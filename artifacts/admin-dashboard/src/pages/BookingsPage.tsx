@@ -1,7 +1,7 @@
 import { useState } from "react";
 import {
   Plus, Pencil, Trash2, CalendarDays, ChevronLeft, ChevronRight,
-  StickyNote, CheckCircle2, XCircle, Armchair, UserX, Wifi,
+  StickyNote, CheckCircle2, XCircle, Armchair, UserX, Wifi, AlertCircle,
 } from "lucide-react";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { PageHeader } from "@/components/common/PageHeader";
@@ -111,21 +111,29 @@ function BookingForm({
   const [staffNotes, setStaffNotes] = useState(initial?.staff_notes ?? "");
   const [status, setStatus] = useState<BookingStatus>(initial?.status ?? "pending");
   const [tableId, setTableId] = useState<string | null>(initial?.table_id ?? null);
+  const [formError, setFormError] = useState<string | null>(null);
 
-  function handle(e: React.FormEvent) {
+  async function handle(e: React.FormEvent) {
     e.preventDefault();
-    onSubmit({
-      name: name.trim(),
-      email: email.trim() || null,
-      phone: phone.trim() || null,
-      party_size: parseInt(partySize) || 1,
-      booking_date: date,
-      booking_time: time,
-      notes: notes.trim() || null,
-      staff_notes: staffNotes.trim() || null,
-      status,
-      table_id: tableId,
-    });
+    setFormError(null);
+    try {
+      await onSubmit({
+        name: name.trim(),
+        email: email.trim() || null,
+        phone: phone.trim() || null,
+        party_size: parseInt(partySize) || 1,
+        booking_date: date,
+        booking_time: time,
+        notes: notes.trim() || null,
+        staff_notes: staffNotes.trim() || null,
+        status,
+        table_id: tableId,
+      });
+    } catch (err: unknown) {
+      const msg =
+        err instanceof Error ? err.message : "Failed to save booking. Please try again.";
+      setFormError(msg);
+    }
   }
 
   return (
@@ -274,6 +282,13 @@ function BookingForm({
             rows={2}
             disabled={loading}
           />
+        </div>
+      )}
+
+      {formError && (
+        <div className="flex items-start gap-2 rounded-md border border-destructive/50 bg-destructive/10 px-3 py-2 text-sm text-destructive">
+          <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
+          <span>{formError}</span>
         </div>
       )}
 
