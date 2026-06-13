@@ -1,10 +1,11 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Settings, Coffee, Save, AlertCircle } from "lucide-react";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { PageHeader } from "@/components/common/PageHeader";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import {
   Select,
   SelectContent,
@@ -67,18 +68,23 @@ export function SettingsPage() {
   });
 
   const [name, setName] = useState("");
-  const [logoUrl, setLogoUrl] = useState("");
+  const [description, setDescription] = useState("");
+  const [phone, setPhone] = useState("");
+  const [email, setEmail] = useState("");
+  const [address, setAddress] = useState("");
   const [timezone, setTimezone] = useState("");
   const [saved, setSaved] = useState(false);
 
-  // Sync state when cafe loads
-  useState(() => {
+  useEffect(() => {
     if (cafe) {
-      setName(cafe.name);
-      setLogoUrl(cafe.logo_url ?? "");
-      setTimezone(cafe.timezone);
+      setName(cafe.name ?? "");
+      setDescription(cafe.description ?? "");
+      setPhone(cafe.phone ?? "");
+      setEmail(cafe.email ?? "");
+      setAddress(cafe.address ?? "");
+      setTimezone(cafe.timezone ?? "");
     }
-  });
+  }, [cafe]);
 
   if (!isOwner) {
     return (
@@ -115,18 +121,10 @@ export function SettingsPage() {
           </div>
         ) : (
           <div className="bg-card border border-card-border rounded-xl p-6 shadow-sm space-y-6">
-            {/* Cafe logo preview */}
+            {/* Cafe identity preview */}
             <div className="flex items-center gap-4 pb-6 border-b border-border">
-              <div className="flex items-center justify-center w-16 h-16 rounded-2xl bg-sidebar text-sidebar-primary shrink-0 overflow-hidden">
-                {(logoUrl || cafe?.logo_url) ? (
-                  <img
-                    src={logoUrl || cafe?.logo_url!}
-                    alt="Logo"
-                    className="w-full h-full object-cover"
-                  />
-                ) : (
-                  <Coffee className="w-8 h-8" />
-                )}
+              <div className="flex items-center justify-center w-16 h-16 rounded-2xl bg-sidebar text-sidebar-primary shrink-0">
+                <Coffee className="w-8 h-8" />
               </div>
               <div>
                 <p className="font-semibold text-foreground">
@@ -141,25 +139,50 @@ export function SettingsPage() {
               <div className="space-y-1.5">
                 <Label>Cafe name *</Label>
                 <Input
-                  value={name || (cafe?.name ?? "")}
+                  value={name}
                   onChange={(e) => setName(e.target.value)}
                   placeholder="Cup & Cozy"
                 />
               </div>
               <div className="space-y-1.5">
-                <Label>Logo URL</Label>
+                <Label>Description</Label>
+                <Textarea
+                  value={description}
+                  onChange={(e) => setDescription(e.target.value)}
+                  placeholder="A short description of your cafe…"
+                  rows={3}
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-1.5">
+                  <Label>Phone</Label>
+                  <Input
+                    value={phone}
+                    onChange={(e) => setPhone(e.target.value)}
+                    placeholder="+61 2 1234 5678"
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label>Email</Label>
+                  <Input
+                    type="email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    placeholder="hello@cafe.com"
+                  />
+                </div>
+              </div>
+              <div className="space-y-1.5">
+                <Label>Address</Label>
                 <Input
-                  value={logoUrl || (cafe?.logo_url ?? "")}
-                  onChange={(e) => setLogoUrl(e.target.value)}
-                  placeholder="https://…"
+                  value={address}
+                  onChange={(e) => setAddress(e.target.value)}
+                  placeholder="123 High St, Melbourne VIC 3000"
                 />
               </div>
               <div className="space-y-1.5">
                 <Label>Timezone</Label>
-                <Select
-                  value={timezone || (cafe?.timezone ?? "")}
-                  onValueChange={setTimezone}
-                >
+                <Select value={timezone} onValueChange={setTimezone}>
                   <SelectTrigger>
                     <SelectValue placeholder="Select timezone" />
                   </SelectTrigger>
@@ -185,7 +208,10 @@ export function SettingsPage() {
                 onClick={() =>
                   updateCafe.mutate({
                     name: name || cafe?.name,
-                    logo_url: logoUrl || null,
+                    description: description.trim() || null,
+                    phone: phone.trim() || null,
+                    email: email.trim() || null,
+                    address: address.trim() || null,
                     timezone: timezone || cafe?.timezone,
                   })
                 }

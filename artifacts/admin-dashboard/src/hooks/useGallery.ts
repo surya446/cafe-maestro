@@ -16,7 +16,7 @@ export function useGallery() {
         .from("gallery_images")
         .select("*")
         .eq("cafe_id", user.cafeId)
-        .order("display_order");
+        .order("position");
       if (error) throw error;
       return data ?? [];
     },
@@ -29,25 +29,34 @@ export function useAddGalleryImage() {
   const qc = useQueryClient();
 
   return useMutation({
-    mutationFn: async (input: { url: string; caption?: string; display_order?: number }) => {
+    mutationFn: async (input: {
+      url: string;
+      storage_path: string;
+      caption?: string;
+      alt_text?: string;
+      position?: number;
+    }) => {
       if (!user) throw new Error("Not authenticated");
       const { data: existing } = await supabase
         .from("gallery_images")
-        .select("display_order")
+        .select("position")
         .eq("cafe_id", user.cafeId)
-        .order("display_order", { ascending: false })
+        .order("position", { ascending: false })
         .limit(1)
         .single();
 
-      const nextOrder = (existing?.display_order ?? 0) + 1;
+      const nextPosition = (existing?.position ?? 0) + 1;
 
       const { data, error } = await supabase
         .from("gallery_images")
         .insert({
           cafe_id: user.cafeId,
           url: input.url,
+          storage_path: input.storage_path,
           caption: input.caption ?? null,
-          display_order: input.display_order ?? nextOrder,
+          alt_text: input.alt_text ?? null,
+          position: input.position ?? nextPosition,
+          is_visible: true,
         })
         .select()
         .single();
@@ -103,7 +112,7 @@ export function useUploadGalleryImage() {
   const { user } = useAuth();
 
   return useMutation({
-    mutationFn: async (file: File): Promise<string> => {
+    mutationFn: async (file: File): Promise<{ publicUrl: string; path: string }> => {
       if (!user) throw new Error("Not authenticated");
       const ext = file.name.split(".").pop();
       const path = `${user.cafeId}/${Date.now()}.${ext}`;
@@ -113,7 +122,7 @@ export function useUploadGalleryImage() {
       if (uploadError) throw uploadError;
 
       const { data } = supabase.storage.from("gallery").getPublicUrl(path);
-      return data.publicUrl;
+      return { publicUrl: data.publicUrl, path };
     },
   });
 }

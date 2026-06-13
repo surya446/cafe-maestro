@@ -48,7 +48,7 @@ function BookingForm({
   loading,
 }: {
   initial?: Partial<Booking>;
-  onSubmit: (data: Omit<Booking, "id" | "cafe_id" | "created_at">) => void;
+  onSubmit: (data: Omit<Booking, "id" | "cafe_id" | "created_at" | "updated_at" | "confirmed_at" | "confirmed_by">) => void;
   onCancel: () => void;
   loading: boolean;
 }) {
@@ -72,6 +72,8 @@ function BookingForm({
       booking_date: date,
       booking_time: time,
       notes: notes.trim() || null,
+      staff_notes: null,
+      table_id: null,
       status,
     });
   }

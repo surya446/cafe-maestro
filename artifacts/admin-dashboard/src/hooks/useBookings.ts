@@ -34,7 +34,7 @@ export function useCreateBooking() {
 
   return useMutation({
     mutationFn: async (
-      input: Omit<Booking, "id" | "cafe_id" | "created_at">
+      input: Omit<Booking, "id" | "cafe_id" | "created_at" | "updated_at" | "confirmed_at" | "confirmed_by">
     ) => {
       if (!user) throw new Error("Not authenticated");
       const { data, error } = await supabase

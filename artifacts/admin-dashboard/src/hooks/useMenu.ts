@@ -17,7 +17,7 @@ export function useMenuCategories() {
         .from("menu_categories")
         .select("*")
         .eq("cafe_id", user.cafeId)
-        .order("display_order");
+        .order("position");
       if (error) throw error;
       return data ?? [];
     },
@@ -36,7 +36,7 @@ export function useMenuItems() {
         .from("menu_items")
         .select("*, menu_categories(id, name)")
         .eq("cafe_id", user.cafeId)
-        .order("display_order");
+        .order("position");
       if (error) throw error;
       return data ?? [];
     },
@@ -50,7 +50,7 @@ export function useCreateCategory() {
 
   return useMutation({
     mutationFn: async (
-      input: Omit<MenuCategory, "id" | "cafe_id" | "created_at">
+      input: Omit<MenuCategory, "id" | "cafe_id" | "created_at" | "updated_at">
     ) => {
       if (!user) throw new Error("Not authenticated");
       const { data, error } = await supabase
@@ -114,7 +114,7 @@ export function useCreateMenuItem() {
 
   return useMutation({
     mutationFn: async (
-      input: Omit<MenuItem, "id" | "cafe_id" | "created_at" | "menu_categories">
+      input: Omit<MenuItem, "id" | "cafe_id" | "created_at" | "updated_at" | "menu_categories">
     ) => {
       if (!user) throw new Error("Not authenticated");
       const { data, error } = await supabase

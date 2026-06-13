@@ -27,7 +27,7 @@ function OfferForm({
   loading,
 }: {
   initial?: Partial<Offer>;
-  onSubmit: (data: Omit<Offer, "id" | "cafe_id" | "created_at">) => void;
+  onSubmit: (data: Omit<Offer, "id" | "cafe_id" | "created_at" | "updated_at">) => void;
   onCancel: () => void;
   loading: boolean;
 }) {
@@ -48,9 +48,13 @@ function OfferForm({
       title: title.trim(),
       description: description.trim() || null,
       image_url: imageUrl.trim() || null,
+      discount_type: null,
+      discount_value: null,
+      applies_to_items: null,
       valid_from: validFrom || null,
       valid_until: validUntil || null,
       is_active: isActive,
+      is_public: true,
     });
   }
 

@@ -20,6 +20,10 @@ export interface DashboardStats {
   }[];
 }
 
+function computeOrderTotal(order_items?: Array<{ unit_price: number; quantity: number }>): number {
+  return (order_items ?? []).reduce((sum, item) => sum + item.unit_price * item.quantity, 0);
+}
+
 export function useDashboard() {
   const { user } = useAuth();
 
@@ -37,7 +41,7 @@ export function useDashboard() {
         await Promise.all([
           supabase
             .from("orders")
-            .select("total, status")
+            .select("status, created_at, order_items(unit_price, quantity)")
             .eq("cafe_id", cafeId)
             .gte("created_at", today),
           supabase
@@ -58,14 +62,14 @@ export function useDashboard() {
             .in("status", ["pending_approval", "approved", "in_kitchen"]),
           supabase
             .from("orders")
-            .select("created_at, total")
+            .select("created_at, order_items(unit_price, quantity)")
             .eq("cafe_id", cafeId)
             .gte("created_at", weekAgo)
             .not("status", "in", '("cancelled","archived")'),
           supabase
             .from("orders")
             .select(
-              "id, total, status, created_at, cafe_tables(label, table_number)"
+              "id, status, created_at, order_items(unit_price, quantity), cafe_tables(name, number)"
             )
             .eq("cafe_id", cafeId)
             .order("created_at", { ascending: false })
@@ -77,10 +81,14 @@ export function useDashboard() {
             .gte("created_at", weekAgo),
         ]);
 
-      const ordersToday = ordersRes.data ?? [];
+      const ordersToday = (ordersRes.data ?? []) as Array<{
+        status: string;
+        created_at: string;
+        order_items: Array<{ unit_price: number; quantity: number }>;
+      }>;
       const revenueToday = ordersToday
         .filter((o) => !["cancelled", "archived"].includes(o.status))
-        .reduce((sum, o) => sum + (o.total ?? 0), 0);
+        .reduce((sum, o) => sum + computeOrderTotal(o.order_items), 0);
 
       const weeklyMap: Record<string, number> = {};
       for (let i = 6; i >= 0; i--) {
@@ -88,18 +96,28 @@ export function useDashboard() {
         const key = d.toLocaleDateString("en-AU", { weekday: "short" });
         weeklyMap[key] = 0;
       }
-      for (const row of weeklyRes.data ?? []) {
+      const weeklyOrders = (weeklyRes.data ?? []) as Array<{
+        created_at: string;
+        order_items: Array<{ unit_price: number; quantity: number }>;
+      }>;
+      for (const row of weeklyOrders) {
         const d = new Date(row.created_at);
         const key = d.toLocaleDateString("en-AU", { weekday: "short" });
-        if (key in weeklyMap) weeklyMap[key] += row.total ?? 0;
+        if (key in weeklyMap) weeklyMap[key] += computeOrderTotal(row.order_items);
       }
 
-      const recentOrders = (recentRes.data ?? []).map((o: any) => ({
+      const recentOrders = ((recentRes.data ?? []) as unknown as Array<{
+        id: string;
+        status: string;
+        created_at: string;
+        order_items: Array<{ unit_price: number; quantity: number }>;
+        cafe_tables: { name: string | null; number: number } | null;
+      }>).map((o) => ({
         id: o.id,
         tableLabel:
-          o.cafe_tables?.label ??
-          `Table ${o.cafe_tables?.table_number ?? "?"}`,
-        total: o.total ?? 0,
+          o.cafe_tables?.name ??
+          `Table ${o.cafe_tables?.number ?? "?"}`,
+        total: computeOrderTotal(o.order_items),
         status: o.status,
         created_at: o.created_at,
       }));

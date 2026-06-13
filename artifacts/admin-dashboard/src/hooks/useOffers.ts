@@ -30,7 +30,7 @@ export function useCreateOffer() {
 
   return useMutation({
     mutationFn: async (
-      input: Omit<Offer, "id" | "cafe_id" | "created_at">
+      input: Omit<Offer, "id" | "cafe_id" | "created_at" | "updated_at">
     ) => {
       if (!user) throw new Error("Not authenticated");
       const { data, error } = await supabase

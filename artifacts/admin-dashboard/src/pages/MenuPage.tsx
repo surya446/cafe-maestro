@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState } from "react";
 import {
   Plus,
   Pencil,
@@ -7,7 +7,6 @@ import {
   GripVertical,
   Eye,
   EyeOff,
-  Star,
   AlertCircle,
 } from "lucide-react";
 import { AppLayout } from "@/components/layout/AppLayout";
@@ -47,7 +46,7 @@ function CategoryForm({
   loading,
 }: {
   initial?: Partial<MenuCategory>;
-  onSubmit: (data: Omit<MenuCategory, "id" | "cafe_id" | "created_at">) => void;
+  onSubmit: (data: Omit<MenuCategory, "id" | "cafe_id" | "created_at" | "updated_at">) => void;
   onCancel: () => void;
   loading: boolean;
 }) {
@@ -60,8 +59,9 @@ function CategoryForm({
     onSubmit({
       name: name.trim(),
       description: description.trim() || null,
+      image_url: null,
       is_visible: isVisible,
-      display_order: initial?.display_order ?? 0,
+      position: initial?.position ?? 0,
     });
   }
 
@@ -116,7 +116,7 @@ function ItemForm({
 }: {
   initial?: Partial<MenuItem>;
   categories: MenuCategory[];
-  onSubmit: (data: Omit<MenuItem, "id" | "cafe_id" | "created_at" | "menu_categories">) => void;
+  onSubmit: (data: Omit<MenuItem, "id" | "cafe_id" | "created_at" | "updated_at" | "menu_categories">) => void;
   onCancel: () => void;
   loading: boolean;
 }) {
@@ -126,7 +126,6 @@ function ItemForm({
   const [categoryId, setCategoryId] = useState(initial?.category_id ?? "");
   const [imageUrl, setImageUrl] = useState(initial?.image_url ?? "");
   const [isAvailable, setIsAvailable] = useState(initial?.is_available ?? true);
-  const [isPopular, setIsPopular] = useState(initial?.is_popular ?? false);
   const [tags, setTags] = useState((initial?.tags ?? []).join(", "));
   const [allergens, setAllergens] = useState((initial?.allergens ?? []).join(", "));
 
@@ -139,8 +138,9 @@ function ItemForm({
       category_id: categoryId,
       image_url: imageUrl.trim() || null,
       is_available: isAvailable,
-      is_popular: isPopular,
-      display_order: initial?.display_order ?? 0,
+      prep_time_min: null,
+      position: initial?.position ?? 0,
+      calories: null,
       tags: tags.split(",").map((t) => t.trim()).filter(Boolean),
       allergens: allergens.split(",").map((a) => a.trim()).filter(Boolean),
     });
@@ -219,23 +219,13 @@ function ItemForm({
           placeholder="dairy, gluten, nuts"
         />
       </div>
-      <div className="flex gap-4">
-        <div className="flex items-center gap-2">
-          <Switch
-            id="available"
-            checked={isAvailable}
-            onCheckedChange={setIsAvailable}
-          />
-          <Label htmlFor="available" className="cursor-pointer">Available</Label>
-        </div>
-        <div className="flex items-center gap-2">
-          <Switch
-            id="popular"
-            checked={isPopular}
-            onCheckedChange={setIsPopular}
-          />
-          <Label htmlFor="popular" className="cursor-pointer">Popular</Label>
-        </div>
+      <div className="flex items-center gap-2">
+        <Switch
+          id="available"
+          checked={isAvailable}
+          onCheckedChange={setIsAvailable}
+        />
+        <Label htmlFor="available" className="cursor-pointer">Available</Label>
       </div>
       <DialogFooter>
         <Button variant="outline" onClick={onCancel} type="button" disabled={loading}>
@@ -395,11 +385,8 @@ export function MenuPage() {
                               </div>
                             )}
                             <div>
-                              <p className="font-medium text-foreground flex items-center gap-1.5">
+                              <p className="font-medium text-foreground">
                                 {item.name}
-                                {item.is_popular && (
-                                  <Star className="w-3 h-3 fill-primary text-primary" />
-                                )}
                               </p>
                               {item.description && (
                                 <p className="text-xs text-muted-foreground truncate max-w-xs">

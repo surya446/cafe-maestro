@@ -74,7 +74,7 @@ function AddImageDialog({
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onSubmit: (data: { url: string; caption?: string }) => void;
+  onSubmit: (data: { url: string; storage_path: string; caption?: string }) => void;
   loading: boolean;
 }) {
   const [tab, setTab] = useState<"url" | "upload">("url");
@@ -93,10 +93,10 @@ function AddImageDialog({
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (tab === "url") {
-      onSubmit({ url, caption: caption.trim() || undefined });
+      onSubmit({ url, storage_path: url, caption: caption.trim() || undefined });
     } else if (file) {
-      const publicUrl = await uploadMutation.mutateAsync(file);
-      onSubmit({ url: publicUrl, caption: caption.trim() || undefined });
+      const { publicUrl, path } = await uploadMutation.mutateAsync(file);
+      onSubmit({ url: publicUrl, storage_path: path, caption: caption.trim() || undefined });
     }
     setUrl("");
     setCaption("");

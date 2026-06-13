@@ -21,9 +21,9 @@ export function useAuth() {
   const buildAuthUser = useCallback(
     async (supabaseUser: User): Promise<AuthUser | null> => {
       const { data: member, error } = await supabase
-        .from("cafe_members")
-        .select("role, display_name, cafe_id, cafes(name)")
-        .eq("user_id", supabaseUser.id)
+        .from("staff_users")
+        .select("role, full_name, cafe_id, cafes(name)")
+        .eq("id", supabaseUser.id)
         .eq("is_active", true)
         .single();
 
@@ -35,7 +35,7 @@ export function useAuth() {
         id: supabaseUser.id,
         email: supabaseUser.email ?? "",
         role: member.role as UserRole,
-        displayName: member.display_name,
+        displayName: member.full_name,
         cafeId: member.cafe_id,
         cafeName: cafe?.name ?? "",
       };

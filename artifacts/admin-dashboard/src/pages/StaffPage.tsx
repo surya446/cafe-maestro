@@ -28,7 +28,7 @@ import {
   useInviteMember,
 } from "@/hooks/useStaff";
 import { useAuth } from "@/hooks/useAuth";
-import { CafeMember, UserRole } from "@/types";
+import { StaffUser, UserRole } from "@/types";
 import { ROLE_LABELS, formatDate } from "@/lib/utils";
 import { cn } from "@/lib/utils";
 
@@ -76,7 +76,7 @@ function InviteDialog({
 
   async function handle(e: React.FormEvent) {
     e.preventDefault();
-    await invite.mutateAsync({ email, role, display_name: displayName });
+    await invite.mutateAsync({ email, role, full_name: displayName });
     setSent(true);
   }
 
@@ -217,7 +217,7 @@ export function StaffPage() {
         ) : (
           <div className="space-y-2">
             {members.map((member) => {
-              const isSelf = member.user_id === user?.id;
+              const isSelf = member.id === user?.id;
               return (
                 <div
                   key={member.id}
@@ -228,13 +228,13 @@ export function StaffPage() {
                 >
                   {/* Avatar */}
                   <div className="flex items-center justify-center w-10 h-10 rounded-full bg-primary/10 text-primary font-bold text-sm shrink-0">
-                    {member.display_name.charAt(0).toUpperCase()}
+                    {member.full_name.charAt(0).toUpperCase()}
                   </div>
 
                   {/* Info */}
                   <div className="flex-1 min-w-0">
                     <p className="font-medium text-foreground flex items-center gap-2">
-                      {member.display_name}
+                      {member.full_name}
                       {isSelf && (
                         <span className="text-xs text-muted-foreground font-normal">(you)</span>
                       )}

@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase";
-import { CafeMember, UserRole } from "@/types";
+import { StaffUser, UserRole } from "@/types";
 import { useAuth } from "./useAuth";
 
 const STAFF_KEY = (cafeId: string) => ["staff", cafeId];
@@ -10,10 +10,10 @@ export function useStaff() {
 
   return useQuery({
     queryKey: STAFF_KEY(user?.cafeId ?? ""),
-    queryFn: async (): Promise<CafeMember[]> => {
+    queryFn: async (): Promise<StaffUser[]> => {
       if (!user) return [];
       const { data, error } = await supabase
-        .from("cafe_members")
+        .from("staff_users")
         .select("*")
         .eq("cafe_id", user.cafeId)
         .order("created_at");
@@ -31,7 +31,7 @@ export function useUpdateMemberRole() {
   return useMutation({
     mutationFn: async ({ id, role }: { id: string; role: UserRole }) => {
       const { data, error } = await supabase
-        .from("cafe_members")
+        .from("staff_users")
         .update({ role })
         .eq("id", id)
         .select()
@@ -57,7 +57,7 @@ export function useToggleMemberActive() {
       is_active: boolean;
     }) => {
       const { data, error } = await supabase
-        .from("cafe_members")
+        .from("staff_users")
         .update({ is_active })
         .eq("id", id)
         .select()
@@ -78,7 +78,7 @@ export function useInviteMember() {
     mutationFn: async (input: {
       email: string;
       role: UserRole;
-      display_name: string;
+      full_name: string;
     }) => {
       if (!user) throw new Error("Not authenticated");
       const { data, error } = await supabase.functions.invoke(
@@ -87,7 +87,7 @@ export function useInviteMember() {
           body: {
             email: input.email,
             role: input.role,
-            display_name: input.display_name,
+            full_name: input.full_name,
             cafe_id: user.cafeId,
           },
         }
