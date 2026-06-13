@@ -11,13 +11,23 @@
 --   3. Manager and Owner both use /admin/* route.
 --   4. No DELETE on orders or order_items (enforced by trigger in 019).
 --   5. All policies gate on cafe_id for multi-tenant isolation.
+--   6. Guest policies scope to device_token via request.device_token
+--      session variable. The API layer must call:
+--        SELECT set_config('request.device_token', '<token>', true);
+--      before any guest query. nullif(...,'') returns NULL when absent,
+--      causing the USING clause to evaluate false — full denial.
+--
+-- NOTE on NEW/OLD in RLS:
+--   NEW and OLD pseudo-records are trigger-only constructs.
+--   In RLS USING clauses, bare column names reference the existing
+--   row (semantically OLD). In WITH CHECK clauses they reference
+--   the incoming row (semantically NEW). Never use NEW./OLD. prefixes.
 --
 -- Role shorthand: O=owner  M=manager  S=staff  C=chef  P=public/anon
 -- ============================================================
 
 
--- ── Helper: rebuild auth_user_has_role ───────────────────────
--- Replaced here so it is consistent with the final model.
+-- ── Helper functions (authoritative final versions) ──────────
 
 CREATE OR REPLACE FUNCTION auth_user_has_role(allowed_roles text[])
 RETURNS boolean
@@ -140,11 +150,20 @@ CREATE POLICY "cafe_tables__owner__delete"
 
 ALTER TABLE table_sessions ENABLE ROW LEVEL SECURITY;
 
--- P: guests need to read their session (status, expiry)
+-- P: guest may only read the session their device belongs to.
+-- Ownership validated through session_devices to prevent session
+-- UUID enumeration by unauthenticated callers.
 CREATE POLICY "table_sessions__public__select"
   ON table_sessions FOR SELECT
   TO anon
-  USING (true);
+  USING (
+    id IN (
+      SELECT session_id
+      FROM   session_devices
+      WHERE  device_token = nullif(current_setting('request.device_token', true), '')
+        AND  is_active    = true
+    )
+  );
 
 -- O+M+S: floor roles read all sessions in their cafe
 -- C: chef does not need session data
@@ -166,11 +185,14 @@ CREATE POLICY "table_sessions__owner_manager_staff__update"
 
 ALTER TABLE session_devices ENABLE ROW LEVEL SECURITY;
 
--- P: guests verify their own device_token is still active
+-- P: guest may only read their own device record.
+-- Used by the frontend to verify the token is still active.
 CREATE POLICY "session_devices__public__select"
   ON session_devices FOR SELECT
   TO anon
-  USING (true);
+  USING (
+    device_token = nullif(current_setting('request.device_token', true), '')
+  );
 
 -- O+M+S: see device list for active device count on table map
 -- C: not needed for kitchen operations
@@ -229,11 +251,12 @@ CREATE POLICY "menu_items__all_staff__select"
   ON menu_items FOR SELECT
   USING (cafe_id = auth_user_cafe_id());
 
--- O+M: create and update items (includes availability toggle)
+-- O+M: create items
 CREATE POLICY "menu_items__owner_manager__insert"
   ON menu_items FOR INSERT
   WITH CHECK (cafe_id = auth_user_cafe_id() AND auth_user_has_role(ARRAY['owner','manager']));
 
+-- O+M: update items (includes availability toggle)
 CREATE POLICY "menu_items__owner_manager__update"
   ON menu_items FOR UPDATE
   USING  (cafe_id = auth_user_cafe_id() AND auth_user_has_role(ARRAY['owner','manager']))
@@ -253,11 +276,14 @@ CREATE POLICY "menu_items__owner__delete"
 
 ALTER TABLE orders ENABLE ROW LEVEL SECURITY;
 
--- P: guests read orders in their session
+-- P: guest may only read orders they placed (device_token is
+-- denormalized onto orders at insert time by the API layer).
 CREATE POLICY "orders__public__select"
   ON orders FOR SELECT
   TO anon
-  USING (true);
+  USING (
+    device_token = nullif(current_setting('request.device_token', true), '')
+  );
 
 -- O+M+S+C: all staff read all orders in their cafe
 CREATE POLICY "orders__all_staff__select"
@@ -265,7 +291,6 @@ CREATE POLICY "orders__all_staff__select"
   USING (cafe_id = auth_user_cafe_id());
 
 -- O+M+S: approve, reject (cancel), mark served, archive
--- These roles manage the order workflow on the floor
 CREATE POLICY "orders__owner_manager_staff__update"
   ON orders FOR UPDATE
   USING  (cafe_id = auth_user_cafe_id() AND auth_user_has_role(ARRAY['owner','manager','staff']))
@@ -286,11 +311,17 @@ CREATE POLICY "orders__chef__update"
 
 ALTER TABLE order_items ENABLE ROW LEVEL SECURITY;
 
--- P: guests read items in their orders
+-- P: guest may only read items belonging to their own orders.
 CREATE POLICY "order_items__public__select"
   ON order_items FOR SELECT
   TO anon
-  USING (true);
+  USING (
+    order_id IN (
+      SELECT id
+      FROM   orders
+      WHERE  device_token = nullif(current_setting('request.device_token', true), '')
+    )
+  );
 
 -- O+M+S+C: all staff read all order items
 CREATE POLICY "order_items__all_staff__select"
@@ -304,11 +335,14 @@ CREATE POLICY "order_items__all_staff__select"
 
 ALTER TABLE bill_requests ENABLE ROW LEVEL SECURITY;
 
--- P: guests read their own bill request status
+-- P: guest may only read bill requests they submitted.
+-- device_token is recorded on the bill_request row at creation.
 CREATE POLICY "bill_requests__public__select"
   ON bill_requests FOR SELECT
   TO anon
-  USING (true);
+  USING (
+    device_token = nullif(current_setting('request.device_token', true), '')
+  );
 
 -- O+M+S: floor roles see and action the bill request queue
 -- C: chef has no bill responsibility
@@ -454,14 +488,15 @@ CREATE POLICY "staff_users__self__select"
   ON staff_users FOR SELECT
   USING (id = auth.uid());
 
--- O+M+S+C: update own profile (name, pin hash) but not own role or cafe
+-- O+M+S+C: update own profile (name, pin hash) but not own role or cafe.
+-- In WITH CHECK, bare `role` refers to the incoming (new) value.
+-- The subquery reads the current stored role to detect self-elevation.
 CREATE POLICY "staff_users__self__update"
   ON staff_users FOR UPDATE
   USING (id = auth.uid())
   WITH CHECK (
     id      = auth.uid()
     AND cafe_id = auth_user_cafe_id()
-    -- Cannot elevate own role via self-update
     AND role = (SELECT role FROM staff_users WHERE id = auth.uid())
   );
 
@@ -470,38 +505,40 @@ CREATE POLICY "staff_users__owner_manager__select"
   ON staff_users FOR SELECT
   USING (cafe_id = auth_user_cafe_id() AND auth_user_has_role(ARRAY['owner','manager']));
 
--- O+M: create new accounts
--- Manager may not create an owner account
+-- O+M: create new accounts.
+-- In WITH CHECK for INSERT, bare `role` refers to the value being inserted.
+-- Manager may not create an owner account.
 CREATE POLICY "staff_users__owner_manager__insert"
   ON staff_users FOR INSERT
   WITH CHECK (
     cafe_id = auth_user_cafe_id()
     AND auth_user_has_role(ARRAY['owner','manager'])
     AND (
-      auth_user_role() = 'owner'          -- Owner can create any role
-      OR NEW.role IN ('staff', 'chef')    -- Manager can only create staff/chef
+      auth_user_role() = 'owner'        -- Owner can create any role
+      OR role IN ('staff', 'chef')      -- Manager can only create staff/chef
     )
   );
 
--- O+M: update other staff accounts
--- Manager may not edit accounts with role=owner or role=manager
--- Manager may not promote anyone to owner or manager
+-- O+M: update other staff accounts.
+-- In USING, bare column names reference the existing row (pre-update).
+-- In WITH CHECK, bare column names reference the incoming row (post-update).
+-- Manager may not edit owner/manager accounts and may not promote to owner/manager.
 CREATE POLICY "staff_users__owner_manager__update"
   ON staff_users FOR UPDATE
   USING (
-    cafe_id   = auth_user_cafe_id()
-    AND id   <> auth.uid()              -- Cannot edit self via this policy
+    cafe_id = auth_user_cafe_id()
+    AND id <> auth.uid()
     AND auth_user_has_role(ARRAY['owner','manager'])
     AND (
       auth_user_role() = 'owner'        -- Owner can edit any account
-      OR OLD.role IN ('staff', 'chef')  -- Manager can only edit staff/chef
+      OR role IN ('staff', 'chef')      -- Manager can only edit staff/chef (existing role)
     )
   )
   WITH CHECK (
     cafe_id = auth_user_cafe_id()
     AND (
       auth_user_role() = 'owner'
-      OR NEW.role IN ('staff', 'chef')  -- Manager cannot promote to owner/manager
+      OR role IN ('staff', 'chef')      -- Manager cannot promote to owner/manager (new role)
     )
   );
 
@@ -509,8 +546,8 @@ CREATE POLICY "staff_users__owner_manager__update"
 CREATE POLICY "staff_users__owner__delete"
   ON staff_users FOR DELETE
   USING (
-    cafe_id  = auth_user_cafe_id()
-    AND id  <> auth.uid()
+    cafe_id = auth_user_cafe_id()
+    AND id <> auth.uid()
     AND auth_user_has_role(ARRAY['owner'])
   );
 
@@ -530,7 +567,7 @@ CREATE POLICY "audit_logs__owner__select"
 CREATE POLICY "audit_logs__manager__select"
   ON audit_logs FOR SELECT
   USING (
-    cafe_id   = auth_user_cafe_id()
+    cafe_id = auth_user_cafe_id()
     AND auth_user_has_role(ARRAY['manager'])
     AND event_type NOT LIKE 'staff.%'
   );
@@ -539,7 +576,7 @@ CREATE POLICY "audit_logs__manager__select"
 
 
 -- ============================================================
--- ROLE_CAPABILITIES & ROLE_PERMISSIONS
+-- ROLE_CAPABILITIES, ROLE_PERMISSIONS, PERMISSIONS
 -- (read-only reference tables)
 -- ============================================================
 
