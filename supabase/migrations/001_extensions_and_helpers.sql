@@ -2,14 +2,20 @@
 -- Migration 001: Extensions & Helper Functions
 -- Cafe Maestro Platform
 -- ============================================================
+-- Free Tier compatible: pg_cron removed.
+-- Session expiry is enforced via expires_at checks in RLS,
+-- views, and a BEFORE INSERT trigger (migration 011).
+-- ============================================================
 
 -- ------------------------------------
 -- Extensions
 -- ------------------------------------
 
-CREATE EXTENSION IF NOT EXISTS "uuid-ossp";      -- gen_random_uuid() fallback
-CREATE EXTENSION IF NOT EXISTS "pg_cron";         -- scheduled session expiry
-CREATE EXTENSION IF NOT EXISTS "pgcrypto";        -- gen_random_bytes for device tokens
+CREATE EXTENSION IF NOT EXISTS "uuid-ossp";   -- gen_random_uuid() fallback
+CREATE EXTENSION IF NOT EXISTS "pgcrypto";    -- gen_random_bytes for device tokens
+
+-- uuid-ossp and pgcrypto are enabled by default on all Supabase tiers.
+-- pg_cron is NOT used — no scheduled jobs, no paid-tier dependency.
 
 -- ------------------------------------
 -- Helper: auto-update updated_at

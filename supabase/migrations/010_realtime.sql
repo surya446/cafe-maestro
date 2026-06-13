@@ -12,18 +12,17 @@
 --   kitchen:{cafeId}       → kitchen display (approved orders)
 --   admin:{cafeId}         → owner dashboard (analytics events)
 --   devices:{sessionId}    → staff table map (device joins/leaves)
+--
+-- FREE TIER NOTE:
+-- ALTER PUBLICATION statements are intentionally omitted here.
+-- Supabase owns and manages the supabase_realtime publication.
+-- Enable Realtime on each table via the Supabase Dashboard:
+--   Database → Replication → supabase_realtime → toggle each table
+--
+-- Tables to enable:
+--   orders, order_items, table_sessions, session_devices,
+--   bill_requests, menu_items, menu_categories
 -- ============================================================
-
--- Add tables to the Supabase Realtime publication
--- (supabase_realtime is created by Supabase automatically)
-
-ALTER PUBLICATION supabase_realtime ADD TABLE orders;
-ALTER PUBLICATION supabase_realtime ADD TABLE order_items;
-ALTER PUBLICATION supabase_realtime ADD TABLE table_sessions;
-ALTER PUBLICATION supabase_realtime ADD TABLE session_devices;
-ALTER PUBLICATION supabase_realtime ADD TABLE bill_requests;
-ALTER PUBLICATION supabase_realtime ADD TABLE menu_items;        -- Staff needs live 86 updates
-ALTER PUBLICATION supabase_realtime ADD TABLE menu_categories;
 
 -- ------------------------------------
 -- Realtime broadcast triggers

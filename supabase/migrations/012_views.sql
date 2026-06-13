@@ -5,6 +5,12 @@
 -- Views that pre-join common query patterns.
 -- Used by the API layer and analytics.
 -- All views respect the underlying table RLS through SECURITY INVOKER.
+--
+-- FREE TIER SESSION EXPIRY:
+-- active_sessions_with_devices filters expires_at > NOW() in addition
+-- to status = 'active'. This ensures logically-expired sessions
+-- (whose status column hasn't been transitioned yet) never appear
+-- on the staff dashboard, even without a background job.
 -- ============================================================
 
 -- ------------------------------------
@@ -12,6 +18,7 @@
 -- ------------------------------------
 -- Used by the staff dashboard table map.
 -- Shows exactly how many devices are currently active per session.
+-- Dual guard: status = 'active' AND expires_at > NOW()
 
 CREATE OR REPLACE VIEW active_sessions_with_devices AS
 SELECT
@@ -30,12 +37,16 @@ FROM table_sessions ts
 JOIN cafe_tables ct ON ct.id = ts.table_id
 LEFT JOIN session_devices sd ON sd.session_id = ts.id
 WHERE ts.status = 'active'
+  AND ts.expires_at > NOW()   -- Free Tier guard: hide logically-expired sessions
 GROUP BY ts.id, ts.cafe_id, ts.table_id, ts.status,
          ts.started_at, ts.expires_at,
          ct.number, ct.name, ct.capacity;
 
 COMMENT ON VIEW active_sessions_with_devices IS
-  'Staff dashboard: active sessions with live device counts. device_count is always computed — never stored.';
+  'Staff dashboard: active sessions with live device counts.
+   Filters status=active AND expires_at > NOW() — logically-expired sessions
+   are excluded even if their status column has not yet been transitioned.
+   device_count is always computed — never stored.';
 
 -- ------------------------------------
 -- Orders with table and session info
