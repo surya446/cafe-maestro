@@ -6,6 +6,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { useAuth } from "@/hooks/useAuth";
 
 import { LoginPage } from "@/pages/LoginPage";
+import { AuthConfirmPage } from "@/pages/AuthConfirmPage";
 import { DashboardPage } from "@/pages/DashboardPage";
 import { MenuPage } from "@/pages/MenuPage";
 import { GalleryPage } from "@/pages/GalleryPage";
@@ -40,6 +41,7 @@ function Router() {
   return (
     <Switch>
       <Route path="/login" component={LoginPage} />
+      <Route path="/auth/confirm" component={AuthConfirmPage} />
       <Route path="/">
         <ProtectedRoute>
           <DashboardPage />
