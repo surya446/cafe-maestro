@@ -1,12 +1,10 @@
 // ============================================================
 // Auth Types — Cafe Maestro Platform
+// Final Authorization Model (no inheritance)
 // Copy into: lib/auth/types.ts
 // ============================================================
 
 export type StaffRole = 'owner' | 'manager' | 'staff' | 'chef';
-
-// Ordered lowest → highest privilege
-export const ROLE_HIERARCHY: StaffRole[] = ['chef', 'staff', 'manager', 'owner'];
 
 export interface StaffUser {
   id: string;
@@ -17,140 +15,223 @@ export interface StaffUser {
   is_active: boolean;
 }
 
-// ── Permission keys ──────────────────────────────────────────
-// Single source of truth. Matches the `permissions` table in migration 017.
+// ── Permissions ───────────────────────────────────────────────
+// Every permission is explicit. No role inherits from another.
+// Matches the `permissions` table in migration 017.
 
 export type Permission =
-  | 'sessions.read'
+  // Session management (floor roles only — chef excluded)
+  | 'sessions.view'
   | 'sessions.end'
-  | 'orders.read'
-  | 'orders.approve'
-  | 'orders.reject'
-  | 'orders.mark_served'
-  | 'orders.kitchen_update'
-  | 'bill_requests.read'
+
+  // Order management
+  | 'orders.view'               // all staff see orders
+  | 'orders.approve'            // staff | manager | owner
+  | 'orders.reject'             // staff | manager | owner  (sets status=cancelled)
+  | 'orders.mark_served'        // staff | manager | owner
+  | 'orders.kitchen_update'     // chef | manager | owner   (in_kitchen → ready)
+  | 'orders.archive'            // manager | owner          (served|cancelled → archived)
+
+  // Bill requests (floor roles — chef excluded)
+  | 'bill_requests.view'
   | 'bill_requests.acknowledge'
-  | 'menu.read_hidden'
-  | 'menu.write'
-  | 'menu.delete'
+
+  // Menu (operations — chef reads only, no write access)
+  | 'menu.view_all'             // all staff see unavailable/hidden items
+  | 'menu.write'                // manager | owner   (create, update, toggle availability)
+  | 'menu.delete'               // owner only        (permanent delete)
+
+  // Tables & QR (manager | owner)
   | 'tables.write'
-  | 'tables.delete'
-  | 'bookings.read'
-  | 'bookings.manage'
-  | 'bookings.delete'
+  | 'tables.delete'             // owner only
+
+  // Bookings (floor roles — chef excluded)
+  | 'bookings.view'
+  | 'bookings.manage'           // confirm, cancel, seat
+  | 'bookings.delete'           // manager | owner
+
+  // Reviews (manager | owner)
   | 'reviews.moderate'
-  | 'reviews.delete'
+  | 'reviews.delete'            // owner only
+
+  // Gallery & offers (manager | owner)
   | 'gallery.write'
   | 'offers.write'
-  | 'staff.read'
-  | 'staff.create'
-  | 'staff.manage'
-  | 'staff.manage_owners'
-  | 'staff.delete'
-  | 'analytics.read'
-  | 'audit_logs.read'
-  | 'audit_logs.read_operations'
-  | 'settings.write';
 
-// ── Static permission map (mirrors role_permissions table) ───
-// Used client-side so dashboards can hide/show UI without a DB call.
-// Single source of truth is still the DB — this is a read-only mirror.
+  // Staff management
+  | 'staff.view'                // manager | owner
+  | 'staff.create_non_owner'    // manager (staff | chef only) | owner (any role)
+  | 'staff.manage_non_owner'    // manager (staff | chef only) | owner (any role)
+  | 'staff.manage_all'          // owner only (includes manager and owner accounts)
+
+  // Analytics (manager | owner)
+  | 'analytics.view'
+
+  // Audit logs
+  | 'audit_logs.view_operations' // manager (excludes staff account events)
+  | 'audit_logs.view_all'        // owner only
+
+  // Cafe settings
+  | 'settings.write';            // owner only
+
+
+// ── Explicit permission assignments ──────────────────────────
+// No inheritance. Each role's permissions are fully enumerated.
 
 export const ROLE_PERMISSIONS: Record<StaffRole, Permission[]> = {
+
+  // ── Chef ─────────────────────────────────────────────────
+  // Kitchen operations only. Cannot access floor, admin, or settings.
   chef: [
-    'orders.read',
-    'orders.kitchen_update',
-    'menu.read_hidden',
+    'orders.view',
+    'orders.kitchen_update',    // approved → in_kitchen, in_kitchen → ready
+    'menu.view_all',            // full item detail needed for KDS display
   ],
 
+  // ── Staff ─────────────────────────────────────────────────
+  // Floor operations. No admin access. No menu writes.
   staff: [
-    'orders.read',
+    'orders.view',
     'orders.approve',
     'orders.reject',
     'orders.mark_served',
-    'orders.kitchen_update',
-    'menu.read_hidden',
-    'sessions.read',
+    'sessions.view',
     'sessions.end',
-    'bill_requests.read',
+    'bill_requests.view',
     'bill_requests.acknowledge',
-    'bookings.read',
+    'bookings.view',
     'bookings.manage',
+    'menu.view_all',            // needed to answer guest questions about unavailable items
   ],
 
+  // ── Manager ───────────────────────────────────────────────
+  // Full operations + admin dashboard (restricted).
+  // No cafe settings, no owner account management, no full audit log.
   manager: [
-    'orders.read',
+    // Order workflow
+    'orders.view',
     'orders.approve',
     'orders.reject',
     'orders.mark_served',
-    'orders.kitchen_update',
-    'menu.read_hidden',
-    'menu.write',
-    'sessions.read',
+    'orders.kitchen_update',    // manager can step in on kitchen if needed
+    'orders.archive',
+
+    // Session & floor
+    'sessions.view',
     'sessions.end',
-    'bill_requests.read',
+    'bill_requests.view',
     'bill_requests.acknowledge',
-    'bookings.read',
+
+    // Bookings
+    'bookings.view',
     'bookings.manage',
     'bookings.delete',
+
+    // Menu
+    'menu.view_all',
+    'menu.write',
+
+    // Tables & QR
+    'tables.write',
+
+    // Content
     'reviews.moderate',
     'gallery.write',
     'offers.write',
-    'tables.write',
-    'staff.read',
-    'staff.create',
-    'staff.manage',
-    'analytics.read',
-    'audit_logs.read_operations',
+
+    // Staff management (staff and chef only — not other managers or owners)
+    'staff.view',
+    'staff.create_non_owner',
+    'staff.manage_non_owner',
+
+    // Reporting
+    'analytics.view',
+    'audit_logs.view_operations', // operational events; no staff account events
   ],
 
+  // ── Owner ─────────────────────────────────────────────────
+  // Full platform access. All permissions explicit.
   owner: [
-    'orders.read',
+    // Order workflow
+    'orders.view',
     'orders.approve',
     'orders.reject',
     'orders.mark_served',
     'orders.kitchen_update',
-    'menu.read_hidden',
-    'menu.write',
-    'menu.delete',
-    'sessions.read',
+    'orders.archive',
+
+    // Session & floor
+    'sessions.view',
     'sessions.end',
-    'bill_requests.read',
+    'bill_requests.view',
     'bill_requests.acknowledge',
-    'bookings.read',
+
+    // Bookings
+    'bookings.view',
     'bookings.manage',
     'bookings.delete',
+
+    // Menu
+    'menu.view_all',
+    'menu.write',
+    'menu.delete',
+
+    // Tables & QR
+    'tables.write',
+    'tables.delete',
+
+    // Content
     'reviews.moderate',
     'reviews.delete',
     'gallery.write',
     'offers.write',
-    'tables.write',
-    'tables.delete',
-    'staff.read',
-    'staff.create',
-    'staff.manage',
-    'staff.manage_owners',
-    'staff.delete',
-    'analytics.read',
-    'audit_logs.read',
+
+    // Staff management (all roles including other owners)
+    'staff.view',
+    'staff.create_non_owner',
+    'staff.manage_non_owner',
+    'staff.manage_all',
+
+    // Reporting
+    'analytics.view',
+    'audit_logs.view_operations',
+    'audit_logs.view_all',
+
+    // Settings
     'settings.write',
   ],
 };
 
-// ── Helpers ──────────────────────────────────────────────────
+// ── Helpers ───────────────────────────────────────────────────
+// hasPermission: explicit lookup — no hierarchy logic.
 
 export function hasPermission(role: StaffRole, permission: Permission): boolean {
   return ROLE_PERMISSIONS[role].includes(permission);
 }
 
-export function hasMinimumRole(userRole: StaffRole, minimumRole: StaffRole): boolean {
-  return ROLE_HIERARCHY.indexOf(userRole) >= ROLE_HIERARCHY.indexOf(minimumRole);
-}
+// ── Route access (which roles may enter each route group) ─────
+// No /manager/* route exists.
+// Manager and Owner both use /admin/*.
+// Individual pages within /admin/* enforce finer checks.
 
-// Roles that can access a given route group
-export const ROUTE_ROLES: Record<string, StaffRole[]> = {
-  '/kitchen':  ['chef', 'staff', 'manager', 'owner'],
-  '/staff':    ['staff', 'manager', 'owner'],
-  '/manager':  ['manager', 'owner'],
-  '/admin':    ['owner'],
+export const ROUTE_ACCESS: Record<string, StaffRole[]> = {
+  '/kitchen': ['chef', 'staff', 'manager', 'owner'],
+  '/staff':   ['staff', 'manager', 'owner'],
+  '/admin':   ['manager', 'owner'],
 };
+
+// Default dashboard path after login for each role
+export const DEFAULT_DASHBOARD: Record<StaffRole, string> = {
+  chef:    '/kitchen/display',
+  staff:   '/staff/dashboard',
+  manager: '/admin/dashboard',
+  owner:   '/admin/dashboard',
+};
+
+// Admin sub-pages restricted to owner only
+// (middleware allows managers into /admin/*, but these pages
+//  enforce owner-only via requirePermission at the API/page level)
+export const OWNER_ONLY_ADMIN_PAGES = [
+  '/admin/settings',
+  '/admin/audit-logs',
+] as const;
