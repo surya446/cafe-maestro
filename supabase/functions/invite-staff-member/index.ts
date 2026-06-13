@@ -16,7 +16,7 @@
 //              supabase secrets set SITE_URL=https://your-domain
 // ============================================================
 
-import { createClient, SupabaseClient } from "npm:@supabase/supabase-js@2";
+import { createClient, SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 // ── Types ─────────────────────────────────────────────────────
 
