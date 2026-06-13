@@ -19,6 +19,8 @@ Run via the Supabase Dashboard SQL editor or `supabase db push`.
 | `010_realtime.sql` | Realtime publication + pg_notify triggers |
 | `011_session_expiry_cron.sql` | pg_cron job — expires sessions every 5 min |
 | `012_views.sql` | Convenience views (active sessions, orders, analytics) |
+| `013_audit_logs.sql` | `audit_logs` table + all SECURITY DEFINER trigger functions |
+| `014_audit_views.sql` | Audit query views (feed, staff activity, menu history, etc.) |
 
 ## Seed Data
 
@@ -34,3 +36,6 @@ Run via the Supabase Dashboard SQL editor or `supabase db push`.
 - **`unit_price` snapshotted** in `order_items` — historical order values survive menu price changes
 - **`menu_items.is_available`** — use to "86" items; never delete items that appear in orders (`ON DELETE RESTRICT`)
 - **Session states**: `active | expired | ended` only. No table open/close workflow.
+- **Audit logging is trigger-based** — all audit records are written by `SECURITY DEFINER` Postgres triggers, never by application code. Any future mobile app is automatically audited with zero extra implementation.
+- **`pin_hash` is scrubbed from audit data** — credential fields are never written into `audit_logs.old_data` or `new_data`.
+- **Actor identity via session variable** — API routes run `SET LOCAL app.actor_id = '...'` before DML so triggers can record who performed the action without an application-level audit call.
