@@ -1,0 +1,151 @@
+Writing the full rewrite now — explicit read → validate → insert/update, no blind upserts.
+
+
+2 actions
+Here is the complete report of all changes made and the security verification.
+
+Files changed
+supabase/functions/invite-staff-member/index.ts  (full rewrite)
+
+What changed and why
+Old architecture (vulnerable)
+invite → send auth invite → blind upsert({ onConflict: "id" })
+                              ↑ overwrites cafe_id, role, is_active
+                              ↑ no pre-flight read
+                              ↑ no cross-cafe check
+                              ↑ no role guard on existing rows
+
+New architecture (patched)
+invite → send auth invite → applyStaffRow()
+                              1. READ existing staff_users row
+                              2. VALIDATE (cafe, caller role, target role)
+                              3. INSERT (new row) OR UPDATE (existing row)
+
+Both paths — new auth user and duplicate email — converge into the single applyStaffRow() function so every security check runs exactly once regardless of which path is taken.
+
+Changed code — annotated diff
+Removed: both blind upserts
+// ❌ BEFORE — both paths used this pattern
+await adminClient
+  .from("staff_users")
+  .upsert(
+    { id, cafe_id, email, full_name, role, is_active: true },
+    { onConflict: "id" },   // ← blindly overwrites everything
+  )
+
+Added: applyStaffRow() — shared read → validate → write
+// ✅ AFTER — explicit read before any write
+const { data: existingRow } = await adminClient
+  .from("staff_users")
+  .select("id, cafe_id, role, is_active")
+  .eq("id", targetUserId)
+  .maybeSingle<ExistingStaffRow>();
+
+Security report — each attack blocked
+Attack 1 — Cross-cafe hijacking
+Scenario: Owner of Cafe A sends { email: "alice@cafeB.com", cafe_id: "A" }. Alice belongs to Cafe B.
+
+Code that blocks it (applyStaffRow, lines 82–97):
+
+if (existingRow && existingRow.cafe_id !== cafe_id) {
+  return json(
+    {
+      error: "User already belongs to another cafe",
+      code: "CROSS_CAFE_CONFLICT",
+      detail:
+        "This auth account is already assigned to a different cafe. " +
+        "The user must be removed from their current cafe before being added to this one.",
+    },
+    409,   // Conflict
+  );
+}
+
+Result: HTTP 409 before any write. Alice's cafe_id is never touched.
+
+Attack 2 — Manager demoting a peer manager
+Scenario: Manager A sends { email: "manager-b@cafe.com", role: "staff" }. Manager B is already a manager in the same cafe.
+
+Code that blocks it (applyStaffRow, lines 100–114):
+
+if (
+  callerRole === "manager" &&
+  ["owner", "manager"].includes(existingRow.role)
+) {
+  return json(
+    {
+      error: "Managers cannot modify owner or manager accounts",
+      code: "INSUFFICIENT_ROLE",
+      detail:
+        `Target account has role '${existingRow.role}'. ` +
+        "Only an owner can modify this account.",
+    },
+    403,
+  );
+}
+
+Result: HTTP 403. Manager B's row is never read for write.
+
+Attack 3 — Accidental owner role overwrite
+Scenario: An owner re-invites another owner with role: "staff" — perhaps intending to add a new staff member but entering the wrong email.
+
+Code that blocks it (applyStaffRow, lines 116–126):
+
+if (existingRow.role === "owner" && role !== "owner") {
+  return json(
+    {
+      error: "Cannot change an existing owner's role via invite",
+      code: "OWNER_ROLE_PROTECTED",
+      detail:
+        "This account currently has role 'owner'. " +
+        "Role changes for owners must be performed through account management.",
+    },
+    403,
+  );
+}
+
+Result: HTTP 403. Existing owner's role is never changed.
+
+Attack 4 — Bypassing deactivation via re-invite
+Scenario: An owner deactivates a staff member (is_active = false). A manager re-invites the same email to re-activate them.
+
+Old code:
+
+is_active: true,  // ← hardcoded in upsert — bypassed deactivation
+
+New UPDATE path (lines 155–168):
+
+await adminClient
+  .from("staff_users")
+  .update({
+    email,
+    full_name,
+    role,
+    // cafe_id:   omitted — immutable
+    // is_active: omitted — current value preserved
+  })
+  .eq("id", targetUserId)
+
+Result: is_active is never written on UPDATE. The deactivated account stays deactivated. The invite email is still sent (so they receive a link) but their dashboard access remains blocked until an owner explicitly reactivates them.
+
+Attack 5 — cafe_id mutation via re-invite
+Old code:
+
+{ id, cafe_id, ..., onConflict: "id" }  // ← cafe_id overwritten
+
+New INSERT path includes cafe_id (correct — brand new row):
+
+.insert({ id: targetUserId, cafe_id, ... })   // only on INSERT
+
+New UPDATE path omits cafe_id (correct — row already exists):
+
+.update({ email, full_name, role })            // cafe_id NOT included
+
+Result: cafe_id is written once on INSERT and never touched again.
+
+Security matrix — final state
+Attack	Before	After
+Cross-cafe hijacking	❌ Blind upsert overwrites cafe_id	✅ HTTP 409 before any write
+Manager demotes manager	❌ Upsert proceeds if role is staff/chef	✅ HTTP 403 — reads existing role first
+Accidental owner demotion	❌ Role overwritten unconditionally	✅ HTTP 403 — owner role is protected
+Re-invite bypasses deactivation	❌ is_active: true hardcoded	✅ is_active omitted from UPDATE
+cafe_id mutation	❌ Overwritten on every upsert	✅ Set on INSERT only, never on UPDATE
