@@ -7,6 +7,7 @@ import { useAuth } from "@/hooks/useAuth";
 
 import { LoginPage } from "@/pages/LoginPage";
 import { AuthConfirmPage } from "@/pages/AuthConfirmPage";
+import { BookingFormPage } from "@/pages/BookingFormPage";
 import { DashboardPage } from "@/pages/DashboardPage";
 import { MenuPage } from "@/pages/MenuPage";
 import { GalleryPage } from "@/pages/GalleryPage";
@@ -42,6 +43,7 @@ function Router() {
     <Switch>
       <Route path="/login" component={LoginPage} />
       <Route path="/auth/confirm" component={AuthConfirmPage} />
+      <Route path="/book" component={BookingFormPage} />
       <Route path="/">
         <ProtectedRoute>
           <DashboardPage />
