@@ -24,7 +24,7 @@ export function LoginPage() {
     if (err) {
       setError("Invalid email or password. Please try again.");
     } else {
-      navigate("/admin");
+      navigate("/");
     }
   }
 
