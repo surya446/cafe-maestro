@@ -1,0 +1,285 @@
+import { useState } from "react";
+import { Users, UserPlus, Shield, ToggleLeft, ToggleRight, Mail } from "lucide-react";
+import { AppLayout } from "@/components/layout/AppLayout";
+import { PageHeader } from "@/components/common/PageHeader";
+import { EmptyState } from "@/components/common/EmptyState";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import {
+  useStaff,
+  useUpdateMemberRole,
+  useToggleMemberActive,
+  useInviteMember,
+} from "@/hooks/useStaff";
+import { useAuth } from "@/hooks/useAuth";
+import { CafeMember, UserRole } from "@/types";
+import { ROLE_LABELS, formatDate } from "@/lib/utils";
+import { cn } from "@/lib/utils";
+
+const ROLES: UserRole[] = ["owner", "manager", "staff", "chef"];
+
+const ROLE_DESCRIPTIONS: Record<UserRole, string> = {
+  owner: "Full access — manage staff, settings, and all content",
+  manager: "Admin access — manage menu, bookings, gallery, and offers",
+  staff: "Front of house — view orders and manage table sessions",
+  chef: "Kitchen-only — view and update order items",
+};
+
+const ROLE_COLORS: Record<UserRole, string> = {
+  owner: "bg-purple-100 text-purple-800 border-purple-200",
+  manager: "bg-blue-100 text-blue-800 border-blue-200",
+  staff: "bg-emerald-100 text-emerald-800 border-emerald-200",
+  chef: "bg-amber-100 text-amber-800 border-amber-200",
+};
+
+function RoleBadge({ role }: { role: UserRole }) {
+  return (
+    <span
+      className={cn(
+        "inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium border",
+        ROLE_COLORS[role]
+      )}
+    >
+      {ROLE_LABELS[role]}
+    </span>
+  );
+}
+
+function InviteDialog({
+  open,
+  onOpenChange,
+}: {
+  open: boolean;
+  onOpenChange: (o: boolean) => void;
+}) {
+  const invite = useInviteMember();
+  const [email, setEmail] = useState("");
+  const [displayName, setDisplayName] = useState("");
+  const [role, setRole] = useState<UserRole>("staff");
+  const [sent, setSent] = useState(false);
+
+  async function handle(e: React.FormEvent) {
+    e.preventDefault();
+    await invite.mutateAsync({ email, role, display_name: displayName });
+    setSent(true);
+  }
+
+  function handleClose() {
+    onOpenChange(false);
+    setSent(false);
+    setEmail("");
+    setDisplayName("");
+    setRole("staff");
+  }
+
+  return (
+    <Dialog open={open} onOpenChange={handleClose}>
+      <DialogContent className="max-w-sm">
+        <DialogHeader>
+          <DialogTitle>Invite staff member</DialogTitle>
+        </DialogHeader>
+        {sent ? (
+          <div className="text-center py-6">
+            <div className="flex items-center justify-center w-12 h-12 rounded-full bg-emerald-100 text-emerald-600 mx-auto mb-4">
+              <Mail className="w-6 h-6" />
+            </div>
+            <p className="font-medium text-foreground">Invitation sent!</p>
+            <p className="text-sm text-muted-foreground mt-1">
+              An email has been sent to <strong>{email}</strong>.
+            </p>
+            <Button className="mt-4" onClick={handleClose}>Done</Button>
+          </div>
+        ) : (
+          <form onSubmit={handle} className="space-y-4">
+            <div className="space-y-1.5">
+              <Label>Email *</Label>
+              <Input
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="staff@example.com"
+                required
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label>Display name *</Label>
+              <Input
+                value={displayName}
+                onChange={(e) => setDisplayName(e.target.value)}
+                placeholder="e.g. Jamie"
+                required
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label>Role</Label>
+              <Select value={role} onValueChange={(v) => setRole(v as UserRole)}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {ROLES.filter((r) => r !== "owner").map((r) => (
+                    <SelectItem key={r} value={r}>
+                      {ROLE_LABELS[r]}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-muted-foreground">
+                {ROLE_DESCRIPTIONS[role]}
+              </p>
+            </div>
+            <DialogFooter>
+              <Button variant="outline" type="button" onClick={handleClose}>
+                Cancel
+              </Button>
+              <Button type="submit" disabled={invite.isPending}>
+                {invite.isPending ? "Sending…" : "Send invite"}
+              </Button>
+            </DialogFooter>
+          </form>
+        )}
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+export function StaffPage() {
+  const { data: members = [], isLoading } = useStaff();
+  const updateRole = useUpdateMemberRole();
+  const toggleActive = useToggleMemberActive();
+  const { user } = useAuth();
+
+  const [inviteOpen, setInviteOpen] = useState(false);
+
+  const active = members.filter((m) => m.is_active);
+  const inactive = members.filter((m) => !m.is_active);
+
+  return (
+    <AppLayout>
+      <div className="p-8 max-w-4xl mx-auto">
+        <PageHeader
+          title="Staff"
+          subtitle={`${active.length} active members`}
+          actions={
+            <Button onClick={() => setInviteOpen(true)}>
+              <UserPlus className="w-4 h-4 mr-1.5" />
+              Invite member
+            </Button>
+          }
+        />
+
+        {/* Role legend */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-8">
+          {ROLES.map((role) => (
+            <div key={role} className="p-3 bg-card border border-card-border rounded-xl shadow-sm">
+              <RoleBadge role={role} />
+              <p className="text-xs text-muted-foreground mt-2 leading-relaxed">
+                {ROLE_DESCRIPTIONS[role]}
+              </p>
+            </div>
+          ))}
+        </div>
+
+        {isLoading ? (
+          <div className="space-y-2">
+            {Array.from({ length: 4 }).map((_, i) => (
+              <div key={i} className="h-20 bg-muted rounded-xl animate-pulse" />
+            ))}
+          </div>
+        ) : members.length === 0 ? (
+          <EmptyState
+            icon={Users}
+            title="No staff members yet"
+            description="Invite your team to manage the cafe together."
+            action={
+              <Button onClick={() => setInviteOpen(true)}>
+                <UserPlus className="w-4 h-4 mr-1.5" />
+                Invite first member
+              </Button>
+            }
+          />
+        ) : (
+          <div className="space-y-2">
+            {members.map((member) => {
+              const isSelf = member.user_id === user?.id;
+              return (
+                <div
+                  key={member.id}
+                  className={cn(
+                    "flex items-center gap-4 p-4 bg-card border border-card-border rounded-xl shadow-sm",
+                    !member.is_active && "opacity-50"
+                  )}
+                >
+                  {/* Avatar */}
+                  <div className="flex items-center justify-center w-10 h-10 rounded-full bg-primary/10 text-primary font-bold text-sm shrink-0">
+                    {member.display_name.charAt(0).toUpperCase()}
+                  </div>
+
+                  {/* Info */}
+                  <div className="flex-1 min-w-0">
+                    <p className="font-medium text-foreground flex items-center gap-2">
+                      {member.display_name}
+                      {isSelf && (
+                        <span className="text-xs text-muted-foreground font-normal">(you)</span>
+                      )}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      Joined {formatDate(member.created_at)}
+                    </p>
+                  </div>
+
+                  {/* Role select */}
+                  <Select
+                    value={member.role}
+                    onValueChange={(v) =>
+                      updateRole.mutate({ id: member.id, role: v as UserRole })
+                    }
+                    disabled={isSelf || member.role === "owner"}
+                  >
+                    <SelectTrigger className="w-32 h-8 text-xs">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {ROLES.map((r) => (
+                        <SelectItem key={r} value={r} className="text-xs">
+                          {ROLE_LABELS[r]}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+
+                  {/* Active toggle */}
+                  <Switch
+                    checked={member.is_active}
+                    onCheckedChange={(v) =>
+                      toggleActive.mutate({ id: member.id, is_active: v })
+                    }
+                    disabled={isSelf}
+                  />
+                </div>
+              );
+            })}
+          </div>
+        )}
+
+        <InviteDialog open={inviteOpen} onOpenChange={setInviteOpen} />
+      </div>
+    </AppLayout>
+  );
+}
