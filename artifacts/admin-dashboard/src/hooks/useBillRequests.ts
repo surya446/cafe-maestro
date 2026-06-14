@@ -54,7 +54,7 @@ export function useBillRequests() {
 
   useEffect(() => {
     const channel = supabase
-      .channel("staff_bill_requests_realtime")
+      .channel(`staff_bill_requests_rt_${Math.random().toString(36).slice(2)}`)
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "bill_requests" },

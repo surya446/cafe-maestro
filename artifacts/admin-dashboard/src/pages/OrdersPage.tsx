@@ -781,7 +781,9 @@ export function OrdersPage() {
   const pendingOrders = (qc.getQueryData<StaffOrder[]>(["staff_orders"]) ?? []).filter(
     (o) => o.status === "pending_approval"
   );
-  const { pendingBills } = useBillRequests();
+  const pendingBills = (qc.getQueryData<BillRequest[]>(["staff_bill_requests"]) ?? []).filter(
+    (b) => b.status === "pending"
+  );
 
   return (
     <AppLayout>
