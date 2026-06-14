@@ -357,7 +357,7 @@ Deno.serve(async (req: Request) => {
   const { data: inviteData, error: inviteError } =
     await adminClient.auth.admin.inviteUserByEmail(normalizedEmail, {
       data: { full_name: trimmedName, cafe_id, role: staffRole },
-      redirectTo: `${siteUrl.replace(/\/$/, "")}/auth/confirm`,
+      redirectTo: `${siteUrl.replace(/\/$/, "")}/admin/auth/confirm`,
     });
 
   // ── Path A: New auth user (invite sent successfully) ──────────

@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useLocation } from "wouter";
 import { Coffee, Eye, EyeOff, AlertCircle, CheckCircle2 } from "lucide-react";
 import { supabase } from "@/lib/supabase";
@@ -7,6 +7,12 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
 type PageState = "checking" | "ready" | "error" | "success";
+
+// Parse key=value pairs from the URL hash fragment.
+// Supabase appends tokens as: #access_token=...&refresh_token=...&type=invite
+function parseHash(): URLSearchParams {
+  return new URLSearchParams(window.location.hash.replace(/^#/, ""));
+}
 
 export function AuthConfirmPage() {
   const [, navigate] = useLocation();
@@ -20,25 +26,83 @@ export function AuthConfirmPage() {
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
+  // Guard against calling setPageState after unmount or after already settled.
+  const settled = useRef(false);
+  function settle(state: PageState, errorMsg?: string) {
+    if (settled.current) return;
+    settled.current = true;
+    if (errorMsg) setSessionError(errorMsg);
+    setPageState(state);
+  }
+
   useEffect(() => {
-    async function checkSession() {
-      const { data, error } = await supabase.auth.getSession();
-      if (error || !data.session) {
-        setSessionError(
-          "This invite link is invalid or has already been used. " +
-          "Please ask your administrator to send a new invite."
-        );
-        setPageState("error");
-      } else {
-        setPageState("ready");
-      }
+    const params = parseHash();
+
+    // ── 1. Supabase error in hash (expired, invalid, already used) ──
+    const hashError = params.get("error");
+    const hashErrorDesc = params.get("error_description");
+    if (hashError) {
+      settle(
+        "error",
+        hashErrorDesc?.replace(/\+/g, " ") ??
+          "This invite link is invalid or has already been used."
+      );
+      return;
     }
-    checkSession();
+
+    // ── 2. No tokens in hash at all — not a valid invite URL ──────
+    const accessToken = params.get("access_token");
+    const refreshToken = params.get("refresh_token");
+    if (!accessToken || !refreshToken) {
+      settle(
+        "error",
+        "This invite link is missing required tokens. Please ask your administrator to send a new invite."
+      );
+      return;
+    }
+
+    // ── 3. Explicitly establish the session from the hash tokens ──
+    // detectSessionInUrl:true processes the hash asynchronously.
+    // We also call setSession directly to guarantee timing.
+    supabase.auth
+      .setSession({ access_token: accessToken, refresh_token: refreshToken })
+      .then(({ data, error }) => {
+        if (error || !data.session) {
+          settle(
+            "error",
+            "This invite link has expired or has already been used. Please ask your administrator to send a new invite."
+          );
+        } else {
+          settle("ready");
+        }
+      });
+
+    // ── 4. Also listen for auth state (covers detectSessionInUrl path) ──
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      (event, session) => {
+        if ((event === "SIGNED_IN" || event === "USER_UPDATED") && session) {
+          settle("ready");
+        }
+      }
+    );
+
+    // ── 5. Timeout fallback — treat silence as expired ────────────
+    const timeout = setTimeout(() => {
+      settle(
+        "error",
+        "This invite link has expired or has already been used. Please ask your administrator to send a new invite."
+      );
+    }, 10_000);
+
+    return () => {
+      subscription.unsubscribe();
+      clearTimeout(timeout);
+    };
   }, []);
 
   useEffect(() => {
     if (pageState === "success") {
-      const timer = setTimeout(() => navigate("/login"), 2000);
+      const timer = setTimeout(() => navigate("/login"), 2500);
       return () => clearTimeout(timer);
     }
   }, [pageState, navigate]);
@@ -61,7 +125,9 @@ export function AuthConfirmPage() {
     setLoading(false);
 
     if (error) {
-      setSubmitError(error.message ?? "Failed to set password. Please try again.");
+      setSubmitError(
+        error.message ?? "Failed to set password. Please try again."
+      );
     } else {
       await supabase.auth.signOut();
       setPageState("success");
@@ -102,7 +168,9 @@ export function AuthConfirmPage() {
           ].map((feature) => (
             <div key={feature} className="flex items-center gap-3">
               <div className="w-1.5 h-1.5 rounded-full bg-sidebar-primary shrink-0" />
-              <span className="text-sm text-sidebar-foreground/70">{feature}</span>
+              <span className="text-sm text-sidebar-foreground/70">
+                {feature}
+              </span>
             </div>
           ))}
         </div>
