@@ -205,7 +205,12 @@ export function useTableSession(qrToken: string) {
         setSessionState("active");
       } catch (err: unknown) {
         if (cancelled) return;
-        setSessionState("invalid");
+        const msg = err instanceof Error ? err.message : String(err);
+        if (msg.includes("TABLE_CLOSED")) {
+          setSessionState("ended");
+        } else {
+          setSessionState("invalid");
+        }
       }
     }
 

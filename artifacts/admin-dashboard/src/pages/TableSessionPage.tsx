@@ -666,7 +666,7 @@ export function TableSessionPage() {
       <SessionScreen
         icon={<XCircle className="h-12 w-12" />}
         title="Session ended"
-        body="This session has been ended. Please ask your waiter for assistance or scan the QR code again."
+        body="Session ended. Please ask staff to start a new session."
       />
     );
   }
