@@ -389,7 +389,10 @@ export function StaffPage() {
                         </Badge>
                       )}
                     </p>
-                    <p className="text-xs text-muted-foreground">
+                    <p className="text-xs text-muted-foreground truncate">
+                      {member.email}
+                    </p>
+                    <p className="text-xs text-muted-foreground/60">
                       Joined {formatDate(member.created_at)}
                     </p>
                   </div>
