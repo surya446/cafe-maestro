@@ -278,7 +278,7 @@ function CreateMemberDialog({
 }
 
 export function StaffPage() {
-  const { data: members = [], isLoading } = useStaff();
+  const { data: members = [], isLoading, isError, error } = useStaff();
   const updateRole = useUpdateMemberRole();
   const toggleActive = useToggleMemberActive();
   const deleteUser = useDeleteStaffUser();
@@ -330,6 +330,13 @@ export function StaffPage() {
             {Array.from({ length: 4 }).map((_, i) => (
               <div key={i} className="h-20 bg-muted rounded-xl animate-pulse" />
             ))}
+          </div>
+        ) : isError ? (
+          <div className="rounded-xl border border-destructive/30 bg-destructive/5 px-5 py-4 text-sm text-destructive">
+            <p className="font-medium">Failed to load staff members</p>
+            <p className="mt-1 text-destructive/80">
+              {error instanceof Error ? error.message : "An unexpected error occurred. Please refresh the page."}
+            </p>
           </div>
         ) : members.length === 0 ? (
           <EmptyState
