@@ -5,6 +5,16 @@ import { useAuth } from "./useAuth";
 
 const STAFF_KEY = (cafeId: string) => ["staff", cafeId];
 
+export interface CreateStaffResult {
+  success: boolean;
+  already_existed: boolean;
+  email_sent: boolean;
+  email: string;
+  temp_password: string;
+  login_url: string;
+  staff_user: StaffUser;
+}
+
 export function useStaff() {
   const { user } = useAuth();
 
@@ -87,7 +97,7 @@ export function useDeleteStaffUser() {
   });
 }
 
-export function useInviteMember() {
+export function useCreateStaffMember() {
   const { user } = useAuth();
   const qc = useQueryClient();
 
@@ -96,10 +106,10 @@ export function useInviteMember() {
       email: string;
       role: UserRole;
       full_name: string;
-    }) => {
+    }): Promise<CreateStaffResult> => {
       if (!user) throw new Error("Not authenticated");
       const { data, error } = await supabase.functions.invoke(
-        "invite-staff-member",
+        "create-staff-member",
         {
           body: {
             email: input.email,
@@ -110,7 +120,8 @@ export function useInviteMember() {
         }
       );
       if (error) throw error;
-      return data;
+      if (!data?.success) throw new Error(data?.error ?? "Unknown error");
+      return data as CreateStaffResult;
     },
     onSuccess: () =>
       qc.invalidateQueries({ queryKey: STAFF_KEY(user?.cafeId ?? "") }),
