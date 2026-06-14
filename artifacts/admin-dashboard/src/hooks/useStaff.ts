@@ -16,7 +16,6 @@ export function useStaff() {
         .from("staff_users")
         .select("*")
         .eq("cafe_id", user.cafeId)
-        .eq("is_active", true)
         .order("created_at");
       if (error) throw error;
       return data ?? [];
