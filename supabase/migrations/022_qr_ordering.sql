@@ -95,11 +95,11 @@ BEGIN
   --    and the other catches unique_violation then retries.
   <<session_loop>>
   LOOP
-    SELECT id INTO v_session_id
-    FROM   table_sessions
-    WHERE  table_id   = v_table.id
-      AND  status     = 'active'
-      AND  expires_at > NOW()
+    SELECT ts2.id INTO v_session_id
+    FROM   table_sessions ts2
+    WHERE  ts2.table_id   = v_table.id
+      AND  ts2.status     = 'active'
+      AND  ts2.expires_at > NOW()
     LIMIT 1;
 
     EXIT session_loop WHEN v_session_id IS NOT NULL;
