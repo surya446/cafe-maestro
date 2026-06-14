@@ -215,10 +215,13 @@ BEGIN
   END IF;
 
   -- Resolve QR token → active physical table
-  SELECT * INTO v_table
-  FROM   cafe_tables
-  WHERE  qr_code_token = p_qr_token
-    AND  is_active     = true;
+  -- Use explicit alias 'ct' so qr_code_token / is_active are unambiguous
+  -- with any RETURNS TABLE output column of the same name in future.
+  SELECT ct.*
+  INTO   v_table
+  FROM   cafe_tables ct
+  WHERE  ct.qr_code_token = p_qr_token
+    AND  ct.is_active     = true;
 
   IF NOT FOUND THEN
     RAISE EXCEPTION 'TABLE_NOT_FOUND'
@@ -226,18 +229,19 @@ BEGIN
   END IF;
 
   -- ── Group assignment ──────────────────────────────────────────
-  -- Get the current active group for this table.
-  -- If none exists (first scan ever, or table was just cleared),
-  -- create a new group. This is the ONLY place groups are created.
-  SELECT id INTO v_group_id
-  FROM   table_groups
-  WHERE  table_id = v_table.id
-    AND  status   = 'active';
+  -- Alias 'tg' prevents PostgreSQL from confusing the bare column
+  -- name 'table_id' with the RETURNS TABLE output parameter of the
+  -- same name (error 42702 "column reference is ambiguous").
+  SELECT tg.id
+  INTO   v_group_id
+  FROM   table_groups tg
+  WHERE  tg.table_id = v_table.id
+    AND  tg.status   = 'active';
 
   IF NOT FOUND THEN
     INSERT INTO table_groups (cafe_id, table_id)
     VALUES (v_table.cafe_id, v_table.id)
-    RETURNING id INTO v_group_id;
+    RETURNING table_groups.id INTO v_group_id;
   END IF;
   -- ─────────────────────────────────────────────────────────────
 
@@ -246,9 +250,11 @@ BEGIN
   -- on this table whose expires_at has already passed.
   INSERT INTO table_sessions (cafe_id, table_id, customer_name, group_id)
   VALUES (v_table.cafe_id, v_table.id, v_name, v_group_id)
-  RETURNING id INTO v_session_id;
+  RETURNING table_sessions.id INTO v_session_id;
 
-  -- Register the device; capture user_agent for audit trail
+  -- Register the device; capture user_agent for audit trail.
+  -- 'session_devices.device_token' is already table-qualified to avoid
+  -- ambiguity with the RETURNS TABLE output param 'device_token'.
   INSERT INTO session_devices (session_id, cafe_id, user_agent)
   VALUES (
     v_session_id,
@@ -257,20 +263,22 @@ BEGIN
   )
   RETURNING session_devices.device_token INTO v_device_token;
 
+  -- All selected expressions are explicitly table-aliased so PostgreSQL
+  -- never confuses them with the RETURNS TABLE output parameters.
   RETURN QUERY
   SELECT
-    ts.id,
-    v_device_token,
-    ts.cafe_id,
-    c.name::text        AS cafe_name,
-    ts.table_id,
-    v_table.number      AS table_number,
-    v_table.name        AS table_name,
-    ts.expires_at,
-    ts.customer_name
-  FROM  table_sessions ts
-  JOIN  cafes          c  ON c.id = ts.cafe_id
-  WHERE ts.id = v_session_id;
+    ts.id              AS session_id,
+    v_device_token     AS device_token,
+    ts.cafe_id         AS cafe_id,
+    c.name::text       AS cafe_name,
+    ts.table_id        AS table_id,
+    v_table.number     AS table_number,
+    v_table.name       AS table_name,
+    ts.expires_at      AS expires_at,
+    ts.customer_name   AS customer_name
+  FROM   table_sessions ts
+  JOIN   cafes          c  ON c.id = ts.cafe_id
+  WHERE  ts.id = v_session_id;
 END;
 $$;
 
