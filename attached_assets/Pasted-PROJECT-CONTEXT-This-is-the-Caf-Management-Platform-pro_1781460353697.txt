@@ -1,0 +1,105 @@
+PROJECT CONTEXT
+
+This is the Café Management Platform project.
+
+Already completed and working:
+
+* Supabase backend
+* Menu management
+* Gallery
+* Offers
+* Bookings
+* Staff management
+* Invite staff Edge Function
+* QR ordering system
+* Orders page
+* Bill requests
+* Session ending
+* Table ordering route
+
+Current architecture before this change:
+
+* One active session per table
+* Multiple devices could join the same session
+
+We are now replacing that architecture.
+
+FINAL DECISIONS (LOCKED)
+
+Session Model:
+
+* Every QR scan creates a NEW customer session.
+* Customer must enter a name before ordering.
+* Multiple active sessions can exist simultaneously on the same table.
+* Orders belong to a session.
+* Customers can see ALL orders placed on the table.
+* Staff can see which customer/session placed each order.
+* Staff can end one session.
+* Staff can end all sessions on a table.
+* Historical sessions must remain in the database.
+
+Billing Model:
+
+* Bill is PER TABLE.
+* One combined table bill.
+* Request Bill is table-scoped, not session-scoped.
+
+Audit Data:
+
+Store:
+
+* customer_name
+* session_id
+* device_token
+* user_agent
+* started_at
+* ended_at
+
+Name is for display only, not identity verification.
+
+Migration Status:
+
+Migration file already exists:
+
+supabase/migrations/025_multi_session.sql
+
+It contains:
+
+* table_sessions.customer_name
+* session_devices.user_agent
+* removes table_sessions_one_active_per_table
+* create_session()
+* get_table_orders()
+* end_table_sessions()
+* updated validate_device()
+* updated request_bill()
+* drops old join_or_create_session()
+* drops old get_session_orders()
+
+IMPORTANT
+
+Before writing any frontend code:
+
+1. Read the actual contents of migration 025.
+2. Verify it applies cleanly against the current schema.
+3. Report any migration errors before making changes.
+4. Do NOT redesign the architecture.
+5. Do NOT revert to one-session-per-table.
+6. Do NOT change billing back to per-session.
+
+After verifying migration 025:
+
+Implement:
+
+* Name-entry screen after QR scan
+* create_session integration
+* validate_device integration
+* get_table_orders integration
+* Multi-session staff view
+* End All Sessions button
+* Customer order list grouped by customer name
+* Combined table bill display
+
+First task:
+
+Read migration 025 completely and provide an implementation plan before modifying any frontend code.
