@@ -132,7 +132,6 @@ export interface StaffUser {
   email: string;
   role: UserRole;
   is_active: boolean;
-  must_change_password: boolean;
   deleted_at: string | null;
   deleted_by: string | null;
   created_at: string;
@@ -221,5 +220,4 @@ export interface AuthUser {
   displayName: string;
   cafeId: string;
   cafeName: string;
-  mustChangePassword: boolean;
 }

@@ -2,13 +2,8 @@ import { useState } from "react";
 import {
   Users,
   UserPlus,
-  Trash2,
-  Copy,
-  Check,
-  ExternalLink,
-  Eye,
-  EyeOff,
   Mail,
+  Trash2,
 } from "lucide-react";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { PageHeader } from "@/components/common/PageHeader";
@@ -47,8 +42,7 @@ import {
   useUpdateMemberRole,
   useToggleMemberActive,
   useDeleteStaffUser,
-  useCreateStaffMember,
-  CreateStaffResult,
+  useInviteMember,
 } from "@/hooks/useStaff";
 import { useAuth } from "@/hooks/useAuth";
 import { StaffUser, UserRole, AuthUser } from "@/types";
@@ -96,249 +90,6 @@ function canDeleteMember(viewer: AuthUser, member: StaffUser): boolean {
   return canManageMember(viewer, member);
 }
 
-// ── Copy button with transient ✓ feedback ─────────────────────
-
-function CopyButton({ value, label }: { value: string; label?: string }) {
-  const [copied, setCopied] = useState(false);
-
-  function handleCopy() {
-    navigator.clipboard.writeText(value).then(() => {
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    });
-  }
-
-  return (
-    <button
-      type="button"
-      onClick={handleCopy}
-      className={cn(
-        "shrink-0 p-1.5 rounded transition-colors",
-        copied
-          ? "text-emerald-600 bg-emerald-50"
-          : "text-muted-foreground hover:text-foreground hover:bg-muted"
-      )}
-      title={label ?? "Copy"}
-    >
-      {copied ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
-    </button>
-  );
-}
-
-// ── Credentials card shown after account creation ─────────────
-
-function CredentialsCard({ result, name }: { result: CreateStaffResult; name: string }) {
-  const [showPass, setShowPass] = useState(false);
-
-  return (
-    <div className="space-y-4">
-      {result.email_sent ? (
-        <div className="flex items-start gap-2.5 p-3 rounded-lg bg-emerald-50 text-emerald-700 border border-emerald-200">
-          <Mail className="w-4 h-4 mt-0.5 shrink-0" />
-          <p className="text-sm">
-            Credentials emailed to <strong>{result.email}</strong>.
-          </p>
-        </div>
-      ) : (
-        <p className="text-sm text-muted-foreground">
-          Share these credentials with <strong>{name}</strong>. They will be
-          asked to set a permanent password on first login.
-        </p>
-      )}
-
-      <div className="rounded-xl border border-card-border bg-muted/40 divide-y divide-card-border overflow-hidden">
-        {/* Email */}
-        <div className="flex items-center gap-2 px-4 py-3">
-          <div className="flex-1 min-w-0">
-            <p className="text-[11px] font-medium text-muted-foreground uppercase tracking-wide mb-0.5">
-              Email
-            </p>
-            <p className="text-sm font-medium truncate">{result.email}</p>
-          </div>
-          <CopyButton value={result.email} label="Copy email" />
-        </div>
-
-        {/* Temporary password */}
-        <div className="flex items-center gap-2 px-4 py-3">
-          <div className="flex-1 min-w-0">
-            <p className="text-[11px] font-medium text-muted-foreground uppercase tracking-wide mb-0.5">
-              Temporary password
-            </p>
-            <p className="text-sm font-mono font-medium tracking-widest">
-              {showPass ? result.temp_password : "•".repeat(result.temp_password.length)}
-            </p>
-          </div>
-          <button
-            type="button"
-            onClick={() => setShowPass((v) => !v)}
-            className="shrink-0 p-1.5 rounded text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
-            title={showPass ? "Hide password" : "Reveal password"}
-          >
-            {showPass ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
-          </button>
-          <CopyButton value={result.temp_password} label="Copy password" />
-        </div>
-
-        {/* Login URL */}
-        <div className="flex items-center gap-2 px-4 py-3">
-          <div className="flex-1 min-w-0">
-            <p className="text-[11px] font-medium text-muted-foreground uppercase tracking-wide mb-0.5">
-              Login URL
-            </p>
-            <a
-              href={result.login_url}
-              target="_blank"
-              rel="noreferrer"
-              className="text-sm text-primary hover:underline inline-flex items-center gap-1 truncate"
-            >
-              {result.login_url}
-              <ExternalLink className="w-3 h-3 shrink-0" />
-            </a>
-          </div>
-          <CopyButton value={result.login_url} label="Copy login URL" />
-        </div>
-      </div>
-    </div>
-  );
-}
-
-// ── Add Member dialog ─────────────────────────────────────────
-
-function AddMemberDialog({
-  open,
-  onOpenChange,
-}: {
-  open: boolean;
-  onOpenChange: (o: boolean) => void;
-}) {
-  const createMember = useCreateStaffMember();
-  const [fullName, setFullName]     = useState("");
-  const [email, setEmail]           = useState("");
-  const [role, setRole]             = useState<UserRole>("staff");
-  const [result, setResult]         = useState<CreateStaffResult | null>(null);
-  const [createError, setCreateError] = useState<string | null>(null);
-
-  function handleClose() {
-    onOpenChange(false);
-    // Reset after close animation
-    setTimeout(() => {
-      setFullName("");
-      setEmail("");
-      setRole("staff");
-      setResult(null);
-      setCreateError(null);
-    }, 200);
-  }
-
-  async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    setCreateError(null);
-    try {
-      const data = await createMember.mutateAsync({
-        email,
-        role,
-        full_name: fullName,
-      });
-      setResult(data);
-    } catch (err: unknown) {
-      const msg =
-        err instanceof Error
-          ? err.message
-          : "Failed to create account. Please try again.";
-      setCreateError(msg);
-    }
-  }
-
-  return (
-    <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent className="max-w-sm">
-        <DialogHeader>
-          <DialogTitle>
-            {result ? "Account created" : "Add staff member"}
-          </DialogTitle>
-        </DialogHeader>
-
-        {result ? (
-          <>
-            <CredentialsCard result={result} name={fullName} />
-            <DialogFooter>
-              <Button className="w-full" onClick={handleClose}>
-                Done
-              </Button>
-            </DialogFooter>
-          </>
-        ) : (
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="space-y-1.5">
-              <Label>Full name *</Label>
-              <Input
-                value={fullName}
-                onChange={(e) => setFullName(e.target.value)}
-                placeholder="e.g. Jamie Lee"
-                required
-                disabled={createMember.isPending}
-              />
-            </div>
-            <div className="space-y-1.5">
-              <Label>Email *</Label>
-              <Input
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="staff@example.com"
-                required
-                disabled={createMember.isPending}
-              />
-            </div>
-            <div className="space-y-1.5">
-              <Label>Role</Label>
-              <Select
-                value={role}
-                onValueChange={(v) => setRole(v as UserRole)}
-                disabled={createMember.isPending}
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {ROLES.filter((r) => r !== "owner").map((r) => (
-                    <SelectItem key={r} value={r}>
-                      {ROLE_LABELS[r]}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <p className="text-xs text-muted-foreground">
-                {ROLE_DESCRIPTIONS[role]}
-              </p>
-            </div>
-
-            {createError && (
-              <p className="text-sm text-destructive">{createError}</p>
-            )}
-
-            <DialogFooter>
-              <Button
-                variant="outline"
-                type="button"
-                onClick={handleClose}
-                disabled={createMember.isPending}
-              >
-                Cancel
-              </Button>
-              <Button type="submit" disabled={createMember.isPending}>
-                {createMember.isPending ? "Creating…" : "Create account"}
-              </Button>
-            </DialogFooter>
-          </form>
-        )}
-      </DialogContent>
-    </Dialog>
-  );
-}
-
-// ── Delete confirmation dialog ────────────────────────────────
-
 function DeleteConfirmDialog({
   member,
   open,
@@ -379,16 +130,114 @@ function DeleteConfirmDialog({
   );
 }
 
-// ── Main page ─────────────────────────────────────────────────
+function InviteDialog({
+  open,
+  onOpenChange,
+}: {
+  open: boolean;
+  onOpenChange: (o: boolean) => void;
+}) {
+  const invite = useInviteMember();
+  const [email, setEmail] = useState("");
+  const [displayName, setDisplayName] = useState("");
+  const [role, setRole] = useState<UserRole>("staff");
+  const [sent, setSent] = useState(false);
+
+  async function handle(e: React.FormEvent) {
+    e.preventDefault();
+    await invite.mutateAsync({ email, role, full_name: displayName });
+    setSent(true);
+  }
+
+  function handleClose() {
+    onOpenChange(false);
+    setSent(false);
+    setEmail("");
+    setDisplayName("");
+    setRole("staff");
+  }
+
+  return (
+    <Dialog open={open} onOpenChange={handleClose}>
+      <DialogContent className="max-w-sm">
+        <DialogHeader>
+          <DialogTitle>Invite staff member</DialogTitle>
+        </DialogHeader>
+        {sent ? (
+          <div className="text-center py-6">
+            <div className="flex items-center justify-center w-12 h-12 rounded-full bg-emerald-100 text-emerald-600 mx-auto mb-4">
+              <Mail className="w-6 h-6" />
+            </div>
+            <p className="font-medium text-foreground">Invitation sent!</p>
+            <p className="text-sm text-muted-foreground mt-1">
+              An email has been sent to <strong>{email}</strong>.
+            </p>
+            <Button className="mt-4" onClick={handleClose}>
+              Done
+            </Button>
+          </div>
+        ) : (
+          <form onSubmit={handle} className="space-y-4">
+            <div className="space-y-1.5">
+              <Label>Email *</Label>
+              <Input
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="staff@example.com"
+                required
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label>Display name *</Label>
+              <Input
+                value={displayName}
+                onChange={(e) => setDisplayName(e.target.value)}
+                placeholder="e.g. Jamie"
+                required
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label>Role</Label>
+              <Select value={role} onValueChange={(v) => setRole(v as UserRole)}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {ROLES.filter((r) => r !== "owner").map((r) => (
+                    <SelectItem key={r} value={r}>
+                      {ROLE_LABELS[r]}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-muted-foreground">
+                {ROLE_DESCRIPTIONS[role]}
+              </p>
+            </div>
+            <DialogFooter>
+              <Button variant="outline" type="button" onClick={handleClose}>
+                Cancel
+              </Button>
+              <Button type="submit" disabled={invite.isPending}>
+                {invite.isPending ? "Sending…" : "Send invite"}
+              </Button>
+            </DialogFooter>
+          </form>
+        )}
+      </DialogContent>
+    </Dialog>
+  );
+}
 
 export function StaffPage() {
   const { data: members = [], isLoading } = useStaff();
-  const updateRole    = useUpdateMemberRole();
-  const toggleActive  = useToggleMemberActive();
-  const deleteUser    = useDeleteStaffUser();
-  const { user }      = useAuth();
+  const updateRole = useUpdateMemberRole();
+  const toggleActive = useToggleMemberActive();
+  const deleteUser = useDeleteStaffUser();
+  const { user } = useAuth();
 
-  const [addOpen, setAddOpen]           = useState(false);
+  const [inviteOpen, setInviteOpen] = useState(false);
   const [deletingMember, setDeletingMember] = useState<StaffUser | null>(null);
 
   const active = members.filter((m) => m.is_active);
@@ -407,9 +256,9 @@ export function StaffPage() {
           title="Staff"
           subtitle={`${active.length} active member${active.length !== 1 ? "s" : ""}`}
           actions={
-            <Button onClick={() => setAddOpen(true)}>
+            <Button onClick={() => setInviteOpen(true)}>
               <UserPlus className="w-4 h-4 mr-1.5" />
-              Add member
+              Invite member
             </Button>
           }
         />
@@ -439,21 +288,21 @@ export function StaffPage() {
           <EmptyState
             icon={Users}
             title="No staff members yet"
-            description="Add your team to manage the cafe together."
+            description="Invite your team to manage the cafe together."
             action={
-              <Button onClick={() => setAddOpen(true)}>
+              <Button onClick={() => setInviteOpen(true)}>
                 <UserPlus className="w-4 h-4 mr-1.5" />
-                Add first member
+                Invite first member
               </Button>
             }
           />
         ) : (
           <div className="space-y-2">
             {members.map((member) => {
-              const isSelf    = member.id === user?.id;
+              const isSelf = member.id === user?.id;
               const canManage = user ? canManageMember(user, member) : false;
               const canDelete = user ? canDeleteMember(user, member) : false;
-              const isOwner   = member.role === "owner";
+              const isOwner = member.role === "owner";
 
               return (
                 <div
@@ -485,17 +334,9 @@ export function StaffPage() {
                           Disabled
                         </Badge>
                       )}
-                      {member.must_change_password && (
-                        <Badge
-                          variant="outline"
-                          className="text-[10px] px-1.5 py-0 h-4 border-amber-300 text-amber-700 bg-amber-50"
-                        >
-                          Pending first login
-                        </Badge>
-                      )}
                     </p>
                     <p className="text-xs text-muted-foreground">
-                      {member.email} · Joined {formatDate(member.created_at)}
+                      Joined {formatDate(member.created_at)}
                     </p>
                   </div>
 
@@ -519,20 +360,18 @@ export function StaffPage() {
                     </SelectContent>
                   </Select>
 
-                  {/* Disable / Enable toggle */}
+                  {/* Disable / Enable toggle — hidden for owners and self */}
                   {canManage && (
                     <Switch
                       checked={member.is_active}
                       onCheckedChange={(v) =>
                         toggleActive.mutate({ id: member.id, is_active: v })
                       }
-                      title={
-                        member.is_active ? "Disable member" : "Enable member"
-                      }
+                      title={member.is_active ? "Disable member" : "Enable member"}
                     />
                   )}
 
-                  {/* Delete button */}
+                  {/* Delete button — hidden for owners, self, and those without permission */}
                   {canDelete && (
                     <Button
                       variant="ghost"
@@ -546,19 +385,23 @@ export function StaffPage() {
                   )}
 
                   {/* Spacer so rows align when no action buttons */}
-                  {!canManage && !isSelf && <div className="w-8 shrink-0" />}
+                  {!canManage && !isSelf && (
+                    <div className="w-8 shrink-0" />
+                  )}
                 </div>
               );
             })}
           </div>
         )}
 
-        <AddMemberDialog open={addOpen} onOpenChange={setAddOpen} />
+        <InviteDialog open={inviteOpen} onOpenChange={setInviteOpen} />
 
         <DeleteConfirmDialog
           member={deletingMember}
           open={!!deletingMember}
-          onOpenChange={(o) => { if (!o) setDeletingMember(null); }}
+          onOpenChange={(o) => {
+            if (!o) setDeletingMember(null);
+          }}
           onConfirm={handleDeleteConfirm}
           isPending={deleteUser.isPending}
         />

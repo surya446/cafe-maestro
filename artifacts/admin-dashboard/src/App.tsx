@@ -6,7 +6,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { useAuth } from "@/hooks/useAuth";
 
 import { LoginPage } from "@/pages/LoginPage";
-import { ChangePasswordPage } from "@/pages/ChangePasswordPage";
+import { AuthConfirmPage } from "@/pages/AuthConfirmPage";
 import { BookingFormPage } from "@/pages/BookingFormPage";
 import { TableSessionPage } from "@/pages/TableSessionPage";
 import { DashboardPage } from "@/pages/DashboardPage";
@@ -37,11 +37,6 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
     return <Redirect to="/login" />;
   }
 
-  // First-login guard: force password change before accessing any page.
-  if (user.mustChangePassword) {
-    return <Redirect to="/change-password" />;
-  }
-
   return <>{children}</>;
 }
 
@@ -49,7 +44,7 @@ function Router() {
   return (
     <Switch>
       <Route path="/login" component={LoginPage} />
-      <Route path="/change-password" component={ChangePasswordPage} />
+      <Route path="/auth/confirm" component={AuthConfirmPage} />
       <Route path="/book" component={BookingFormPage} />
       <Route path="/table/:token" component={TableSessionPage} />
       <Route path="/">
