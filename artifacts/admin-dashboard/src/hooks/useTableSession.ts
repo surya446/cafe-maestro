@@ -49,17 +49,25 @@ interface StoredDevice {
   sessionId: string;
 }
 
+interface EndedMarker {
+  ended: true;
+}
+
 function storageKey(qrToken: string) {
   return `cafe_session_${qrToken}`;
 }
 
-function loadStored(qrToken: string): StoredDevice | null {
+function loadStored(qrToken: string): StoredDevice | EndedMarker | null {
   try {
     const raw = localStorage.getItem(storageKey(qrToken));
-    return raw ? (JSON.parse(raw) as StoredDevice) : null;
+    return raw ? (JSON.parse(raw) as StoredDevice | EndedMarker) : null;
   } catch {
     return null;
   }
+}
+
+function isStoredDevice(s: StoredDevice | EndedMarker): s is StoredDevice {
+  return "deviceToken" in s;
 }
 
 function saveStored(qrToken: string, deviceToken: string, sessionId: string) {
@@ -68,6 +76,22 @@ function saveStored(qrToken: string, deviceToken: string, sessionId: string) {
 
 function clearStored(qrToken: string) {
   localStorage.removeItem(storageKey(qrToken));
+}
+
+// Writes an ended marker so that on page reload the guest sees the "ended"
+// screen rather than being silently dropped into a new session.
+// Cleared automatically when the guest does a fresh navigation (QR rescan).
+function markEnded(qrToken: string) {
+  localStorage.setItem(storageKey(qrToken), JSON.stringify({ ended: true }));
+}
+
+// Returns true when the page was opened via fresh navigation (QR scan, link,
+// address-bar) rather than a reload or back/forward traversal.
+function isFreshNavigation(): boolean {
+  const entries = performance.getEntriesByType(
+    "navigation"
+  ) as PerformanceNavigationTiming[];
+  return entries.length === 0 || entries[0].type === "navigate";
 }
 
 // ─── RPC wrappers ──────────────────────────────────────────────────────────────
@@ -154,17 +178,34 @@ export function useTableSession(qrToken: string) {
     let cancelled = false;
 
     async function init() {
+      // Distinguish QR scan (fresh navigation) from page reload.
+      // On fresh navigation: clear any ended marker so the guest can rejoin.
+      // On reload: preserve the ended marker so the "Session ended" screen persists.
+      const freshNav = isFreshNavigation();
+
       const stored = loadStored(qrToken);
 
-      // Try re-using stored device token first
-      if (stored) {
-        const result = await rpcValidateDevice(stored.deviceToken);
+      // Ended marker present → guard against reload silently auto-joining.
+      if (stored && !isStoredDevice(stored)) {
+        if (!freshNav) {
+          // Reload after staff-ended session → keep showing ended screen.
+          setSessionState("ended");
+          return;
+        }
+        // Fresh QR scan → guest intentionally rescanning; clear marker and join.
+        clearStored(qrToken);
+      }
+
+      // Try re-using stored device token first.
+      const storedDevice = loadStored(qrToken);
+      if (storedDevice && isStoredDevice(storedDevice)) {
+        const result = await rpcValidateDevice(storedDevice.deviceToken);
         if (cancelled) return;
 
         if (result?.is_valid) {
           setSessionInfo({
-            sessionId:    stored.sessionId,
-            deviceToken:  stored.deviceToken,
+            sessionId:    storedDevice.sessionId,
+            deviceToken:  storedDevice.deviceToken,
             cafeId:       result.cafe_id,
             cafeName:     result.cafe_name,
             tableId:      result.table_id,
@@ -176,16 +217,23 @@ export function useTableSession(qrToken: string) {
           return;
         }
 
-        // Stored token is no longer valid — clear it
-        clearStored(qrToken);
-        if (result) {
-          if (result.session_status === "ended")   { setSessionState("ended");   return; }
-          if (result.session_status === "expired") { setSessionState("expired"); return; }
+        // Stored token is no longer valid.
+        if (result?.session_status === "ended") {
+          // Staff ended this session — write ended marker so reloads stay on
+          // the ended screen. Do NOT fall through to join_or_create_session.
+          markEnded(qrToken);
+          setSessionState("ended");
+          return;
         }
-        // Device record missing or session unknown → fall through to fresh join
+
+        // Expired or device record gone → clear and fall through to fresh join
+        // (expired sessions allow automatic session creation).
+        clearStored(qrToken);
+        if (result?.session_status === "expired") { setSessionState("expired"); return; }
+        // Device record missing → fall through to join
       }
 
-      // Join (or create) a session fresh
+      // No stored token (or expired/unknown device) → join or create a session.
       try {
         const row = await rpcJoinOrCreate(qrToken);
         if (cancelled) return;
@@ -205,12 +253,7 @@ export function useTableSession(qrToken: string) {
         setSessionState("active");
       } catch (err: unknown) {
         if (cancelled) return;
-        const msg = err instanceof Error ? err.message : String(err);
-        if (msg.includes("TABLE_CLOSED")) {
-          setSessionState("ended");
-        } else {
-          setSessionState("invalid");
-        }
+        setSessionState("invalid");
       }
     }
 
@@ -235,7 +278,11 @@ export function useTableSession(qrToken: string) {
       }
 
       if (!result.is_valid) {
-        clearStored(qrToken);
+        if (result.session_status === "ended") {
+          markEnded(qrToken);   // preserve ended state across reloads
+        } else {
+          clearStored(qrToken); // expired → allow fresh join
+        }
         setSessionState(result.session_status === "ended" ? "ended" : "expired");
       }
 
@@ -267,10 +314,10 @@ export function useTableSession(qrToken: string) {
         (payload) => {
           const rec = payload.new as { status?: string };
           if (rec.status === "ended") {
-            clearStored(qrToken);
+            markEnded(qrToken);   // preserve ended state so reloads don't auto-join
             setSessionState("ended");
           } else if (rec.status === "expired") {
-            clearStored(qrToken);
+            clearStored(qrToken); // expired → allow fresh join on next scan
             setSessionState("expired");
           }
         }

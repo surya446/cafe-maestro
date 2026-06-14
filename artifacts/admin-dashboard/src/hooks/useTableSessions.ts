@@ -22,7 +22,6 @@ export interface CafeTable {
   name: string | null;
   qrCodeToken: string | null;
   isActive: boolean;
-  isClosed: boolean;
 }
 
 export function useTableSessions() {
@@ -67,7 +66,7 @@ export function useTableSessions() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("cafe_tables")
-        .select("id, cafe_id, number, name, qr_code_token, is_active, is_closed")
+        .select("id, cafe_id, number, name, qr_code_token, is_active")
         .order("number", { ascending: true });
 
       if (error) throw error;
@@ -79,7 +78,6 @@ export function useTableSessions() {
         name: t.name ?? null,
         qrCodeToken: t.qr_code_token ?? null,
         isActive: t.is_active,
-        isClosed: t.is_closed ?? false,
       }));
     },
     staleTime: 30_000,
@@ -134,16 +132,6 @@ export function useTableSessions() {
     },
   });
 
-  const reopenTableMutation = useMutation({
-    mutationFn: async (tableId: string) => {
-      const { error } = await supabase.rpc("reopen_table", { p_table_id: tableId });
-      if (error) throw error;
-    },
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["staff_tables"] });
-    },
-  });
-
   return {
     sessions,
     sessionsLoading,
@@ -155,8 +143,5 @@ export function useTableSessions() {
     regenerateQr: regenerateQrMutation.mutateAsync,
     isRegeneratingQr: regenerateQrMutation.isPending,
     regeneratingTableId: regenerateQrMutation.variables as string | undefined,
-    reopenTable: reopenTableMutation.mutateAsync,
-    isReopeningTable: reopenTableMutation.isPending,
-    reopeningTableId: reopenTableMutation.variables as string | undefined,
   };
 }

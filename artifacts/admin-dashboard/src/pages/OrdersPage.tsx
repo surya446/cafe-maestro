@@ -289,12 +289,8 @@ function OrdersTab() {
 // ─── Sessions Tab ─────────────────────────────────────────────────────────────
 
 function SessionsTab() {
-  const {
-    sessions, sessionsLoading,
-    tables,
-    endSession, isEndingSession, endingSessionId,
-    reopenTable, isReopeningTable, reopeningTableId,
-  } = useTableSessions();
+  const { sessions, sessionsLoading, endSession, isEndingSession, endingSessionId } =
+    useTableSessions();
   const [confirmId, setConfirmId] = useState<string | null>(null);
 
   if (sessionsLoading) {
@@ -326,7 +322,6 @@ function SessionsTab() {
   }
 
   return (
-    <>
     <div className="rounded-xl border overflow-hidden">
       <table className="w-full text-sm">
         <thead className="bg-muted/50 border-b">
@@ -410,58 +405,6 @@ function SessionsTab() {
         </tbody>
       </table>
     </div>
-
-    {tables.filter((t) => t.isClosed).length > 0 && (
-      <div className="mt-6">
-        <h3 className="text-sm font-semibold text-muted-foreground mb-3 flex items-center gap-2">
-          <XCircle className="h-4 w-4" />
-          Closed Tables
-        </h3>
-        <div className="rounded-xl border overflow-hidden">
-          <table className="w-full text-sm">
-            <thead className="bg-muted/50 border-b">
-              <tr>
-                <th className="px-4 py-3 text-left font-medium text-muted-foreground">Table</th>
-                <th className="px-4 py-3 text-left font-medium text-muted-foreground">Status</th>
-                <th className="px-4 py-3 text-right font-medium text-muted-foreground">Action</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y">
-              {tables.filter((t) => t.isClosed).map((table) => {
-                const label = tableLabel(table.number, table.name);
-                const isReopening = isReopeningTable && reopeningTableId === table.id;
-                return (
-                  <tr key={table.id} className="hover:bg-muted/20 transition-colors">
-                    <td className="px-4 py-3 font-medium">{label}</td>
-                    <td className="px-4 py-3">
-                      <span className="inline-flex items-center gap-1.5 text-xs font-medium text-destructive bg-destructive/10 px-2 py-0.5 rounded-full">
-                        <XCircle className="h-3 w-3" />
-                        Closed by staff
-                      </span>
-                    </td>
-                    <td className="px-4 py-3 text-right">
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        disabled={isReopening}
-                        onClick={() => reopenTable(table.id).catch(console.error)}
-                      >
-                        {isReopening ? (
-                          <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                        ) : (
-                          "Reopen Table"
-                        )}
-                      </Button>
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
-      </div>
-    )}
-    </>
   );
 }
 
