@@ -21,6 +21,9 @@ import {
   Bell,
   User,
   Trash2,
+  RotateCcw,
+  DollarSign,
+  BellRing,
 } from "lucide-react";
 import QRCode from "react-qr-code";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -30,7 +33,8 @@ import { AppLayout } from "@/components/layout/AppLayout";
 import { PageHeader } from "@/components/common/PageHeader";
 import { EmptyState } from "@/components/common/EmptyState";
 import { useOrders, StaffOrder, OrderStatus } from "@/hooks/useOrders";
-import { useTableSessions, ActiveSession, CafeTable } from "@/hooks/useTableSessions";
+import { useTableSessions, CafeTable } from "@/hooks/useTableSessions";
+import { useTableGroups, TableOverview, SessionInGroup } from "@/hooks/useTableGroups";
 import { useBillRequests, BillRequest } from "@/hooks/useBillRequests";
 import { useAuth } from "@/hooks/useAuth";
 import { formatCurrency } from "@/lib/utils";
@@ -296,50 +300,312 @@ function OrdersTab() {
   );
 }
 
-// ─── Sessions Tab ─────────────────────────────────────────────────────────────
+// ─── Tables Tab ───────────────────────────────────────────────────────────────
 
-interface TableGroup {
-  tableId: string;
-  tableLabel: string;
-  tableNumber: number;
-  sessions: ActiveSession[];
+function TableStatusBadge({ status }: { status: "active" | "bill_requested" }) {
+  if (status === "bill_requested") {
+    return (
+      <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 px-2 py-0.5 text-[11px] font-semibold text-amber-800">
+        <BellRing className="h-3 w-3" />
+        Bill Requested
+      </span>
+    );
+  }
+  return (
+    <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 px-2 py-0.5 text-[11px] font-semibold text-emerald-800">
+      <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
+      Active
+    </span>
+  );
 }
 
-function SessionsTab() {
+function TableCard({
+  table,
+  onEndSession,
+  isEndingSession,
+  endingSessionId,
+  onRequestBill,
+  isRequestingBill,
+  onClearTable,
+  isClearingTable,
+}: {
+  table: TableOverview;
+  onEndSession: (sessionId: string) => Promise<void>;
+  isEndingSession: boolean;
+  endingSessionId: string | undefined;
+  onRequestBill: (tableId: string) => Promise<string>;
+  isRequestingBill: boolean;
+  onClearTable: (tableId: string) => Promise<void>;
+  isClearingTable: boolean;
+}) {
+  const label = tableLabel(table.tableNumber, table.tableName);
+  const [confirmEndId, setConfirmEndId] = useState<string | null>(null);
+  const [confirmClear, setConfirmClear] = useState(false);
+  const [busyEnd, setBusyEnd] = useState(false);
+  const [busyBill, setBusyBill] = useState(false);
+  const [busyClear, setBusyClear] = useState(false);
+
+  async function handleEndSession(sessionId: string) {
+    setBusyEnd(true);
+    try {
+      await onEndSession(sessionId);
+    } catch (err) {
+      console.error("[end_session]", err);
+    } finally {
+      setBusyEnd(false);
+      setConfirmEndId(null);
+    }
+  }
+
+  async function handleRequestBill() {
+    setBusyBill(true);
+    try {
+      await onRequestBill(table.tableId);
+    } catch (err) {
+      console.error("[staff_request_bill]", err);
+    } finally {
+      setBusyBill(false);
+    }
+  }
+
+  async function handleClearTable() {
+    setBusyClear(true);
+    try {
+      await onClearTable(table.tableId);
+    } catch (err) {
+      console.error("[clear_table]", err);
+    } finally {
+      setBusyClear(false);
+      setConfirmClear(false);
+    }
+  }
+
+  return (
+    <div className="rounded-xl border overflow-hidden shadow-sm">
+      {/* ── Table header ──────────────────────────────────────────── */}
+      <div
+        className={cn(
+          "px-4 py-3 border-b",
+          table.tableStatus === "bill_requested"
+            ? "bg-amber-50"
+            : "bg-muted/40"
+        )}
+      >
+        <div className="flex items-start justify-between gap-3">
+          {/* Left: label + status + guests */}
+          <div className="flex flex-col gap-1 min-w-0">
+            <div className="flex items-center gap-2 flex-wrap">
+              <TableProperties className="h-4 w-4 text-muted-foreground shrink-0" />
+              <span className="font-semibold text-sm">{label}</span>
+              <TableStatusBadge status={table.tableStatus} />
+            </div>
+            <div className="flex items-center gap-3 text-xs text-muted-foreground pl-6">
+              <span className="flex items-center gap-1">
+                <Users className="h-3 w-3" />
+                {table.guestCount} {table.guestCount === 1 ? "guest" : "guests"}
+              </span>
+              <span className="flex items-center gap-1 font-semibold text-foreground">
+                <DollarSign className="h-3 w-3" />
+                {formatCurrency(table.total)}
+              </span>
+              {table.billRequestedAt && (
+                <span className="flex items-center gap-1 text-amber-700">
+                  <BellRing className="h-3 w-3" />
+                  {timeAgo(table.billRequestedAt)}
+                </span>
+              )}
+            </div>
+          </div>
+
+          {/* Right: Request Bill */}
+          {table.tableStatus === "active" && (
+            <Button
+              size="sm"
+              variant="outline"
+              className="shrink-0 gap-1.5 text-amber-700 border-amber-300 hover:bg-amber-50"
+              disabled={busyBill || isRequestingBill}
+              onClick={handleRequestBill}
+            >
+              {busyBill ? (
+                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+              ) : (
+                <Receipt className="h-3.5 w-3.5" />
+              )}
+              Request Bill
+            </Button>
+          )}
+        </div>
+      </div>
+
+      {/* ── Guest rows ────────────────────────────────────────────── */}
+      {table.sessions.length === 0 ? (
+        <div className="px-4 py-4 text-xs text-muted-foreground italic">
+          No active guests — sessions may have expired.
+        </div>
+      ) : (
+        <div className="divide-y">
+          {table.sessions.map((session) => {
+            const isConfirming = confirmEndId === session.id;
+            const isEnding = isEndingSession && endingSessionId === session.id;
+
+            return (
+              <div
+                key={session.id}
+                className="flex items-center gap-3 px-4 py-3 hover:bg-muted/20 transition-colors"
+              >
+                {/* Avatar + name */}
+                <div className="flex items-center gap-2 min-w-0 flex-1">
+                  <div className="w-7 h-7 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+                    <User className="h-3.5 w-3.5 text-primary" />
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-sm font-medium truncate">
+                      {session.customerName || "Guest"}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      Started {format(new Date(session.createdAt), "HH:mm")}
+                    </p>
+                  </div>
+                </div>
+
+                {/* Expiry */}
+                <div className="hidden sm:block shrink-0">
+                  <span
+                    className={cn(
+                      "text-xs",
+                      new Date(session.expiresAt) <= new Date()
+                        ? "text-destructive font-medium"
+                        : "text-muted-foreground"
+                    )}
+                  >
+                    {expiresIn(session.expiresAt)}
+                  </span>
+                </div>
+
+                {/* Devices */}
+                <div className="hidden sm:flex items-center gap-1 text-xs text-muted-foreground shrink-0">
+                  <Smartphone className="h-3.5 w-3.5" />
+                  {session.activeDeviceCount}
+                </div>
+
+                {/* End Session action */}
+                <div className="shrink-0">
+                  {isConfirming ? (
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs text-muted-foreground hidden sm:block">End?</span>
+                      <Button
+                        size="sm"
+                        variant="destructive"
+                        disabled={isEnding || busyEnd}
+                        onClick={() => handleEndSession(session.id)}
+                      >
+                        {isEnding || busyEnd
+                          ? <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                          : "Yes"
+                        }
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={() => setConfirmEndId(null)}
+                      >
+                        No
+                      </Button>
+                    </div>
+                  ) : (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="text-destructive border-destructive/40 hover:bg-destructive/10"
+                      onClick={() => {
+                        setConfirmClear(false);
+                        setConfirmEndId(session.id);
+                      }}
+                    >
+                      End Session
+                    </Button>
+                  )}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      {/* ── Clear Table footer ────────────────────────────────────── */}
+      <div
+        className={cn(
+          "px-4 py-3 border-t flex items-center justify-end gap-2",
+          table.tableStatus === "bill_requested"
+            ? "bg-amber-50/60"
+            : "bg-muted/20"
+        )}
+      >
+        {confirmClear ? (
+          <>
+            <span className="text-xs text-muted-foreground mr-auto">
+              End all sessions and reset table?
+            </span>
+            <Button
+              size="sm"
+              variant="destructive"
+              disabled={busyClear || isClearingTable}
+              onClick={handleClearTable}
+            >
+              {busyClear || isClearingTable ? (
+                <Loader2 className="h-3.5 w-3.5 animate-spin mr-1" />
+              ) : (
+                <RotateCcw className="h-3.5 w-3.5 mr-1" />
+              )}
+              Yes, Clear Table
+            </Button>
+            <Button
+              size="sm"
+              variant="ghost"
+              onClick={() => setConfirmClear(false)}
+            >
+              Cancel
+            </Button>
+          </>
+        ) : (
+          <Button
+            size="sm"
+            variant={table.tableStatus === "bill_requested" ? "default" : "outline"}
+            className={
+              table.tableStatus === "bill_requested"
+                ? "bg-amber-600 hover:bg-amber-700 text-white gap-1.5"
+                : "gap-1.5"
+            }
+            onClick={() => {
+              setConfirmEndId(null);
+              setConfirmClear(true);
+            }}
+          >
+            <RotateCcw className="h-3.5 w-3.5" />
+            Clear Table
+          </Button>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function TablesTab() {
   const {
-    sessions,
-    sessionsLoading,
+    tableOverview,
+    isLoading,
+    clearTable,
+    isClearingTable,
+    clearingTableId,
+    staffRequestBill,
+    isRequestingBill,
+    requestingBillTableId,
     endSession,
     isEndingSession,
     endingSessionId,
-    endTableSessions,
-    isEndingTable,
-    endingTableId,
-  } = useTableSessions();
+  } = useTableGroups();
 
-  // confirmId = sessionId for single-session confirm
-  const [confirmId, setConfirmId] = useState<string | null>(null);
-  // confirmTableId = tableId for end-all confirm
-  const [confirmTableId, setConfirmTableId] = useState<string | null>(null);
-
-  const tableGroups = useMemo<TableGroup[]>(() => {
-    const map = new Map<string, TableGroup>();
-    for (const session of sessions) {
-      const label = tableLabel(session.tableNumber, session.tableName);
-      if (!map.has(session.tableId)) {
-        map.set(session.tableId, {
-          tableId:     session.tableId,
-          tableLabel:  label,
-          tableNumber: session.tableNumber,
-          sessions:    [],
-        });
-      }
-      map.get(session.tableId)!.sessions.push(session);
-    }
-    return Array.from(map.values()).sort((a, b) => a.tableNumber - b.tableNumber);
-  }, [sessions]);
-
-  if (sessionsLoading) {
+  if (isLoading) {
     return (
       <div className="flex items-center justify-center py-16">
         <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
@@ -347,184 +613,31 @@ function SessionsTab() {
     );
   }
 
-  if (tableGroups.length === 0) {
+  if (tableOverview.length === 0) {
     return (
       <EmptyState
         icon={TableProperties}
-        title="No active sessions"
-        description="Sessions appear here when guests scan a QR code and enter their name."
+        title="No active tables"
+        description="Tables appear here when guests scan a QR code and enter their name."
       />
     );
   }
 
-  async function handleEndSession(sessionId: string) {
-    try {
-      await endSession(sessionId);
-    } catch (err) {
-      console.error("[end_session] error:", err);
-    } finally {
-      setConfirmId(null);
-    }
-  }
-
-  async function handleEndTable(tableId: string) {
-    try {
-      await endTableSessions(tableId);
-    } catch (err) {
-      console.error("[end_table_sessions] error:", err);
-    } finally {
-      setConfirmTableId(null);
-    }
-  }
-
   return (
     <div className="space-y-4">
-      {tableGroups.map((group) => {
-        const isConfirmingTable   = confirmTableId === group.tableId;
-        const isEndingThisTable   = isEndingTable && endingTableId === group.tableId;
-
-        return (
-          <div key={group.tableId} className="rounded-xl border overflow-hidden">
-            {/* Table group header */}
-            <div className="flex items-center justify-between px-4 py-3 bg-muted/40 border-b">
-              <div className="flex items-center gap-2">
-                <TableProperties className="h-4 w-4 text-muted-foreground" />
-                <span className="font-semibold text-sm">{group.tableLabel}</span>
-                <Badge variant="secondary" className="text-xs">
-                  {group.sessions.length} {group.sessions.length === 1 ? "guest" : "guests"}
-                </Badge>
-              </div>
-
-              {/* End All Sessions for this table */}
-              {isConfirmingTable ? (
-                <div className="flex items-center gap-2">
-                  <span className="text-xs text-muted-foreground">End all sessions?</span>
-                  <Button
-                    size="sm"
-                    variant="destructive"
-                    disabled={isEndingThisTable}
-                    onClick={() => handleEndTable(group.tableId)}
-                  >
-                    {isEndingThisTable
-                      ? <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                      : "Yes, end all"
-                    }
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    onClick={() => setConfirmTableId(null)}
-                  >
-                    Cancel
-                  </Button>
-                </div>
-              ) : (
-                <Button
-                  size="sm"
-                  variant="outline"
-                  className="text-destructive border-destructive/40 hover:bg-destructive/10 gap-1.5"
-                  onClick={() => {
-                    setConfirmId(null);
-                    setConfirmTableId(group.tableId);
-                  }}
-                >
-                  <Trash2 className="h-3.5 w-3.5" />
-                  End All Sessions
-                </Button>
-              )}
-            </div>
-
-            {/* Session rows */}
-            <div className="divide-y">
-              {group.sessions.map((session) => {
-                const isConfirming = confirmId === session.id;
-                const isEnding     = isEndingSession && endingSessionId === session.id;
-
-                return (
-                  <div
-                    key={session.id}
-                    className="flex items-center gap-4 px-4 py-3 hover:bg-muted/20 transition-colors"
-                  >
-                    {/* Customer avatar + name */}
-                    <div className="flex items-center gap-2 min-w-0 flex-1">
-                      <div className="w-7 h-7 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
-                        <User className="h-3.5 w-3.5 text-primary" />
-                      </div>
-                      <div className="min-w-0">
-                        <p className="text-sm font-medium truncate">
-                          {session.customerName || "Guest"}
-                        </p>
-                        <p className="text-xs text-muted-foreground">
-                          Started {format(new Date(session.createdAt), "HH:mm")}
-                        </p>
-                      </div>
-                    </div>
-
-                    {/* Expiry */}
-                    <div className="hidden sm:block shrink-0">
-                      <span
-                        className={cn(
-                          "text-xs",
-                          new Date(session.expiresAt) <= new Date()
-                            ? "text-destructive font-medium"
-                            : "text-muted-foreground"
-                        )}
-                      >
-                        {expiresIn(session.expiresAt)}
-                      </span>
-                    </div>
-
-                    {/* Device count */}
-                    <div className="hidden sm:flex items-center gap-1 text-xs text-muted-foreground shrink-0">
-                      <Smartphone className="h-3.5 w-3.5" />
-                      {session.activeDeviceCount}
-                    </div>
-
-                    {/* Per-session action */}
-                    <div className="shrink-0">
-                      {isConfirming ? (
-                        <div className="flex items-center gap-2">
-                          <span className="text-xs text-muted-foreground hidden sm:block">End?</span>
-                          <Button
-                            size="sm"
-                            variant="destructive"
-                            disabled={isEnding}
-                            onClick={() => handleEndSession(session.id)}
-                          >
-                            {isEnding
-                              ? <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                              : "Yes"
-                            }
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            onClick={() => setConfirmId(null)}
-                          >
-                            No
-                          </Button>
-                        </div>
-                      ) : (
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          className="text-destructive border-destructive/40 hover:bg-destructive/10"
-                          onClick={() => {
-                            setConfirmTableId(null);
-                            setConfirmId(session.id);
-                          }}
-                        >
-                          End Session
-                        </Button>
-                      )}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        );
-      })}
+      {tableOverview.map((table) => (
+        <TableCard
+          key={table.groupId}
+          table={table}
+          onEndSession={endSession}
+          isEndingSession={isEndingSession}
+          endingSessionId={endingSessionId}
+          onRequestBill={staffRequestBill}
+          isRequestingBill={isRequestingBill && requestingBillTableId === table.tableId}
+          onClearTable={clearTable}
+          isClearingTable={isClearingTable && clearingTableId === table.tableId}
+        />
+      ))}
     </div>
   );
 }
@@ -910,8 +1023,8 @@ export function OrdersPage() {
   return (
     <AppLayout>
       <PageHeader
-        title="Orders & Sessions"
-        subtitle="Real-time kitchen queue, table sessions, and bill requests"
+        title="Orders & Tables"
+        subtitle="Kitchen queue, live table status, and bill requests"
       />
 
       <Tabs defaultValue="orders" className="mt-6">
@@ -926,9 +1039,9 @@ export function OrdersPage() {
             )}
           </TabsTrigger>
 
-          <TabsTrigger value="sessions" className="flex items-center gap-2">
+          <TabsTrigger value="tables" className="flex items-center gap-2">
             <TableProperties className="h-4 w-4" />
-            Sessions
+            Tables
           </TabsTrigger>
 
           <TabsTrigger value="bills" className="flex items-center gap-2">
@@ -951,8 +1064,8 @@ export function OrdersPage() {
           <OrdersTab />
         </TabsContent>
 
-        <TabsContent value="sessions">
-          <SessionsTab />
+        <TabsContent value="tables">
+          <TablesTab />
         </TabsContent>
 
         <TabsContent value="bills">

@@ -1,0 +1,76 @@
+New requirement: Table Reset & Billing Workflow
+
+Current architecture:
+
+* Multiple customer sessions can exist on the same table.
+* Customers can see all orders placed on the table.
+* Billing is per-table (combined bill).
+* Historical orders must never be deleted.
+
+Problem:
+
+When one customer group leaves and a new group arrives at the same table, the new group must not see or inherit the previous group's orders or bill total.
+
+Required workflow:
+
+1. Customers arrive and create sessions by scanning the QR code and entering their name.
+2. Customers place orders normally.
+3. A bill request can originate from either:
+
+   * Customer clicks "Request Bill" in the QR ordering interface.
+   * Customer verbally asks staff for the bill and staff manually marks the table as "Bill Requested" from the dashboard.
+4. Both methods must result in the same state:
+
+   * Table Status = BILL_REQUESTED
+5. After payment is collected offline, staff clicks a new action:
+
+   * "Clear Table"
+
+Clear Table requirements:
+
+* End all active sessions for that table.
+* Archive/close the current table group.
+* Preserve all historical sessions, orders, bill requests, and audit history.
+* Reset the table's active ordering context.
+* Make the table ready for the next customer group.
+* Store:
+
+  * cleared_by
+  * cleared_at
+
+After Clear Table:
+
+* The next QR scan must start a completely new group.
+* The next group must not see any previous group orders.
+* The next group must not inherit any previous bill total.
+* Previous data must remain available in analytics, reports, and audit history.
+
+Staff Dashboard Requirements:
+
+For each table show:
+
+* Current status (ACTIVE / BILL_REQUESTED)
+* Guest count
+* Current table total
+* Request Bill button (manual staff-triggered bill request)
+* Clear Table button
+
+Customer QR Requirements:
+
+* Request Bill button remains available.
+* Request Bill does NOT automatically reset the table.
+* Request Bill does NOT end sessions.
+* Only Clear Table performs the reset.
+
+Before implementing:
+
+1. Analyze the current schema and multi-session architecture.
+2. Propose the database design needed for Clear Table.
+3. Explain how previous-group orders will be separated from new-group orders.
+4. Identify all affected tables, RPCs, hooks, and pages.
+5. Provide the implementation plan before modifying code.
+6. Do not remove historical data.
+7. Do not revert the multi-session architecture.
+8. Do not change billing back to per-session.
+
+After the analysis and implementation plan are approved, proceed with the full implementation.
