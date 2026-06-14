@@ -96,6 +96,10 @@ export function useOrders() {
   });
 
   useEffect(() => {
+    if (channelRef.current) {
+      supabase.removeChannel(channelRef.current);
+      channelRef.current = null;
+    }
     const channel = supabase
       .channel("staff_orders_realtime")
       .on(
