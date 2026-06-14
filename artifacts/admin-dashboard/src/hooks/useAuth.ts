@@ -22,7 +22,7 @@ export function useAuth() {
     async (supabaseUser: User): Promise<AuthUser | null> => {
       const { data: member, error } = await supabase
         .from("staff_users")
-        .select("role, full_name, cafe_id, cafes(name)")
+        .select("role, full_name, cafe_id, must_change_password, cafes(name)")
         .eq("id", supabaseUser.id)
         .eq("is_active", true)
         .single();
@@ -38,6 +38,7 @@ export function useAuth() {
         displayName: member.full_name,
         cafeId: member.cafe_id,
         cafeName: cafe?.name ?? "",
+        mustChangePassword: member.must_change_password ?? false,
       };
     },
     []

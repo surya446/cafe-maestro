@@ -42,7 +42,7 @@ import {
   useUpdateMemberRole,
   useToggleMemberActive,
   useDeleteStaffUser,
-  useInviteMember,
+  useCreateStaffMember,
 } from "@/hooks/useStaff";
 import { useAuth } from "@/hooks/useAuth";
 import { StaffUser, UserRole, AuthUser } from "@/types";
@@ -130,28 +130,45 @@ function DeleteConfirmDialog({
   );
 }
 
-function InviteDialog({
+function CreateMemberDialog({
   open,
   onOpenChange,
 }: {
   open: boolean;
   onOpenChange: (o: boolean) => void;
 }) {
-  const invite = useInviteMember();
+  const create = useCreateStaffMember();
   const [email, setEmail] = useState("");
   const [displayName, setDisplayName] = useState("");
   const [role, setRole] = useState<UserRole>("staff");
-  const [sent, setSent] = useState(false);
+  const [result, setResult] = useState<{
+    emailSent: boolean;
+    tempPassword?: string;
+    message: string;
+  } | null>(null);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
   async function handle(e: React.FormEvent) {
     e.preventDefault();
-    await invite.mutateAsync({ email, role, full_name: displayName });
-    setSent(true);
+    setErrorMsg(null);
+    try {
+      const data = await create.mutateAsync({ email, role, full_name: displayName });
+      setResult({
+        emailSent: data.email_sent,
+        tempPassword: data.temp_password,
+        message: data.message,
+      });
+    } catch (err: unknown) {
+      const msg =
+        err instanceof Error ? err.message : "Failed to create account. Please try again.";
+      setErrorMsg(msg);
+    }
   }
 
   function handleClose() {
     onOpenChange(false);
-    setSent(false);
+    setResult(null);
+    setErrorMsg(null);
     setEmail("");
     setDisplayName("");
     setRole("staff");
@@ -161,23 +178,53 @@ function InviteDialog({
     <Dialog open={open} onOpenChange={handleClose}>
       <DialogContent className="max-w-sm">
         <DialogHeader>
-          <DialogTitle>Invite staff member</DialogTitle>
+          <DialogTitle>Add staff member</DialogTitle>
         </DialogHeader>
-        {sent ? (
-          <div className="text-center py-6">
-            <div className="flex items-center justify-center w-12 h-12 rounded-full bg-emerald-100 text-emerald-600 mx-auto mb-4">
+        {result ? (
+          <div className="py-4 space-y-4">
+            <div className="flex items-center justify-center w-12 h-12 rounded-full bg-emerald-100 text-emerald-600 mx-auto">
               <Mail className="w-6 h-6" />
             </div>
-            <p className="font-medium text-foreground">Invitation sent!</p>
-            <p className="text-sm text-muted-foreground mt-1">
-              An email has been sent to <strong>{email}</strong>.
-            </p>
-            <Button className="mt-4" onClick={handleClose}>
+            <div className="text-center">
+              <p className="font-medium text-foreground">Account created!</p>
+              <p className="text-sm text-muted-foreground mt-1">
+                {result.message}
+              </p>
+            </div>
+            {!result.emailSent && result.tempPassword && (
+              <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 space-y-1.5">
+                <p className="text-xs font-medium text-amber-800">
+                  Email not sent — share these credentials manually:
+                </p>
+                <p className="text-xs text-amber-700">
+                  <strong>Email:</strong> {email}
+                </p>
+                <p className="text-xs text-amber-700 flex items-center gap-1.5">
+                  <strong>Temp password:</strong>
+                  <code className="bg-amber-100 px-1.5 py-0.5 rounded font-mono text-xs">
+                    {result.tempPassword}
+                  </code>
+                </p>
+                <p className="text-xs text-amber-600 mt-1">
+                  Staff must change this password on first login.
+                </p>
+              </div>
+            )}
+            <Button className="w-full" onClick={handleClose}>
               Done
             </Button>
           </div>
         ) : (
           <form onSubmit={handle} className="space-y-4">
+            <div className="space-y-1.5">
+              <Label>Full name *</Label>
+              <Input
+                value={displayName}
+                onChange={(e) => setDisplayName(e.target.value)}
+                placeholder="e.g. Jamie Smith"
+                required
+              />
+            </div>
             <div className="space-y-1.5">
               <Label>Email *</Label>
               <Input
@@ -185,15 +232,6 @@ function InviteDialog({
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="staff@example.com"
-                required
-              />
-            </div>
-            <div className="space-y-1.5">
-              <Label>Display name *</Label>
-              <Input
-                value={displayName}
-                onChange={(e) => setDisplayName(e.target.value)}
-                placeholder="e.g. Jamie"
                 required
               />
             </div>
@@ -215,12 +253,21 @@ function InviteDialog({
                 {ROLE_DESCRIPTIONS[role]}
               </p>
             </div>
+            {errorMsg && (
+              <p className="text-sm text-destructive bg-destructive/10 border border-destructive/20 rounded-lg px-3 py-2">
+                {errorMsg}
+              </p>
+            )}
+            <p className="text-xs text-muted-foreground">
+              A secure temporary password will be generated. Staff must set a
+              new password on first login.
+            </p>
             <DialogFooter>
               <Button variant="outline" type="button" onClick={handleClose}>
                 Cancel
               </Button>
-              <Button type="submit" disabled={invite.isPending}>
-                {invite.isPending ? "Sending…" : "Send invite"}
+              <Button type="submit" disabled={create.isPending}>
+                {create.isPending ? "Creating…" : "Create account"}
               </Button>
             </DialogFooter>
           </form>
@@ -258,7 +305,7 @@ export function StaffPage() {
           actions={
             <Button onClick={() => setInviteOpen(true)}>
               <UserPlus className="w-4 h-4 mr-1.5" />
-              Invite member
+              Add member
             </Button>
           }
         />
@@ -288,11 +335,11 @@ export function StaffPage() {
           <EmptyState
             icon={Users}
             title="No staff members yet"
-            description="Invite your team to manage the cafe together."
+            description="Add your team members to manage the cafe together."
             action={
               <Button onClick={() => setInviteOpen(true)}>
                 <UserPlus className="w-4 h-4 mr-1.5" />
-                Invite first member
+                Add first member
               </Button>
             }
           />
@@ -394,7 +441,7 @@ export function StaffPage() {
           </div>
         )}
 
-        <InviteDialog open={inviteOpen} onOpenChange={setInviteOpen} />
+        <CreateMemberDialog open={inviteOpen} onOpenChange={setInviteOpen} />
 
         <DeleteConfirmDialog
           member={deletingMember}

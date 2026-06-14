@@ -1,4 +1,5 @@
-- [Supabase staff table](supabase-staff-table.md) — `staff_users` is the auth table (not `cafe_members`); `id` = Supabase auth UID; `full_name` not `display_name`.
+- [Supabase staff table](supabase-staff-table.md) — `staff_users` is the auth table (not `cafe_members`); `id` = Supabase auth UID; `full_name` not `display_name`; includes `must_change_password` boolean (migration 028).
+- [Staff onboarding flow](staff-onboarding.md) — invite-based onboarding removed; direct account creation via `create-staff-member` edge function with temp password + forced password change on first login.
 - [Order total computation](order-total.md) — no `orders.total` column; compute from `order_items(unit_price × quantity)`.
 - [Schema field names](schema-field-names.md) — `position` (not `display_order`), `number`/`name` on tables (not `table_number`/`label`), `qr_code_token`, `expires_at` on sessions.
 - [Mutation input omissions](mutation-input-omissions.md) — always omit `updated_at`, `confirmed_at`, `confirmed_by` and other server-managed fields from mutation input types.

@@ -18,6 +18,7 @@ import { BookingsPage } from "@/pages/BookingsPage";
 import { StaffPage } from "@/pages/StaffPage";
 import { AnalyticsPage } from "@/pages/AnalyticsPage";
 import { SettingsPage } from "@/pages/SettingsPage";
+import { ChangePasswordPage } from "@/pages/ChangePasswordPage";
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth();
@@ -37,6 +38,10 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
     return <Redirect to="/login" />;
   }
 
+  if (user.mustChangePassword) {
+    return <Redirect to="/change-password" />;
+  }
+
   return <>{children}</>;
 }
 
@@ -45,6 +50,7 @@ function Router() {
     <Switch>
       <Route path="/login" component={LoginPage} />
       <Route path="/auth/confirm" component={AuthConfirmPage} />
+      <Route path="/change-password" component={ChangePasswordPage} />
       <Route path="/book" component={BookingFormPage} />
       <Route path="/table/:token" component={TableSessionPage} />
       <Route path="/">

@@ -87,7 +87,7 @@ export function useDeleteStaffUser() {
   });
 }
 
-export function useInviteMember() {
+export function useCreateStaffMember() {
   const { user } = useAuth();
   const qc = useQueryClient();
 
@@ -96,10 +96,15 @@ export function useInviteMember() {
       email: string;
       role: UserRole;
       full_name: string;
-    }) => {
+    }): Promise<{
+      success: boolean;
+      email_sent: boolean;
+      temp_password?: string;
+      message: string;
+    }> => {
       if (!user) throw new Error("Not authenticated");
       const { data, error } = await supabase.functions.invoke(
-        "invite-staff-member",
+        "create-staff-member",
         {
           body: {
             email: input.email,
