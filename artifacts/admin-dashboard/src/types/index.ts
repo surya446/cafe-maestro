@@ -132,6 +132,8 @@ export interface StaffUser {
   email: string;
   role: UserRole;
   is_active: boolean;
+  deleted_at: string | null;
+  deleted_by: string | null;
   created_at: string;
   updated_at: string;
 }

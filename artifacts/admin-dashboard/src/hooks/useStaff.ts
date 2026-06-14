@@ -16,6 +16,7 @@ export function useStaff() {
         .from("staff_users")
         .select("*")
         .eq("cafe_id", user.cafeId)
+        .is("deleted_at", null)
         .order("created_at");
       if (error) throw error;
       return data ?? [];
@@ -64,6 +65,22 @@ export function useToggleMemberActive() {
         .single();
       if (error) throw error;
       return data;
+    },
+    onSuccess: () =>
+      qc.invalidateQueries({ queryKey: STAFF_KEY(user?.cafeId ?? "") }),
+  });
+}
+
+export function useDeleteStaffUser() {
+  const { user } = useAuth();
+  const qc = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (userId: string) => {
+      const { error } = await supabase.rpc("delete_staff_user", {
+        p_user_id: userId,
+      });
+      if (error) throw error;
     },
     onSuccess: () =>
       qc.invalidateQueries({ queryKey: STAFF_KEY(user?.cafeId ?? "") }),

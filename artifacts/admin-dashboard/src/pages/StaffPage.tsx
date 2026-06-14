@@ -1,5 +1,10 @@
 import { useState } from "react";
-import { Users, UserPlus, Shield, ToggleLeft, ToggleRight, Mail } from "lucide-react";
+import {
+  Users,
+  UserPlus,
+  Mail,
+  Trash2,
+} from "lucide-react";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { PageHeader } from "@/components/common/PageHeader";
 import { EmptyState } from "@/components/common/EmptyState";
@@ -7,6 +12,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
+import { Badge } from "@/components/ui/badge";
 import {
   Select,
   SelectContent,
@@ -22,13 +28,24 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import {
   useStaff,
   useUpdateMemberRole,
   useToggleMemberActive,
+  useDeleteStaffUser,
   useInviteMember,
 } from "@/hooks/useStaff";
 import { useAuth } from "@/hooks/useAuth";
-import { StaffUser, UserRole } from "@/types";
+import { StaffUser, UserRole, AuthUser } from "@/types";
 import { ROLE_LABELS, formatDate } from "@/lib/utils";
 import { cn } from "@/lib/utils";
 
@@ -58,6 +75,58 @@ function RoleBadge({ role }: { role: UserRole }) {
     >
       {ROLE_LABELS[role]}
     </span>
+  );
+}
+
+function canManageMember(viewer: AuthUser, member: StaffUser): boolean {
+  if (member.id === viewer.id) return false;
+  if (viewer.role === "owner") return member.role !== "owner";
+  if (viewer.role === "manager")
+    return member.role === "staff" || member.role === "chef";
+  return false;
+}
+
+function canDeleteMember(viewer: AuthUser, member: StaffUser): boolean {
+  return canManageMember(viewer, member);
+}
+
+function DeleteConfirmDialog({
+  member,
+  open,
+  onOpenChange,
+  onConfirm,
+  isPending,
+}: {
+  member: StaffUser | null;
+  open: boolean;
+  onOpenChange: (o: boolean) => void;
+  onConfirm: () => void;
+  isPending: boolean;
+}) {
+  if (!member) return null;
+  return (
+    <AlertDialog open={open} onOpenChange={onOpenChange}>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>Delete {member.full_name}?</AlertDialogTitle>
+          <AlertDialogDescription>
+            This will remove <strong>{member.full_name}</strong> from active
+            staff lists. Historical records including orders, sessions, and
+            audit logs will remain intact.
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel disabled={isPending}>Cancel</AlertDialogCancel>
+          <AlertDialogAction
+            onClick={onConfirm}
+            disabled={isPending}
+            className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+          >
+            {isPending ? "Deleting…" : "Delete"}
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
   );
 }
 
@@ -103,7 +172,9 @@ function InviteDialog({
             <p className="text-sm text-muted-foreground mt-1">
               An email has been sent to <strong>{email}</strong>.
             </p>
-            <Button className="mt-4" onClick={handleClose}>Done</Button>
+            <Button className="mt-4" onClick={handleClose}>
+              Done
+            </Button>
           </div>
         ) : (
           <form onSubmit={handle} className="space-y-4">
@@ -163,19 +234,27 @@ export function StaffPage() {
   const { data: members = [], isLoading } = useStaff();
   const updateRole = useUpdateMemberRole();
   const toggleActive = useToggleMemberActive();
+  const deleteUser = useDeleteStaffUser();
   const { user } = useAuth();
 
   const [inviteOpen, setInviteOpen] = useState(false);
+  const [deletingMember, setDeletingMember] = useState<StaffUser | null>(null);
 
   const active = members.filter((m) => m.is_active);
-  const inactive = members.filter((m) => !m.is_active);
+
+  function handleDeleteConfirm() {
+    if (!deletingMember) return;
+    deleteUser.mutate(deletingMember.id, {
+      onSuccess: () => setDeletingMember(null),
+    });
+  }
 
   return (
     <AppLayout>
       <div className="p-8 max-w-4xl mx-auto">
         <PageHeader
           title="Staff"
-          subtitle={`${active.length} active members`}
+          subtitle={`${active.length} active member${active.length !== 1 ? "s" : ""}`}
           actions={
             <Button onClick={() => setInviteOpen(true)}>
               <UserPlus className="w-4 h-4 mr-1.5" />
@@ -187,7 +266,10 @@ export function StaffPage() {
         {/* Role legend */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-8">
           {ROLES.map((role) => (
-            <div key={role} className="p-3 bg-card border border-card-border rounded-xl shadow-sm">
+            <div
+              key={role}
+              className="p-3 bg-card border border-card-border rounded-xl shadow-sm"
+            >
               <RoleBadge role={role} />
               <p className="text-xs text-muted-foreground mt-2 leading-relaxed">
                 {ROLE_DESCRIPTIONS[role]}
@@ -218,12 +300,16 @@ export function StaffPage() {
           <div className="space-y-2">
             {members.map((member) => {
               const isSelf = member.id === user?.id;
+              const canManage = user ? canManageMember(user, member) : false;
+              const canDelete = user ? canDeleteMember(user, member) : false;
+              const isOwner = member.role === "owner";
+
               return (
                 <div
                   key={member.id}
                   className={cn(
                     "flex items-center gap-4 p-4 bg-card border border-card-border rounded-xl shadow-sm",
-                    !member.is_active && "opacity-50"
+                    !member.is_active && "opacity-60"
                   )}
                 >
                   {/* Avatar */}
@@ -233,10 +319,20 @@ export function StaffPage() {
 
                   {/* Info */}
                   <div className="flex-1 min-w-0">
-                    <p className="font-medium text-foreground flex items-center gap-2">
+                    <p className="font-medium text-foreground flex items-center gap-2 flex-wrap">
                       {member.full_name}
                       {isSelf && (
-                        <span className="text-xs text-muted-foreground font-normal">(you)</span>
+                        <span className="text-xs text-muted-foreground font-normal">
+                          (you)
+                        </span>
+                      )}
+                      {!member.is_active && (
+                        <Badge
+                          variant="secondary"
+                          className="text-[10px] px-1.5 py-0 h-4"
+                        >
+                          Disabled
+                        </Badge>
                       )}
                     </p>
                     <p className="text-xs text-muted-foreground">
@@ -250,7 +346,7 @@ export function StaffPage() {
                     onValueChange={(v) =>
                       updateRole.mutate({ id: member.id, role: v as UserRole })
                     }
-                    disabled={isSelf || member.role === "owner"}
+                    disabled={isSelf || isOwner || !canManage}
                   >
                     <SelectTrigger className="w-32 h-8 text-xs">
                       <SelectValue />
@@ -264,14 +360,34 @@ export function StaffPage() {
                     </SelectContent>
                   </Select>
 
-                  {/* Active toggle */}
-                  <Switch
-                    checked={member.is_active}
-                    onCheckedChange={(v) =>
-                      toggleActive.mutate({ id: member.id, is_active: v })
-                    }
-                    disabled={isSelf}
-                  />
+                  {/* Disable / Enable toggle — hidden for owners and self */}
+                  {canManage && (
+                    <Switch
+                      checked={member.is_active}
+                      onCheckedChange={(v) =>
+                        toggleActive.mutate({ id: member.id, is_active: v })
+                      }
+                      title={member.is_active ? "Disable member" : "Enable member"}
+                    />
+                  )}
+
+                  {/* Delete button — hidden for owners, self, and those without permission */}
+                  {canDelete && (
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8 text-muted-foreground hover:text-destructive hover:bg-destructive/10 shrink-0"
+                      onClick={() => setDeletingMember(member)}
+                      title={`Delete ${member.full_name}`}
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </Button>
+                  )}
+
+                  {/* Spacer so rows align when no action buttons */}
+                  {!canManage && !isSelf && (
+                    <div className="w-8 shrink-0" />
+                  )}
                 </div>
               );
             })}
@@ -279,6 +395,16 @@ export function StaffPage() {
         )}
 
         <InviteDialog open={inviteOpen} onOpenChange={setInviteOpen} />
+
+        <DeleteConfirmDialog
+          member={deletingMember}
+          open={!!deletingMember}
+          onOpenChange={(o) => {
+            if (!o) setDeletingMember(null);
+          }}
+          onConfirm={handleDeleteConfirm}
+          isPending={deleteUser.isPending}
+        />
       </div>
     </AppLayout>
   );
