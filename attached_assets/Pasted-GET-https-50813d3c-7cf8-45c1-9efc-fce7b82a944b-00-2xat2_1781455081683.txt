@@ -1,0 +1,319 @@
+GET https://50813d3c-7cf8-45c1-9efc-fce7b82a944b-00-2xat217h9jijm.sisko.replit.dev/@replit/vite-plugin-dev-banner/banner-script.js net::ERR_ABORTED 404 (Not Found)
+orders:1 Refused to execute script from 'https://50813d3c-7cf8-45c1-9efc-fce7b82a944b-00-2xat217h9jijm.sisko.replit.dev/@replit/vite-plugin-dev-banner/banner-script.js' because its MIME type ('text/html') is not executable, and strict MIME type checking is enabled.
+react-dom_client.js?v=42c95773:17987 Download the React DevTools for a better development experience: https://react.dev/link/react-devtools
+Sidebar.tsx:73 In HTML, <a> cannot be a descendant of <a>.
+This will cause a hydration error.
+
+  ...
+    <Router data-replit-metadata="artifacts/..." data-component-name="WouterRouter" base="/admin">
+      <Router data-replit-metadata="artifacts/..." data-component-name="Router">
+        <Switch data-replit-metadata="artifacts/..." data-component-name="Switch">
+          <Route data-replit-metadata="artifacts/..." data-component-name="Route" path="/orders" match={[...]}>
+            <ProtectedRoute data-replit-metadata="artifacts/..." data-component-name="ProtectedR...">
+              <OrdersPage data-replit-metadata="artifacts/..." data-component-name="OrdersPage">
+                <AppLayout data-replit-metadata="artifacts/..." data-component-name="AppLayout">
+                  <div data-replit-metadata="artifacts/..." data-component-name="div" className="flex min-h...">
+                    <Sidebar data-replit-metadata="artifacts/..." data-component-name="Sidebar">
+                      <aside data-replit-metadata="artifacts/..." data-component-name="aside" className="flex flex-...">
+                        <div>
+                        <nav data-replit-metadata="artifacts/..." data-component-name="nav" className="flex-1 py-...">
+>                         <a
+>                           data-replit-metadata="artifacts/admin-dashboard/src/components/layout/Sidebar.tsx:72:12"
+>                           data-component-name="Link"
+>                           onClick={function}
+>                           href="/admin/"
+>                           className={undefined}
+>                           ref={null}
+>                         >
+>                           <a
+>                             data-replit-metadata="artifacts/admin-dashboard/src/components/layout/Sidebar.tsx:73:14"
+>                             data-component-name="a"
+>                             className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition..."
+>                           >
+                          ...
+                        ...
+                    ...
+    ...
+
+validateDOMNesting @ react-dom_client.js?v=42c95773:2160
+completeWork @ react-dom_client.js?v=42c95773:8110
+runWithFiberInDEV @ react-dom_client.js?v=42c95773:1485
+completeUnitOfWork @ react-dom_client.js?v=42c95773:10976
+performUnitOfWork @ react-dom_client.js?v=42c95773:10882
+workLoopSync @ react-dom_client.js?v=42c95773:10728
+renderRootSync @ react-dom_client.js?v=42c95773:10711
+performWorkOnRoot @ react-dom_client.js?v=42c95773:10330
+performWorkOnRootViaSchedulerTask @ react-dom_client.js?v=42c95773:11623
+performWorkUntilDeadline @ react-dom_client.js?v=42c95773:36
+<a>
+exports.jsxDEV @ react_jsx-dev-runtime.js?v=42c95773:250
+(anonymous) @ Sidebar.tsx:73
+(anonymous) @ Sidebar.tsx:65
+react-stack-bottom-frame @ react-dom_client.js?v=42c95773:17424
+renderWithHooks @ react-dom_client.js?v=42c95773:4206
+updateFunctionComponent @ react-dom_client.js?v=42c95773:6619
+beginWork @ react-dom_client.js?v=42c95773:7654
+runWithFiberInDEV @ react-dom_client.js?v=42c95773:1485
+performUnitOfWork @ react-dom_client.js?v=42c95773:10868
+workLoopSync @ react-dom_client.js?v=42c95773:10728
+renderRootSync @ react-dom_client.js?v=42c95773:10711
+performWorkOnRoot @ react-dom_client.js?v=42c95773:10330
+performWorkOnRootViaSchedulerTask @ react-dom_client.js?v=42c95773:11623
+performWorkUntilDeadline @ react-dom_client.js?v=42c95773:36
+<Sidebar>
+exports.jsxDEV @ react_jsx-dev-runtime.js?v=42c95773:250
+(anonymous) @ AppLayout.tsx:10
+react-stack-bottom-frame @ react-dom_client.js?v=42c95773:17424
+renderWithHooks @ react-dom_client.js?v=42c95773:4206
+updateFunctionComponent @ react-dom_client.js?v=42c95773:6619
+beginWork @ react-dom_client.js?v=42c95773:7654
+runWithFiberInDEV @ react-dom_client.js?v=42c95773:1485
+performUnitOfWork @ react-dom_client.js?v=42c95773:10868
+workLoopSync @ react-dom_client.js?v=42c95773:10728
+renderRootSync @ react-dom_client.js?v=42c95773:10711
+performWorkOnRoot @ react-dom_client.js?v=42c95773:10330
+performWorkOnRootViaSchedulerTask @ react-dom_client.js?v=42c95773:11623
+performWorkUntilDeadline @ react-dom_client.js?v=42c95773:36
+<AppLayout>
+exports.jsxDEV @ react_jsx-dev-runtime.js?v=42c95773:250
+(anonymous) @ OrdersPage.tsx:791
+react-stack-bottom-frame @ react-dom_client.js?v=42c95773:17424
+renderWithHooks @ react-dom_client.js?v=42c95773:4206
+updateFunctionComponent @ react-dom_client.js?v=42c95773:6619
+beginWork @ react-dom_client.js?v=42c95773:7654
+runWithFiberInDEV @ react-dom_client.js?v=42c95773:1485
+performUnitOfWork @ react-dom_client.js?v=42c95773:10868
+workLoopSync @ react-dom_client.js?v=42c95773:10728
+renderRootSync @ react-dom_client.js?v=42c95773:10711
+performWorkOnRoot @ react-dom_client.js?v=42c95773:10330
+performWorkOnRootViaSchedulerTask @ react-dom_client.js?v=42c95773:11623
+performWorkUntilDeadline @ react-dom_client.js?v=42c95773:36
+<OrdersPage>
+exports.jsxDEV @ react_jsx-dev-runtime.js?v=42c95773:250
+Router @ App.tsx:57
+react-stack-bottom-frame @ react-dom_client.js?v=42c95773:17424
+renderWithHooks @ react-dom_client.js?v=42c95773:4206
+updateFunctionComponent @ react-dom_client.js?v=42c95773:6619
+beginWork @ react-dom_client.js?v=42c95773:7654
+runWithFiberInDEV @ react-dom_client.js?v=42c95773:1485
+performUnitOfWork @ react-dom_client.js?v=42c95773:10868
+workLoopSync @ react-dom_client.js?v=42c95773:10728
+renderRootSync @ react-dom_client.js?v=42c95773:10711
+performWorkOnRoot @ react-dom_client.js?v=42c95773:10330
+performWorkOnRootViaSchedulerTask @ react-dom_client.js?v=42c95773:11623
+performWorkUntilDeadline @ react-dom_client.js?v=42c95773:36
+<Router>
+exports.jsxDEV @ react_jsx-dev-runtime.js?v=42c95773:250
+App @ App.tsx:107
+react-stack-bottom-frame @ react-dom_client.js?v=42c95773:17424
+renderWithHooks @ react-dom_client.js?v=42c95773:4206
+updateFunctionComponent @ react-dom_client.js?v=42c95773:6619
+beginWork @ react-dom_client.js?v=42c95773:7654
+runWithFiberInDEV @ react-dom_client.js?v=42c95773:1485
+performUnitOfWork @ react-dom_client.js?v=42c95773:10868
+workLoopSync @ react-dom_client.js?v=42c95773:10728
+renderRootSync @ react-dom_client.js?v=42c95773:10711
+performWorkOnRoot @ react-dom_client.js?v=42c95773:10330
+performWorkOnRootViaSchedulerTask @ react-dom_client.js?v=42c95773:11623
+performWorkUntilDeadline @ react-dom_client.js?v=42c95773:36
+<App>
+exports.jsxDEV @ react_jsx-dev-runtime.js?v=42c95773:250
+(anonymous) @ main.tsx:5
+Sidebar.tsx:72 <a> cannot contain a nested <a>.
+See this log for the ancestor stack trace.
+(anonymous) @ react-dom_client.js?v=42c95773:2167
+runWithFiberInDEV @ react-dom_client.js?v=42c95773:1485
+validateDOMNesting @ react-dom_client.js?v=42c95773:2166
+completeWork @ react-dom_client.js?v=42c95773:8110
+runWithFiberInDEV @ react-dom_client.js?v=42c95773:1485
+completeUnitOfWork @ react-dom_client.js?v=42c95773:10976
+performUnitOfWork @ react-dom_client.js?v=42c95773:10882
+workLoopSync @ react-dom_client.js?v=42c95773:10728
+renderRootSync @ react-dom_client.js?v=42c95773:10711
+performWorkOnRoot @ react-dom_client.js?v=42c95773:10330
+performWorkOnRootViaSchedulerTask @ react-dom_client.js?v=42c95773:11623
+performWorkUntilDeadline @ react-dom_client.js?v=42c95773:36
+<a>
+exports.createElement @ chunk-KC53NVYV.js?v=42c95773:773
+(anonymous) @ wouter.js?v=42c95773:346
+react-stack-bottom-frame @ react-dom_client.js?v=42c95773:17424
+renderWithHooks @ react-dom_client.js?v=42c95773:4206
+updateForwardRef @ react-dom_client.js?v=42c95773:6461
+beginWork @ react-dom_client.js?v=42c95773:7864
+runWithFiberInDEV @ react-dom_client.js?v=42c95773:1485
+performUnitOfWork @ react-dom_client.js?v=42c95773:10868
+workLoopSync @ react-dom_client.js?v=42c95773:10728
+renderRootSync @ react-dom_client.js?v=42c95773:10711
+performWorkOnRoot @ react-dom_client.js?v=42c95773:10330
+performWorkOnRootViaSchedulerTask @ react-dom_client.js?v=42c95773:11623
+performWorkUntilDeadline @ react-dom_client.js?v=42c95773:36
+<ForwardRef>
+exports.jsxDEV @ react_jsx-dev-runtime.js?v=42c95773:250
+(anonymous) @ Sidebar.tsx:72
+(anonymous) @ Sidebar.tsx:65
+react-stack-bottom-frame @ react-dom_client.js?v=42c95773:17424
+renderWithHooks @ react-dom_client.js?v=42c95773:4206
+updateFunctionComponent @ react-dom_client.js?v=42c95773:6619
+beginWork @ react-dom_client.js?v=42c95773:7654
+runWithFiberInDEV @ react-dom_client.js?v=42c95773:1485
+performUnitOfWork @ react-dom_client.js?v=42c95773:10868
+workLoopSync @ react-dom_client.js?v=42c95773:10728
+renderRootSync @ react-dom_client.js?v=42c95773:10711
+performWorkOnRoot @ react-dom_client.js?v=42c95773:10330
+performWorkOnRootViaSchedulerTask @ react-dom_client.js?v=42c95773:11623
+performWorkUntilDeadline @ react-dom_client.js?v=42c95773:36
+<Sidebar>
+exports.jsxDEV @ react_jsx-dev-runtime.js?v=42c95773:250
+(anonymous) @ AppLayout.tsx:10
+react-stack-bottom-frame @ react-dom_client.js?v=42c95773:17424
+renderWithHooks @ react-dom_client.js?v=42c95773:4206
+updateFunctionComponent @ react-dom_client.js?v=42c95773:6619
+beginWork @ react-dom_client.js?v=42c95773:7654
+runWithFiberInDEV @ react-dom_client.js?v=42c95773:1485
+performUnitOfWork @ react-dom_client.js?v=42c95773:10868
+workLoopSync @ react-dom_client.js?v=42c95773:10728
+renderRootSync @ react-dom_client.js?v=42c95773:10711
+performWorkOnRoot @ react-dom_client.js?v=42c95773:10330
+performWorkOnRootViaSchedulerTask @ react-dom_client.js?v=42c95773:11623
+performWorkUntilDeadline @ react-dom_client.js?v=42c95773:36
+<AppLayout>
+exports.jsxDEV @ react_jsx-dev-runtime.js?v=42c95773:250
+(anonymous) @ OrdersPage.tsx:791
+react-stack-bottom-frame @ react-dom_client.js?v=42c95773:17424
+renderWithHooks @ react-dom_client.js?v=42c95773:4206
+updateFunctionComponent @ react-dom_client.js?v=42c95773:6619
+beginWork @ react-dom_client.js?v=42c95773:7654
+runWithFiberInDEV @ react-dom_client.js?v=42c95773:1485
+performUnitOfWork @ react-dom_client.js?v=42c95773:10868
+workLoopSync @ react-dom_client.js?v=42c95773:10728
+renderRootSync @ react-dom_client.js?v=42c95773:10711
+performWorkOnRoot @ react-dom_client.js?v=42c95773:10330
+performWorkOnRootViaSchedulerTask @ react-dom_client.js?v=42c95773:11623
+performWorkUntilDeadline @ react-dom_client.js?v=42c95773:36
+<OrdersPage>
+exports.jsxDEV @ react_jsx-dev-runtime.js?v=42c95773:250
+Router @ App.tsx:57
+react-stack-bottom-frame @ react-dom_client.js?v=42c95773:17424
+renderWithHooks @ react-dom_client.js?v=42c95773:4206
+updateFunctionComponent @ react-dom_client.js?v=42c95773:6619
+beginWork @ react-dom_client.js?v=42c95773:7654
+runWithFiberInDEV @ react-dom_client.js?v=42c95773:1485
+performUnitOfWork @ react-dom_client.js?v=42c95773:10868
+workLoopSync @ react-dom_client.js?v=42c95773:10728
+renderRootSync @ react-dom_client.js?v=42c95773:10711
+performWorkOnRoot @ react-dom_client.js?v=42c95773:10330
+performWorkOnRootViaSchedulerTask @ react-dom_client.js?v=42c95773:11623
+performWorkUntilDeadline @ react-dom_client.js?v=42c95773:36
+<Router>
+exports.jsxDEV @ react_jsx-dev-runtime.js?v=42c95773:250
+App @ App.tsx:107
+react-stack-bottom-frame @ react-dom_client.js?v=42c95773:17424
+renderWithHooks @ react-dom_client.js?v=42c95773:4206
+updateFunctionComponent @ react-dom_client.js?v=42c95773:6619
+beginWork @ react-dom_client.js?v=42c95773:7654
+runWithFiberInDEV @ react-dom_client.js?v=42c95773:1485
+performUnitOfWork @ react-dom_client.js?v=42c95773:10868
+workLoopSync @ react-dom_client.js?v=42c95773:10728
+renderRootSync @ react-dom_client.js?v=42c95773:10711
+performWorkOnRoot @ react-dom_client.js?v=42c95773:10330
+performWorkOnRootViaSchedulerTask @ react-dom_client.js?v=42c95773:11623
+performWorkUntilDeadline @ react-dom_client.js?v=42c95773:36
+<App>
+exports.jsxDEV @ react_jsx-dev-runtime.js?v=42c95773:250
+(anonymous) @ main.tsx:5
+@supabase_supabase-js.js?v=42c95773:20628  POST https://usllfqogcdskfeszntwf.supabase.co/rest/v1/rpc/end_session 404 (Not Found)
+(anonymous) @ @supabase_supabase-js.js?v=42c95773:20628
+(anonymous) @ @supabase_supabase-js.js?v=42c95773:20653
+await in (anonymous)
+executeWithRetry @ @supabase_supabase-js.js?v=42c95773:572
+then @ @supabase_supabase-js.js?v=42c95773:601
+OrdersPage.tsx:318 [end_session] RPC error: {code: 'PGRST202', details: 'Searched for the function public.end_session with …r, but no matches were found in the schema cache.', hint: 'Perhaps you meant to call the function public.expire_sessions', message: 'Could not find the function public.end_session(p_session_id) in the schema cache'}
+handleEnd @ OrdersPage.tsx:318
+await in handleEnd
+(anonymous) @ OrdersPage.tsx:379
+executeDispatch @ react-dom_client.js?v=42c95773:11736
+runWithFiberInDEV @ react-dom_client.js?v=42c95773:1485
+processDispatchQueue @ react-dom_client.js?v=42c95773:11772
+(anonymous) @ react-dom_client.js?v=42c95773:12182
+batchedUpdates$1 @ react-dom_client.js?v=42c95773:2628
+dispatchEventForPluginEventSystem @ react-dom_client.js?v=42c95773:11877
+dispatchEvent @ react-dom_client.js?v=42c95773:14792
+dispatchDiscreteEvent @ react-dom_client.js?v=42c95773:14773
+<button>
+exports.jsxDEV @ react_jsx-dev-runtime.js?v=42c95773:250
+_c @ button.tsx:55
+react-stack-bottom-frame @ react-dom_client.js?v=42c95773:17424
+renderWithHooks @ react-dom_client.js?v=42c95773:4206
+updateForwardRef @ react-dom_client.js?v=42c95773:6461
+beginWork @ react-dom_client.js?v=42c95773:7864
+runWithFiberInDEV @ react-dom_client.js?v=42c95773:1485
+performUnitOfWork @ react-dom_client.js?v=42c95773:10868
+workLoopSync @ react-dom_client.js?v=42c95773:10728
+renderRootSync @ react-dom_client.js?v=42c95773:10711
+performWorkOnRoot @ react-dom_client.js?v=42c95773:10330
+performSyncWorkOnRoot @ react-dom_client.js?v=42c95773:11635
+flushSyncWorkAcrossRoots_impl @ react-dom_client.js?v=42c95773:11536
+processRootScheduleInMicrotask @ react-dom_client.js?v=42c95773:11558
+(anonymous) @ react-dom_client.js?v=42c95773:11649
+<Button>
+exports.jsxDEV @ react_jsx-dev-runtime.js?v=42c95773:250
+(anonymous) @ OrdersPage.tsx:375
+SessionsTab @ OrdersPage.tsx:342
+react-stack-bottom-frame @ react-dom_client.js?v=42c95773:17424
+renderWithHooks @ react-dom_client.js?v=42c95773:4206
+updateFunctionComponent @ react-dom_client.js?v=42c95773:6619
+beginWork @ react-dom_client.js?v=42c95773:7654
+runWithFiberInDEV @ react-dom_client.js?v=42c95773:1485
+performUnitOfWork @ react-dom_client.js?v=42c95773:10868
+workLoopSync @ react-dom_client.js?v=42c95773:10728
+renderRootSync @ react-dom_client.js?v=42c95773:10711
+performWorkOnRoot @ react-dom_client.js?v=42c95773:10330
+performSyncWorkOnRoot @ react-dom_client.js?v=42c95773:11635
+flushSyncWorkAcrossRoots_impl @ react-dom_client.js?v=42c95773:11536
+processRootScheduleInMicrotask @ react-dom_client.js?v=42c95773:11558
+(anonymous) @ react-dom_client.js?v=42c95773:11649
+<SessionsTab>
+exports.jsxDEV @ react_jsx-dev-runtime.js?v=42c95773:250
+(anonymous) @ OrdersPage.tsx:835
+react-stack-bottom-frame @ react-dom_client.js?v=42c95773:17424
+renderWithHooks @ react-dom_client.js?v=42c95773:4206
+updateFunctionComponent @ react-dom_client.js?v=42c95773:6619
+beginWork @ react-dom_client.js?v=42c95773:7654
+runWithFiberInDEV @ react-dom_client.js?v=42c95773:1485
+performUnitOfWork @ react-dom_client.js?v=42c95773:10868
+workLoopSync @ react-dom_client.js?v=42c95773:10728
+renderRootSync @ react-dom_client.js?v=42c95773:10711
+performWorkOnRoot @ react-dom_client.js?v=42c95773:10330
+performWorkOnRootViaSchedulerTask @ react-dom_client.js?v=42c95773:11623
+performWorkUntilDeadline @ react-dom_client.js?v=42c95773:36
+<OrdersPage>
+exports.jsxDEV @ react_jsx-dev-runtime.js?v=42c95773:250
+Router @ App.tsx:57
+react-stack-bottom-frame @ react-dom_client.js?v=42c95773:17424
+renderWithHooks @ react-dom_client.js?v=42c95773:4206
+updateFunctionComponent @ react-dom_client.js?v=42c95773:6619
+beginWork @ react-dom_client.js?v=42c95773:7654
+runWithFiberInDEV @ react-dom_client.js?v=42c95773:1485
+performUnitOfWork @ react-dom_client.js?v=42c95773:10868
+workLoopSync @ react-dom_client.js?v=42c95773:10728
+renderRootSync @ react-dom_client.js?v=42c95773:10711
+performWorkOnRoot @ react-dom_client.js?v=42c95773:10330
+performWorkOnRootViaSchedulerTask @ react-dom_client.js?v=42c95773:11623
+performWorkUntilDeadline @ react-dom_client.js?v=42c95773:36
+<Router>
+exports.jsxDEV @ react_jsx-dev-runtime.js?v=42c95773:250
+App @ App.tsx:107
+react-stack-bottom-frame @ react-dom_client.js?v=42c95773:17424
+renderWithHooks @ react-dom_client.js?v=42c95773:4206
+updateFunctionComponent @ react-dom_client.js?v=42c95773:6619
+beginWork @ react-dom_client.js?v=42c95773:7654
+runWithFiberInDEV @ react-dom_client.js?v=42c95773:1485
+performUnitOfWork @ react-dom_client.js?v=42c95773:10868
+workLoopSync @ react-dom_client.js?v=42c95773:10728
+renderRootSync @ react-dom_client.js?v=42c95773:10711
+performWorkOnRoot @ react-dom_client.js?v=42c95773:10330
+performWorkOnRootViaSchedulerTask @ react-dom_client.js?v=42c95773:11623
+performWorkUntilDeadline @ react-dom_client.js?v=42c95773:36
+<App>
+exports.jsxDEV @ react_jsx-dev-runtime.js?v=42c95773:250
+(anonymous) @ main.tsx:5
