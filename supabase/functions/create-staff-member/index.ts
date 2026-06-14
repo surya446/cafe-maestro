@@ -4,7 +4,7 @@
 // ============================================================
 // Creates a Supabase Auth user directly with a temporary
 // password (no invite email). Sends login credentials via
-// Resend email. Staff must change password on first login.
+// Gmail SMTP (Nodemailer). Staff must change password on first login.
 //
 // Auto-injected by Supabase:
 //   SUPABASE_URL              — project REST URL
@@ -13,12 +13,13 @@
 //
 // Must be set manually via Supabase dashboard → Project Settings
 // → Edge Functions → Secrets:
-//   RESEND_API_KEY  — Resend API key for sending credential emails
-//   FROM_EMAIL      — sender address, e.g. noreply@yourcafe.com
-//   SITE_URL        — admin dashboard base URL, e.g. https://your-domain.replit.app/admin
+//   SMTP_USER     — Gmail address used to send, e.g. yourapp@gmail.com
+//   SMTP_PASSWORD — Gmail App Password (not account password)
+//   SITE_URL      — admin dashboard base URL, e.g. https://your-domain.replit.app/admin
 // ============================================================
 
 import { createClient, SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2";
+import nodemailer from "npm:nodemailer@6";
 
 // ── Types ─────────────────────────────────────────────────────
 
@@ -82,7 +83,6 @@ function generateTempPassword(): string {
   const bytes = new Uint8Array(20);
   crypto.getRandomValues(bytes);
 
-  // Guarantee at least one of each character class
   const guaranteed = [
     upper[bytes[0] % upper.length],
     lower[bytes[1] % lower.length],
@@ -96,7 +96,6 @@ function generateTempPassword(): string {
 
   const combined = [...guaranteed, ...rest];
 
-  // Fisher-Yates shuffle using remaining random bytes
   const shuffleBytes = new Uint8Array(combined.length);
   crypto.getRandomValues(shuffleBytes);
   for (let i = combined.length - 1; i > 0; i--) {
@@ -107,17 +106,47 @@ function generateTempPassword(): string {
   return combined.join("");
 }
 
-// ── Email sender via Resend ────────────────────────────────────
+// ── Email sender via Gmail SMTP (Nodemailer) ──────────────────
 
 async function sendCredentialEmail(opts: {
-  resendKey: string;
-  fromEmail: string;
+  smtpUser: string;
+  smtpPassword: string;
   toEmail: string;
   fullName: string;
+  role: string;
   tempPassword: string;
   loginUrl: string;
-}): Promise<{ ok: boolean; error?: string }> {
-  const { resendKey, fromEmail, toEmail, fullName, tempPassword, loginUrl } = opts;
+}): Promise<{ ok: boolean; error?: string; info?: string }> {
+  const { smtpUser, smtpPassword, toEmail, fullName, role, tempPassword, loginUrl } = opts;
+
+  console.log(`[create-staff-member] Creating SMTP transporter for ${smtpUser} via smtp.gmail.com:465`);
+
+  let transporter: nodemailer.Transporter;
+  try {
+    transporter = nodemailer.createTransport({
+      host: "smtp.gmail.com",
+      port: 465,
+      secure: true,
+      auth: {
+        user: smtpUser,
+        pass: smtpPassword,
+      },
+    });
+  } catch (err) {
+    const msg = `Failed to create SMTP transporter: ${String(err)}`;
+    console.error(`[create-staff-member] ${msg}`);
+    return { ok: false, error: msg };
+  }
+
+  console.log("[create-staff-member] Verifying SMTP connection...");
+  try {
+    await transporter.verify();
+    console.log("[create-staff-member] SMTP connection verified successfully.");
+  } catch (err) {
+    const msg = `SMTP authentication/connection failed: ${String(err)}`;
+    console.error(`[create-staff-member] ${msg}`);
+    return { ok: false, error: msg };
+  }
 
   const html = `
 <!DOCTYPE html>
@@ -132,6 +161,8 @@ async function sendCredentialEmail(opts: {
 
   <div style="background:#f5f5f5;border-radius:8px;padding:20px 24px;margin:24px 0;">
     <p style="margin:0 0 8px;font-size:13px;color:#666;text-transform:uppercase;letter-spacing:.05em;">Your login details</p>
+    <p style="margin:0 0 6px;"><strong>Name:</strong> ${fullName}</p>
+    <p style="margin:0 0 6px;"><strong>Role:</strong> ${role}</p>
     <p style="margin:0 0 6px;"><strong>Email:</strong> ${toEmail}</p>
     <p style="margin:0;"><strong>Temporary password:</strong> <code style="background:#e5e5e5;padding:2px 6px;border-radius:4px;">${tempPassword}</code></p>
   </div>
@@ -148,29 +179,20 @@ async function sendCredentialEmail(opts: {
 </body>
 </html>`;
 
+  console.log(`[create-staff-member] Sending credential email to ${toEmail}...`);
   try {
-    const res = await fetch("https://api.resend.com/emails", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${resendKey}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        from: fromEmail,
-        to: [toEmail],
-        subject: "Your Cafe Maestro staff account is ready",
-        html,
-      }),
+    const info = await transporter.sendMail({
+      from: `"Cafe Maestro" <${smtpUser}>`,
+      to: toEmail,
+      subject: "Your Cafe Maestro staff account is ready",
+      html,
     });
-
-    if (!res.ok) {
-      const body = await res.text();
-      return { ok: false, error: `Resend ${res.status}: ${body}` };
-    }
-
-    return { ok: true };
+    console.log(`[create-staff-member] Email sent successfully. MessageId: ${info.messageId}, Response: ${info.response}`);
+    return { ok: true, info: `messageId=${info.messageId} response=${info.response}` };
   } catch (err) {
-    return { ok: false, error: String(err) };
+    const msg = `Email send failed: ${String(err)}`;
+    console.error(`[create-staff-member] ${msg}`);
+    return { ok: false, error: msg };
   }
 }
 
@@ -305,12 +327,12 @@ Deno.serve(async (req: Request) => {
   const supabaseUrl = Deno.env.get("SUPABASE_URL");
   const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
   const anonKey = Deno.env.get("SUPABASE_ANON_KEY");
-  const resendKey = Deno.env.get("RESEND_API_KEY") ?? "";
-  const fromEmail = Deno.env.get("FROM_EMAIL") ?? "noreply@cafemaestro.app";
+  const smtpUser = Deno.env.get("SMTP_USER") ?? "";
+  const smtpPassword = Deno.env.get("SMTP_PASSWORD") ?? "";
   const siteUrl = Deno.env.get("SITE_URL") ?? "";
 
   if (!supabaseUrl || !serviceRoleKey || !anonKey) {
-    console.error("[create-staff-member] Missing environment variables");
+    console.error("[create-staff-member] Missing Supabase environment variables");
     return json({ error: "Server configuration error" }, 500);
   }
 
@@ -428,7 +450,6 @@ Deno.serve(async (req: Request) => {
   let alreadyRegistered = false;
 
   if (existingAuthUser) {
-    // User already has an auth account — update their password and reuse
     alreadyRegistered = true;
     targetUserId = existingAuthUser.id;
 
@@ -445,12 +466,11 @@ Deno.serve(async (req: Request) => {
       );
     }
   } else {
-    // Create brand-new auth user with temp password
     const { data: newUser, error: createError } =
       await adminClient.auth.admin.createUser({
         email: normalizedEmail,
         password: tempPassword,
-        email_confirm: true, // skip email confirmation — admin is creating the account
+        email_confirm: true,
         user_metadata: { full_name: trimmedName, cafe_id, role: staffRole },
       });
 
@@ -477,31 +497,35 @@ Deno.serve(async (req: Request) => {
 
   if (result instanceof Response) return result;
 
-  // ── Send credential email ─────────────────────────────────────
+  // ── Send credential email via Gmail SMTP ──────────────────────
   let emailSent = false;
   let emailError: string | undefined;
+  let emailInfo: string | undefined;
 
   const loginUrl = siteUrl
     ? `${siteUrl.replace(/\/$/, "")}/login`
     : "(your dashboard login URL)";
 
-  if (resendKey) {
+  if (smtpUser && smtpPassword) {
     const emailResult = await sendCredentialEmail({
-      resendKey,
-      fromEmail,
+      smtpUser,
+      smtpPassword,
       toEmail: normalizedEmail,
       fullName: trimmedName,
+      role: staffRole,
       tempPassword,
       loginUrl,
     });
     emailSent = emailResult.ok;
+    emailInfo = emailResult.info;
     if (!emailResult.ok) {
-      console.warn("[create-staff-member] email send failed:", emailResult.error);
       emailError = emailResult.error;
     }
   } else {
-    console.warn("[create-staff-member] RESEND_API_KEY not set — email not sent");
-    emailError = "RESEND_API_KEY not configured";
+    const missing = [!smtpUser && "SMTP_USER", !smtpPassword && "SMTP_PASSWORD"]
+      .filter(Boolean).join(", ");
+    console.warn(`[create-staff-member] ${missing} not set — email not sent`);
+    emailError = `${missing} not configured`;
   }
 
   return json(
@@ -509,8 +533,9 @@ Deno.serve(async (req: Request) => {
       success: true,
       already_registered: alreadyRegistered,
       email_sent: emailSent,
+      email_info: emailSent ? emailInfo : undefined,
       email_error: emailSent ? undefined : emailError,
-      // temp_password is returned only when email failed so admin can share manually
+      // temp_password returned only when email failed so admin can share manually
       temp_password: emailSent ? undefined : tempPassword,
       message: emailSent
         ? `Account created for ${normalizedEmail}. Login credentials sent by email.`
