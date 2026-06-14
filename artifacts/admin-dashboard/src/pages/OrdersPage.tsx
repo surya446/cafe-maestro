@@ -314,6 +314,8 @@ function SessionsTab() {
   async function handleEnd(sessionId: string) {
     try {
       await endSession(sessionId);
+    } catch (err) {
+      console.error("[end_session] RPC error:", err);
     } finally {
       setConfirmId(null);
     }
