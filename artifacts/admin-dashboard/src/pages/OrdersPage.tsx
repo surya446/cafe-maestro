@@ -1,0 +1,840 @@
+import { useState, useRef, useCallback } from "react";
+import { format, formatDistanceToNow } from "date-fns";
+import {
+  ClipboardList,
+  Loader2,
+  Clock,
+  Users,
+  QrCode,
+  Receipt,
+  ChefHat,
+  CheckCircle2,
+  XCircle,
+  AlertCircle,
+  Copy,
+  Download,
+  Printer,
+  RefreshCw,
+  Smartphone,
+  TableProperties,
+  Bell,
+} from "lucide-react";
+import QRCode from "react-qr-code";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { AppLayout } from "@/components/layout/AppLayout";
+import { PageHeader } from "@/components/common/PageHeader";
+import { EmptyState } from "@/components/common/EmptyState";
+import { useOrders, StaffOrder, OrderStatus } from "@/hooks/useOrders";
+import { useTableSessions, ActiveSession, CafeTable } from "@/hooks/useTableSessions";
+import { useBillRequests, BillRequest } from "@/hooks/useBillRequests";
+import { useAuth } from "@/hooks/useAuth";
+import { formatCurrency } from "@/lib/utils";
+import { cn } from "@/lib/utils";
+
+// ─── Helpers ─────────────────────────────────────────────────────────────────
+
+function tableLabel(num: number | null, name: string | null) {
+  if (name && num !== null) return `${name} (${num})`;
+  if (num !== null) return `Table ${num}`;
+  return "Unknown table";
+}
+
+function timeAgo(iso: string) {
+  return formatDistanceToNow(new Date(iso), { addSuffix: true });
+}
+
+function expiresIn(iso: string) {
+  const d = new Date(iso);
+  const now = new Date();
+  if (d <= now) return "Expired";
+  return `${formatDistanceToNow(d)}`;
+}
+
+// ─── Order Card ───────────────────────────────────────────────────────────────
+
+const STATUS_NEXT: Partial<Record<OrderStatus, { label: string; next: OrderStatus }>> = {
+  approved:   { label: "Start Preparing", next: "in_kitchen" },
+  in_kitchen: { label: "Mark Ready",      next: "ready"      },
+  ready:      { label: "Mark Served",     next: "served"      },
+};
+
+function OrderCard({
+  order,
+  onUpdate,
+  isUpdating,
+}: {
+  order: StaffOrder;
+  onUpdate: (id: string, status: OrderStatus, note?: string | null) => Promise<void>;
+  isUpdating: boolean;
+}) {
+  const [rejecting, setRejecting] = useState(false);
+  const [rejectNote, setRejectNote] = useState("");
+  const [busy, setBusy] = useState(false);
+
+  const label = tableLabel(order.tableNumber, order.tableName);
+  const advance = STATUS_NEXT[order.status];
+
+  async function handleAction(status: OrderStatus, note?: string | null) {
+    setBusy(true);
+    try {
+      await onUpdate(order.id, status, note);
+    } finally {
+      setBusy(false);
+      setRejecting(false);
+      setRejectNote("");
+    }
+  }
+
+  return (
+    <div className="rounded-xl border bg-card shadow-sm flex flex-col">
+      {/* Header */}
+      <div className="flex items-center justify-between px-4 py-3 border-b">
+        <span className="font-semibold text-sm">{label}</span>
+        <span className="text-xs text-muted-foreground">{timeAgo(order.createdAt)}</span>
+      </div>
+
+      {/* Items */}
+      <div className="px-4 py-3 space-y-1 flex-1">
+        {order.items.map((item) => (
+          <div key={item.id} className="flex items-start gap-2 text-sm">
+            <span className="shrink-0 font-medium text-primary w-5 text-right">{item.quantity}×</span>
+            <div className="min-w-0">
+              <span className="text-foreground">{item.name}</span>
+              {item.notes && (
+                <p className="text-xs text-muted-foreground italic truncate">{item.notes}</p>
+              )}
+            </div>
+            <span className="ml-auto shrink-0 text-muted-foreground">
+              {formatCurrency(item.unitPrice * item.quantity)}
+            </span>
+          </div>
+        ))}
+      </div>
+
+      {/* Total */}
+      <div className="flex items-center justify-between px-4 py-2 border-t bg-muted/30">
+        <span className="text-xs text-muted-foreground">Total</span>
+        <span className="text-sm font-semibold">{formatCurrency(order.total)}</span>
+      </div>
+
+      {/* Staff note display */}
+      {order.staffNote && (
+        <div className="px-4 py-2 bg-amber-50 border-t border-amber-100">
+          <p className="text-xs text-amber-800">{order.staffNote}</p>
+        </div>
+      )}
+
+      {/* Actions */}
+      <div className="px-4 py-3 border-t space-y-2">
+        {order.status === "pending_approval" && !rejecting && (
+          <div className="flex gap-2">
+            <Button
+              size="sm"
+              className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white"
+              disabled={busy}
+              onClick={() => handleAction("approved")}
+            >
+              {busy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <CheckCircle2 className="h-3.5 w-3.5 mr-1" />}
+              Approve
+            </Button>
+            <Button
+              size="sm"
+              variant="outline"
+              className="flex-1 text-destructive border-destructive/40 hover:bg-destructive/10"
+              disabled={busy}
+              onClick={() => setRejecting(true)}
+            >
+              <XCircle className="h-3.5 w-3.5 mr-1" />
+              Reject
+            </Button>
+          </div>
+        )}
+
+        {order.status === "pending_approval" && rejecting && (
+          <div className="space-y-2">
+            <input
+              type="text"
+              placeholder="Reason for rejection (optional)"
+              value={rejectNote}
+              onChange={(e) => setRejectNote(e.target.value)}
+              className="w-full text-xs px-3 py-2 rounded-lg border bg-background placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-destructive"
+            />
+            <div className="flex gap-2">
+              <Button
+                size="sm"
+                variant="destructive"
+                className="flex-1"
+                disabled={busy}
+                onClick={() => handleAction("cancelled", rejectNote || null)}
+              >
+                {busy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : null}
+                Confirm Reject
+              </Button>
+              <Button
+                size="sm"
+                variant="ghost"
+                className="flex-1"
+                onClick={() => { setRejecting(false); setRejectNote(""); }}
+              >
+                Cancel
+              </Button>
+            </div>
+          </div>
+        )}
+
+        {advance && (
+          <Button
+            size="sm"
+            className="w-full"
+            disabled={busy}
+            onClick={() => handleAction(advance.next)}
+          >
+            {busy ? <Loader2 className="h-3.5 w-3.5 animate-spin mr-1.5" /> : null}
+            {advance.label}
+          </Button>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ─── Orders Tab ───────────────────────────────────────────────────────────────
+
+function KitchenColumn({
+  title,
+  color,
+  orders,
+  onUpdate,
+  isUpdating,
+  emptyText,
+}: {
+  title: string;
+  color: string;
+  orders: StaffOrder[];
+  onUpdate: (id: string, status: OrderStatus, note?: string | null) => Promise<void>;
+  isUpdating: boolean;
+  emptyText: string;
+}) {
+  return (
+    <div className="flex flex-col gap-3 min-w-0">
+      <div className={cn("flex items-center justify-between px-4 py-2.5 rounded-xl font-medium text-sm", color)}>
+        <span>{title}</span>
+        <span className="ml-2 bg-white/30 rounded-full px-2 py-0.5 text-xs font-bold">{orders.length}</span>
+      </div>
+      <div className="space-y-3">
+        {orders.length === 0 ? (
+          <div className="rounded-xl border border-dashed bg-muted/30 px-4 py-8 text-center text-sm text-muted-foreground">
+            {emptyText}
+          </div>
+        ) : (
+          orders.map((order) => (
+            <OrderCard
+              key={order.id}
+              order={order}
+              onUpdate={onUpdate}
+              isUpdating={isUpdating}
+            />
+          ))
+        )}
+      </div>
+    </div>
+  );
+}
+
+function OrdersTab() {
+  const { pendingOrders, preparingOrders, readyOrders, isLoading, updateStatus, isUpdating } =
+    useOrders();
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center py-16">
+        <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+      </div>
+    );
+  }
+
+  return (
+    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <KitchenColumn
+        title="Pending Approval"
+        color="bg-amber-100 text-amber-900"
+        orders={pendingOrders}
+        onUpdate={updateStatus}
+        isUpdating={isUpdating}
+        emptyText="No orders waiting"
+      />
+      <KitchenColumn
+        title="Preparing"
+        color="bg-blue-100 text-blue-900"
+        orders={preparingOrders}
+        onUpdate={updateStatus}
+        isUpdating={isUpdating}
+        emptyText="Kitchen is clear"
+      />
+      <KitchenColumn
+        title="Ready to Serve"
+        color="bg-emerald-100 text-emerald-900"
+        orders={readyOrders}
+        onUpdate={updateStatus}
+        isUpdating={isUpdating}
+        emptyText="Nothing ready yet"
+      />
+    </div>
+  );
+}
+
+// ─── Sessions Tab ─────────────────────────────────────────────────────────────
+
+function SessionsTab() {
+  const { sessions, sessionsLoading, endSession, isEndingSession, endingSessionId } =
+    useTableSessions();
+  const [confirmId, setConfirmId] = useState<string | null>(null);
+
+  if (sessionsLoading) {
+    return (
+      <div className="flex items-center justify-center py-16">
+        <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+      </div>
+    );
+  }
+
+  if (sessions.length === 0) {
+    return (
+      <EmptyState
+        icon={TableProperties}
+        title="No active sessions"
+        description="Sessions appear here when guests scan a QR code and join a table."
+      />
+    );
+  }
+
+  async function handleEnd(sessionId: string) {
+    try {
+      await endSession(sessionId);
+    } finally {
+      setConfirmId(null);
+    }
+  }
+
+  return (
+    <div className="rounded-xl border overflow-hidden">
+      <table className="w-full text-sm">
+        <thead className="bg-muted/50 border-b">
+          <tr>
+            <th className="px-4 py-3 text-left font-medium text-muted-foreground">Table</th>
+            <th className="px-4 py-3 text-left font-medium text-muted-foreground">Started</th>
+            <th className="px-4 py-3 text-left font-medium text-muted-foreground">Expires In</th>
+            <th className="px-4 py-3 text-left font-medium text-muted-foreground">
+              <span className="flex items-center gap-1">
+                <Smartphone className="h-3.5 w-3.5" />
+                Devices
+              </span>
+            </th>
+            <th className="px-4 py-3 text-right font-medium text-muted-foreground">Action</th>
+          </tr>
+        </thead>
+        <tbody className="divide-y">
+          {sessions.map((session) => {
+            const label = tableLabel(session.tableNumber, session.tableName);
+            const isConfirming = confirmId === session.id;
+            const isEnding = isEndingSession && endingSessionId === session.id;
+
+            return (
+              <tr key={session.id} className="hover:bg-muted/20 transition-colors">
+                <td className="px-4 py-3 font-medium">{label}</td>
+                <td className="px-4 py-3 text-muted-foreground">
+                  {format(new Date(session.createdAt), "HH:mm")}
+                </td>
+                <td className="px-4 py-3">
+                  <span
+                    className={cn(
+                      "text-sm",
+                      new Date(session.expiresAt) <= new Date()
+                        ? "text-destructive font-medium"
+                        : "text-muted-foreground"
+                    )}
+                  >
+                    {expiresIn(session.expiresAt)}
+                  </span>
+                </td>
+                <td className="px-4 py-3">
+                  <span className="flex items-center gap-1 text-muted-foreground">
+                    <Users className="h-3.5 w-3.5" />
+                    {session.activeDeviceCount}
+                  </span>
+                </td>
+                <td className="px-4 py-3 text-right">
+                  {isConfirming ? (
+                    <div className="flex items-center justify-end gap-2">
+                      <span className="text-xs text-muted-foreground">End session?</span>
+                      <Button
+                        size="sm"
+                        variant="destructive"
+                        disabled={isEnding}
+                        onClick={() => handleEnd(session.id)}
+                      >
+                        {isEnding ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : "Yes, end it"}
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={() => setConfirmId(null)}
+                      >
+                        Cancel
+                      </Button>
+                    </div>
+                  ) : (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="text-destructive border-destructive/40 hover:bg-destructive/10"
+                      onClick={() => setConfirmId(session.id)}
+                    >
+                      End Session
+                    </Button>
+                  )}
+                </td>
+              </tr>
+            );
+          })}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+// ─── Bills Tab ────────────────────────────────────────────────────────────────
+
+function BillCard({
+  bill,
+  onAcknowledge,
+  isAcknowledging,
+}: {
+  bill: BillRequest;
+  onAcknowledge: (id: string) => Promise<void>;
+  isAcknowledging: boolean;
+}) {
+  const [busy, setBusy] = useState(false);
+  const label = tableLabel(bill.tableNumber, bill.tableName);
+
+  async function handle() {
+    setBusy(true);
+    try {
+      await onAcknowledge(bill.id);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <div
+      className={cn(
+        "rounded-xl border p-4 flex items-center justify-between gap-4",
+        bill.status === "pending"
+          ? "bg-amber-50 border-amber-200"
+          : "bg-card border-border opacity-60"
+      )}
+    >
+      <div className="flex items-center gap-3 min-w-0">
+        <div
+          className={cn(
+            "flex items-center justify-center w-9 h-9 rounded-full shrink-0",
+            bill.status === "pending"
+              ? "bg-amber-200 text-amber-900"
+              : "bg-muted text-muted-foreground"
+          )}
+        >
+          <Bell className="h-4 w-4" />
+        </div>
+        <div className="min-w-0">
+          <p className="font-semibold text-sm">{label}</p>
+          <p className="text-xs text-muted-foreground">{timeAgo(bill.requestedAt)}</p>
+          {bill.acknowledgedAt && (
+            <p className="text-xs text-muted-foreground">
+              Delivered {timeAgo(bill.acknowledgedAt)}
+            </p>
+          )}
+        </div>
+      </div>
+
+      {bill.status === "pending" && (
+        <Button
+          size="sm"
+          className="shrink-0 bg-amber-600 hover:bg-amber-700 text-white"
+          disabled={busy}
+          onClick={handle}
+        >
+          {busy ? <Loader2 className="h-3.5 w-3.5 animate-spin mr-1" /> : <CheckCircle2 className="h-3.5 w-3.5 mr-1" />}
+          Mark Delivered
+        </Button>
+      )}
+
+      {bill.status === "acknowledged" && (
+        <Badge variant="secondary" className="shrink-0">Delivered</Badge>
+      )}
+    </div>
+  );
+}
+
+function BillsTab() {
+  const { pendingBills, acknowledgedBills, isLoading, acknowledge, isAcknowledging } =
+    useBillRequests();
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center py-16">
+        <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+      </div>
+    );
+  }
+
+  const allBills = [...pendingBills, ...acknowledgedBills];
+
+  if (allBills.length === 0) {
+    return (
+      <EmptyState
+        icon={Receipt}
+        title="No bill requests"
+        description="Bill requests appear here when guests tap 'Request the Bill' on their device."
+      />
+    );
+  }
+
+  return (
+    <div className="space-y-6">
+      {pendingBills.length > 0 && (
+        <div className="space-y-3">
+          <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
+            Pending ({pendingBills.length})
+          </h3>
+          <div className="space-y-2">
+            {pendingBills.map((b) => (
+              <BillCard key={b.id} bill={b} onAcknowledge={acknowledge} isAcknowledging={isAcknowledging} />
+            ))}
+          </div>
+        </div>
+      )}
+
+      {acknowledgedBills.length > 0 && (
+        <div className="space-y-3">
+          <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
+            Delivered ({acknowledgedBills.length})
+          </h3>
+          <div className="space-y-2">
+            {acknowledgedBills.map((b) => (
+              <BillCard key={b.id} bill={b} onAcknowledge={acknowledge} isAcknowledging={isAcknowledging} />
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─── QR Tab ───────────────────────────────────────────────────────────────────
+
+function QRTableCard({
+  table,
+  onRegenerate,
+  isRegenerating,
+  canManage,
+}: {
+  table: CafeTable;
+  onRegenerate: (id: string) => Promise<unknown>;
+  isRegenerating: boolean;
+  canManage: boolean;
+}) {
+  const qrContainerRef = useRef<HTMLDivElement>(null);
+  const [copied, setCopied] = useState(false);
+  const [busy, setBusy] = useState(false);
+
+  const guestUrl = table.qrCodeToken
+    ? `${window.location.origin}${import.meta.env.BASE_URL}table/${table.qrCodeToken}`
+    : null;
+
+  const label = tableLabel(table.number, table.name);
+
+  async function handleCopy() {
+    if (!guestUrl) return;
+    await navigator.clipboard.writeText(guestUrl);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  }
+
+  function handleDownload() {
+    const svg = qrContainerRef.current?.querySelector("svg");
+    if (!svg) return;
+    const svgString = new XMLSerializer().serializeToString(svg);
+    const blob = new Blob([svgString], { type: "image/svg+xml" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `${label.replace(/\s+/g, "-").toLowerCase()}-qr.svg`;
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
+  function handlePrint() {
+    if (!guestUrl) return;
+    const svg = qrContainerRef.current?.querySelector("svg");
+    if (!svg) return;
+    const svgString = new XMLSerializer().serializeToString(svg);
+    const win = window.open("", "_blank", "width=480,height=600");
+    if (!win) return;
+    win.document.write(`
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <title>QR Code — ${label}</title>
+          <style>
+            body { margin: 0; display: flex; flex-direction: column; align-items: center;
+                   justify-content: center; min-height: 100vh; font-family: sans-serif; gap: 16px; }
+            h2 { margin: 0; font-size: 22px; }
+            p { margin: 0; font-size: 13px; color: #666; }
+            @media print { body { padding: 20px; } }
+          </style>
+        </head>
+        <body>
+          <h2>${label}</h2>
+          ${svgString}
+          <p>Scan to view menu &amp; order</p>
+          <script>window.onload = function() { window.print(); }<\/script>
+        </body>
+      </html>
+    `);
+    win.document.close();
+  }
+
+  async function handleRegenerate() {
+    setBusy(true);
+    try {
+      await onRegenerate(table.id);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <div className="rounded-xl border bg-card shadow-sm flex flex-col">
+      {/* Header */}
+      <div className="px-4 py-3 border-b flex items-center justify-between">
+        <span className="font-semibold text-sm">{label}</span>
+        {!table.isActive && (
+          <Badge variant="secondary" className="text-xs">Inactive</Badge>
+        )}
+      </div>
+
+      {/* QR display */}
+      <div className="flex flex-col items-center px-4 py-5 gap-3">
+        {guestUrl ? (
+          <div
+            ref={qrContainerRef}
+            className="bg-white p-3 rounded-xl border shadow-sm"
+          >
+            <QRCode value={guestUrl} size={160} />
+          </div>
+        ) : (
+          <div className="w-[184px] h-[184px] rounded-xl border-2 border-dashed bg-muted flex flex-col items-center justify-center gap-2 text-muted-foreground">
+            <QrCode className="h-10 w-10 opacity-30" />
+            <span className="text-xs text-center px-3">No QR token — generate one</span>
+          </div>
+        )}
+
+        {/* URL display */}
+        {guestUrl && (
+          <div className="w-full bg-muted rounded-lg px-3 py-2">
+            <p className="text-xs text-muted-foreground font-mono break-all line-clamp-2">
+              {guestUrl}
+            </p>
+          </div>
+        )}
+      </div>
+
+      {/* Actions */}
+      <div className="px-4 pb-4 grid grid-cols-2 gap-2">
+        <Button
+          size="sm"
+          variant="outline"
+          disabled={!guestUrl}
+          onClick={handleCopy}
+          className="text-xs"
+        >
+          <Copy className="h-3.5 w-3.5 mr-1.5" />
+          {copied ? "Copied!" : "Copy URL"}
+        </Button>
+
+        <Button
+          size="sm"
+          variant="outline"
+          disabled={!guestUrl}
+          onClick={handleDownload}
+          className="text-xs"
+        >
+          <Download className="h-3.5 w-3.5 mr-1.5" />
+          Download
+        </Button>
+
+        <Button
+          size="sm"
+          variant="outline"
+          disabled={!guestUrl}
+          onClick={handlePrint}
+          className="text-xs"
+        >
+          <Printer className="h-3.5 w-3.5 mr-1.5" />
+          Print
+        </Button>
+
+        {canManage && (
+          <Button
+            size="sm"
+            variant="outline"
+            disabled={busy || isRegenerating}
+            onClick={handleRegenerate}
+            className="text-xs text-amber-700 border-amber-300 hover:bg-amber-50"
+          >
+            {busy ? (
+              <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" />
+            ) : (
+              <RefreshCw className="h-3.5 w-3.5 mr-1.5" />
+            )}
+            {table.qrCodeToken ? "Regenerate" : "Generate"}
+          </Button>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function QRTab() {
+  const { tables, tablesLoading, regenerateQr, isRegeneratingQr, regeneratingTableId } =
+    useTableSessions();
+  const { user } = useAuth();
+  const canManage =
+    user?.role === "owner" || user?.role === "manager";
+
+  if (tablesLoading) {
+    return (
+      <div className="flex items-center justify-center py-16">
+        <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+      </div>
+    );
+  }
+
+  if (tables.length === 0) {
+    return (
+      <EmptyState
+        icon={QrCode}
+        title="No tables configured"
+        description="Add tables in your cafe settings to generate QR codes for them."
+      />
+    );
+  }
+
+  const activeTables = tables.filter((t) => t.isActive);
+  const inactiveTables = tables.filter((t) => !t.isActive);
+
+  return (
+    <div className="space-y-6">
+      {canManage && (
+        <div className="flex items-center gap-2 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+          <AlertCircle className="h-4 w-4 shrink-0" />
+          <span>
+            Regenerating a QR code <strong>invalidates the old URL immediately</strong>. All
+            existing guest sessions will not be affected, but guests who scan the old code
+            will fail to join.
+          </span>
+        </div>
+      )}
+
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
+        {activeTables.map((table) => (
+          <QRTableCard
+            key={table.id}
+            table={table}
+            onRegenerate={regenerateQr}
+            isRegenerating={isRegeneratingQr && regeneratingTableId === table.id}
+            canManage={canManage}
+          />
+        ))}
+        {inactiveTables.map((table) => (
+          <QRTableCard
+            key={table.id}
+            table={table}
+            onRegenerate={regenerateQr}
+            isRegenerating={isRegeneratingQr && regeneratingTableId === table.id}
+            canManage={canManage}
+          />
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// ─── Main Page ────────────────────────────────────────────────────────────────
+
+export function OrdersPage() {
+  const { pendingOrders } = useOrders();
+  const { pendingBills } = useBillRequests();
+
+  return (
+    <AppLayout>
+      <PageHeader
+        title="Orders & Sessions"
+        subtitle="Real-time kitchen queue, table sessions, and bill requests"
+      />
+
+      <Tabs defaultValue="orders" className="mt-6">
+        <TabsList className="mb-6 flex-wrap h-auto gap-1">
+          <TabsTrigger value="orders" className="flex items-center gap-2">
+            <ChefHat className="h-4 w-4" />
+            Orders
+            {pendingOrders.length > 0 && (
+              <span className="ml-1 flex items-center justify-center rounded-full bg-amber-500 text-white text-[10px] font-bold w-4.5 h-4.5 min-w-[18px] px-1">
+                {pendingOrders.length}
+              </span>
+            )}
+          </TabsTrigger>
+
+          <TabsTrigger value="sessions" className="flex items-center gap-2">
+            <TableProperties className="h-4 w-4" />
+            Sessions
+          </TabsTrigger>
+
+          <TabsTrigger value="bills" className="flex items-center gap-2">
+            <Receipt className="h-4 w-4" />
+            Bill Requests
+            {pendingBills.length > 0 && (
+              <span className="ml-1 flex items-center justify-center rounded-full bg-amber-500 text-white text-[10px] font-bold w-4.5 h-4.5 min-w-[18px] px-1">
+                {pendingBills.length}
+              </span>
+            )}
+          </TabsTrigger>
+
+          <TabsTrigger value="qr" className="flex items-center gap-2">
+            <QrCode className="h-4 w-4" />
+            QR Codes
+          </TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="orders">
+          <OrdersTab />
+        </TabsContent>
+
+        <TabsContent value="sessions">
+          <SessionsTab />
+        </TabsContent>
+
+        <TabsContent value="bills">
+          <BillsTab />
+        </TabsContent>
+
+        <TabsContent value="qr">
+          <QRTab />
+        </TabsContent>
+      </Tabs>
+    </AppLayout>
+  );
+}

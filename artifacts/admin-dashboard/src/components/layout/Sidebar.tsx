@@ -12,6 +12,7 @@ import {
   LogOut,
   Coffee,
   ChevronRight,
+  ClipboardList,
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 
@@ -24,6 +25,7 @@ interface NavItem {
 
 const NAV_ITEMS: NavItem[] = [
   { href: "/", label: "Dashboard", icon: LayoutDashboard },
+  { href: "/orders", label: "Orders", icon: ClipboardList },
   { href: "/menu", label: "Menu", icon: UtensilsCrossed },
   { href: "/gallery", label: "Gallery", icon: Images },
   { href: "/offers", label: "Offers", icon: Tag },

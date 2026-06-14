@@ -10,6 +10,7 @@ import { AuthConfirmPage } from "@/pages/AuthConfirmPage";
 import { BookingFormPage } from "@/pages/BookingFormPage";
 import { TableSessionPage } from "@/pages/TableSessionPage";
 import { DashboardPage } from "@/pages/DashboardPage";
+import { OrdersPage } from "@/pages/OrdersPage";
 import { MenuPage } from "@/pages/MenuPage";
 import { GalleryPage } from "@/pages/GalleryPage";
 import { OffersPage } from "@/pages/OffersPage";
@@ -49,6 +50,11 @@ function Router() {
       <Route path="/">
         <ProtectedRoute>
           <DashboardPage />
+        </ProtectedRoute>
+      </Route>
+      <Route path="/orders">
+        <ProtectedRoute>
+          <OrdersPage />
         </ProtectedRoute>
       </Route>
       <Route path="/menu">

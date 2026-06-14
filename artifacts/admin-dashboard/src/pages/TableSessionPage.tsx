@@ -617,12 +617,6 @@ function ActiveSession({
 export function TableSessionPage() {
   const { token } = useParams<{ token: string }>();
 
-  // TEMP: token flow diagnostics
-  console.log("[TableSessionPage] window.location.href  =", window.location.href);
-  console.log("[TableSessionPage] window.location.pathname =", window.location.pathname);
-  console.log("[TableSessionPage] useParams() token     =", token);
-  console.log("[TableSessionPage] passing to hook       =", token ?? "");
-
   const {
     sessionState,
     sessionInfo,
