@@ -1,4 +1,5 @@
 import { useState, useRef, useCallback } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { format, formatDistanceToNow } from "date-fns";
 import {
   ClipboardList,
@@ -776,7 +777,10 @@ function QRTab() {
 // ─── Main Page ────────────────────────────────────────────────────────────────
 
 export function OrdersPage() {
-  const { pendingOrders } = useOrders();
+  const qc = useQueryClient();
+  const pendingOrders = (qc.getQueryData<StaffOrder[]>(["staff_orders"]) ?? []).filter(
+    (o) => o.status === "pending_approval"
+  );
   const { pendingBills } = useBillRequests();
 
   return (
