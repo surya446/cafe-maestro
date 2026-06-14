@@ -20,16 +20,46 @@ export function useAuth() {
 
   const buildAuthUser = useCallback(
     async (supabaseUser: User): Promise<AuthUser | null> => {
-      const { data: member, error } = await supabase
+      // ── Primary query: core auth fields ────────────────────────
+      const { data: member, error: memberError } = await supabase
         .from("staff_users")
-        .select("role, full_name, cafe_id, must_change_password, cafes(name)")
+        .select("role, full_name, cafe_id, cafes(name)")
         .eq("id", supabaseUser.id)
         .eq("is_active", true)
         .single();
 
-      if (error || !member) return null;
+      if (memberError) {
+        console.error(
+          "[useAuth] staff_users primary query error:",
+          JSON.stringify(memberError, null, 2),
+        );
+        return null;
+      }
+      if (!member) return null;
 
       const cafe = member.cafes as unknown as { name: string } | null;
+
+      // ── Secondary query: must_change_password (migration 028) ──
+      // Queried separately so login still works if the migration
+      // hasn't been applied to the database yet.
+      let mustChangePassword = false;
+      const { data: flagRow, error: flagError } = await supabase
+        .from("staff_users")
+        .select("must_change_password")
+        .eq("id", supabaseUser.id)
+        .single();
+
+      if (flagError) {
+        // Column likely doesn't exist yet (migration 028 pending).
+        // Default to false — staff won't be force-redirected until
+        // the migration is applied and the flag is explicitly set.
+        console.warn(
+          "[useAuth] must_change_password query failed (migration 028 may not be applied yet):",
+          JSON.stringify(flagError, null, 2),
+        );
+      } else {
+        mustChangePassword = flagRow?.must_change_password ?? false;
+      }
 
       return {
         id: supabaseUser.id,
@@ -38,10 +68,10 @@ export function useAuth() {
         displayName: member.full_name,
         cafeId: member.cafe_id,
         cafeName: cafe?.name ?? "",
-        mustChangePassword: member.must_change_password ?? false,
+        mustChangePassword,
       };
     },
-    []
+    [],
   );
 
   useEffect(() => {
@@ -85,7 +115,7 @@ export function useAuth() {
       }
       return null;
     },
-    []
+    [],
   );
 
   const signOut = useCallback(async () => {
