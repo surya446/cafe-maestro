@@ -5,7 +5,13 @@ import type { RealtimeChannel } from "@supabase/supabase-js";
 
 // ─── Public types ──────────────────────────────────────────────────────────────
 
-export type SessionState = "loading" | "active" | "expired" | "ended" | "invalid";
+export type SessionState =
+  | "loading"
+  | "entering_name"
+  | "active"
+  | "expired"
+  | "ended"
+  | "invalid";
 
 export interface SessionInfo {
   sessionId: string;
@@ -16,6 +22,7 @@ export interface SessionInfo {
   tableNumber: number;
   tableName: string | null;
   expiresAt: string;
+  customerName: string;
 }
 
 export interface GuestOrderItem {
@@ -28,6 +35,8 @@ export interface GuestOrderItem {
 
 export interface GuestOrder {
   orderId: string;
+  sessionId: string;
+  customerName: string;
   status: string;
   staffNote: string | null;
   createdAt: string;
@@ -47,6 +56,7 @@ export interface CartItem {
 interface StoredDevice {
   deviceToken: string;
   sessionId: string;
+  customerName: string;
 }
 
 interface EndedMarker {
@@ -70,17 +80,23 @@ function isStoredDevice(s: StoredDevice | EndedMarker): s is StoredDevice {
   return "deviceToken" in s;
 }
 
-function saveStored(qrToken: string, deviceToken: string, sessionId: string) {
-  localStorage.setItem(storageKey(qrToken), JSON.stringify({ deviceToken, sessionId }));
+function saveStored(
+  qrToken: string,
+  deviceToken: string,
+  sessionId: string,
+  customerName: string
+) {
+  localStorage.setItem(
+    storageKey(qrToken),
+    JSON.stringify({ deviceToken, sessionId, customerName })
+  );
 }
 
 function clearStored(qrToken: string) {
   localStorage.removeItem(storageKey(qrToken));
 }
 
-// Writes an ended marker so that on page reload the guest sees the "ended"
-// screen rather than being silently dropped into a new session.
-// Cleared automatically when the guest does a fresh navigation (QR rescan).
+// Writes an ended marker so reloads stay on the ended screen.
 function markEnded(qrToken: string) {
   localStorage.setItem(storageKey(qrToken), JSON.stringify({ ended: true }));
 }
@@ -94,9 +110,9 @@ function isFreshNavigation(): boolean {
   return entries.length === 0 || entries[0].type === "navigate";
 }
 
-// ─── RPC wrappers ──────────────────────────────────────────────────────────────
+// ─── RPC types ─────────────────────────────────────────────────────────────────
 
-interface JoinResult {
+interface CreateSessionResult {
   session_id: string;
   device_token: string;
   cafe_id: string;
@@ -105,7 +121,7 @@ interface JoinResult {
   table_number: number;
   table_name: string | null;
   expires_at: string;
-  is_new_session: boolean;
+  customer_name: string;
 }
 
 interface ValidateResult {
@@ -118,14 +134,23 @@ interface ValidateResult {
   table_id: string;
   table_number: number;
   table_name: string | null;
+  customer_name: string;
 }
 
-async function rpcJoinOrCreate(qrToken: string): Promise<JoinResult> {
-  const { data, error } = await supabase.rpc("join_or_create_session", {
+// ─── RPC wrappers ──────────────────────────────────────────────────────────────
+
+async function rpcCreateSession(
+  qrToken: string,
+  customerName: string,
+  userAgent: string
+): Promise<CreateSessionResult> {
+  const { data, error } = await supabase.rpc("create_session", {
     p_qr_token: qrToken,
+    p_customer_name: customerName,
+    p_user_agent: userAgent,
   });
   if (error) throw new Error(error.message);
-  const rows = data as JoinResult[] | null;
+  const rows = data as CreateSessionResult[] | null;
   if (!rows || rows.length === 0) throw new Error("TABLE_NOT_FOUND");
   return rows[0];
 }
@@ -140,6 +165,10 @@ async function rpcValidateDevice(deviceToken: string): Promise<ValidateResult | 
 }
 
 function mapRpcError(msg: string): string {
+  if (msg.includes("CUSTOMER_NAME_REQUIRED"))
+    return "Please enter your name to start ordering.";
+  if (msg.includes("TABLE_NOT_FOUND"))
+    return "This QR code is no longer active. Please ask your waiter for a new one.";
   if (msg.includes("DEVICE_INVALID"))
     return "Your session has ended. Please scan the QR code again.";
   if (msg.includes("SESSION_INVALID") || msg.includes("SESSION_MISMATCH"))
@@ -159,15 +188,15 @@ export function useTableSession(qrToken: string) {
   const [sessionState, setSessionState] = useState<SessionState>("loading");
   const [sessionInfo, setSessionInfo] = useState<SessionInfo | null>(null);
   const [billRequested, setBillRequested] = useState(false);
+  const [nameEntryError, setNameEntryError] = useState<string | null>(null);
+  const [isStartingSession, setIsStartingSession] = useState(false);
 
   const channelRef = useRef<RealtimeChannel | null>(null);
-
-  // ─── Derived shorthands ───────────────────────────────────────────────────
 
   const deviceToken = sessionInfo?.deviceToken ?? null;
   const sessionId   = sessionInfo?.sessionId   ?? null;
 
-  // ─── Initialization: validate stored token or join fresh ─────────────────
+  // ─── Initialization: validate stored token or show name-entry screen ──────
 
   useEffect(() => {
     if (!qrToken) {
@@ -178,83 +207,65 @@ export function useTableSession(qrToken: string) {
     let cancelled = false;
 
     async function init() {
-      // Distinguish QR scan (fresh navigation) from page reload.
-      // On fresh navigation: clear any ended marker so the guest can rejoin.
-      // On reload: preserve the ended marker so the "Session ended" screen persists.
       const freshNav = isFreshNavigation();
-
       const stored = loadStored(qrToken);
 
-      // Ended marker present → guard against reload silently auto-joining.
+      // Ended marker present
       if (stored && !isStoredDevice(stored)) {
         if (!freshNav) {
           // Reload after staff-ended session → keep showing ended screen.
           setSessionState("ended");
           return;
         }
-        // Fresh QR scan → guest intentionally rescanning; clear marker and join.
+        // Fresh QR scan → clear ended marker and show name entry.
         clearStored(qrToken);
+        setSessionState("entering_name");
+        return;
       }
 
-      // Try re-using stored device token first.
-      const storedDevice = loadStored(qrToken);
-      if (storedDevice && isStoredDevice(storedDevice)) {
-        const result = await rpcValidateDevice(storedDevice.deviceToken);
+      // Valid stored device → try to resume without re-asking the name.
+      if (stored && isStoredDevice(stored)) {
+        const result = await rpcValidateDevice(stored.deviceToken);
         if (cancelled) return;
 
         if (result?.is_valid) {
-          setSessionInfo({
-            sessionId:    storedDevice.sessionId,
-            deviceToken:  storedDevice.deviceToken,
+          // Source of truth for customer_name is validate_device(), not localStorage.
+          const info: SessionInfo = {
+            sessionId:    stored.sessionId,
+            deviceToken:  stored.deviceToken,
             cafeId:       result.cafe_id,
             cafeName:     result.cafe_name,
             tableId:      result.table_id,
             tableNumber:  result.table_number,
             tableName:    result.table_name ?? null,
             expiresAt:    result.expires_at,
-          });
+            customerName: result.customer_name,
+          };
+          // Keep localStorage in sync with the authoritative server value.
+          saveStored(qrToken, stored.deviceToken, stored.sessionId, result.customer_name);
+          setSessionInfo(info);
           setSessionState("active");
           return;
         }
 
-        // Stored token is no longer valid.
         if (result?.session_status === "ended") {
-          // Staff ended this session — write ended marker so reloads stay on
-          // the ended screen. Do NOT fall through to join_or_create_session.
           markEnded(qrToken);
           setSessionState("ended");
           return;
         }
 
-        // Expired or device record gone → clear and fall through to fresh join
-        // (expired sessions allow automatic session creation).
+        if (result?.session_status === "expired") {
+          clearStored(qrToken);
+          setSessionState("expired");
+          return;
+        }
+
+        // Device record missing or unknown → clear and fall to name entry.
         clearStored(qrToken);
-        if (result?.session_status === "expired") { setSessionState("expired"); return; }
-        // Device record missing → fall through to join
       }
 
-      // No stored token (or expired/unknown device) → join or create a session.
-      try {
-        const row = await rpcJoinOrCreate(qrToken);
-        if (cancelled) return;
-
-        const info: SessionInfo = {
-          sessionId:   row.session_id,
-          deviceToken: row.device_token,
-          cafeId:      row.cafe_id,
-          cafeName:    row.cafe_name,
-          tableId:     row.table_id,
-          tableNumber: row.table_number,
-          tableName:   row.table_name ?? null,
-          expiresAt:   row.expires_at,
-        };
-        saveStored(qrToken, info.deviceToken, info.sessionId);
-        setSessionInfo(info);
-        setSessionState("active");
-      } catch (err: unknown) {
-        if (cancelled) return;
-        setSessionState("invalid");
-      }
+      // No stored device (or just cleared) → show name-entry screen.
+      setSessionState("entering_name");
     }
 
     init();
@@ -271,7 +282,6 @@ export function useTableSession(qrToken: string) {
       const result = await rpcValidateDevice(deviceToken);
 
       if (!result) {
-        // Device record gone — session was cleaned up
         clearStored(qrToken);
         setSessionState("expired");
         return null;
@@ -279,9 +289,9 @@ export function useTableSession(qrToken: string) {
 
       if (!result.is_valid) {
         if (result.session_status === "ended") {
-          markEnded(qrToken);   // preserve ended state across reloads
+          markEnded(qrToken);
         } else {
-          clearStored(qrToken); // expired → allow fresh join
+          clearStored(qrToken);
         }
         setSessionState(result.session_status === "ended" ? "ended" : "expired");
       }
@@ -295,8 +305,6 @@ export function useTableSession(qrToken: string) {
   });
 
   // ─── Supabase Realtime subscription ──────────────────────────────────────
-  // Subscribes to session status changes and order updates.
-  // Falls back gracefully if RLS blocks the subscription — polling covers it.
 
   useEffect(() => {
     if (!sessionId || sessionState !== "active") return;
@@ -314,10 +322,10 @@ export function useTableSession(qrToken: string) {
         (payload) => {
           const rec = payload.new as { status?: string };
           if (rec.status === "ended") {
-            markEnded(qrToken);   // preserve ended state so reloads don't auto-join
+            markEnded(qrToken);
             setSessionState("ended");
           } else if (rec.status === "expired") {
-            clearStored(qrToken); // expired → allow fresh join on next scan
+            clearStored(qrToken);
             setSessionState("expired");
           }
         }
@@ -331,8 +339,7 @@ export function useTableSession(qrToken: string) {
           filter: `session_id=eq.${sessionId}`,
         },
         () => {
-          // Immediately refresh orders when staff updates status
-          qc.invalidateQueries({ queryKey: ["session_orders", deviceToken] });
+          qc.invalidateQueries({ queryKey: ["table_orders", deviceToken] });
         }
       )
       .subscribe();
@@ -344,22 +351,24 @@ export function useTableSession(qrToken: string) {
     };
   }, [sessionId, sessionState, qrToken, deviceToken, qc]);
 
-  // ─── Orders (polled + realtime-invalidated) ───────────────────────────────
+  // ─── Table orders (all sessions on the same physical table) ──────────────
 
   const { data: orders = [], isLoading: ordersLoading } = useQuery<GuestOrder[]>({
-    queryKey: ["session_orders", deviceToken],
+    queryKey: ["table_orders", deviceToken],
     queryFn: async () => {
       if (!deviceToken) return [];
-      const { data, error } = await supabase.rpc("get_session_orders", {
+      const { data, error } = await supabase.rpc("get_table_orders", {
         p_device_token: deviceToken,
       });
       if (error) throw error;
 
       return ((data as RawOrderRow[]) ?? []).map((row) => ({
-        orderId:   row.order_id,
-        status:    row.status,
-        staffNote: row.staff_note,
-        createdAt: row.created_at,
+        orderId:      row.order_id,
+        sessionId:    row.session_id,
+        customerName: row.customer_name,
+        status:       row.status,
+        staffNote:    row.staff_note,
+        createdAt:    row.created_at,
         items: parseItems(row.items),
       }));
     },
@@ -367,6 +376,45 @@ export function useTableSession(qrToken: string) {
     refetchInterval: 8_000,
     refetchIntervalInBackground: false,
   });
+
+  // ─── startSession: called from NameEntryScreen ────────────────────────────
+  // Does NOT change sessionState to "loading" — the form shows its own spinner.
+  // Source of truth for customerName is the server; we persist it to localStorage
+  // so it survives reloads, but validate_device() is always the final authority.
+
+  const startSession = useCallback(
+    async (customerName: string) => {
+      setNameEntryError(null);
+      setIsStartingSession(true);
+      try {
+        const row = await rpcCreateSession(
+          qrToken,
+          customerName.trim(),
+          navigator.userAgent
+        );
+        const info: SessionInfo = {
+          sessionId:    row.session_id,
+          deviceToken:  row.device_token,
+          cafeId:       row.cafe_id,
+          cafeName:     row.cafe_name,
+          tableId:      row.table_id,
+          tableNumber:  row.table_number,
+          tableName:    row.table_name ?? null,
+          expiresAt:    row.expires_at,
+          customerName: row.customer_name,
+        };
+        saveStored(qrToken, info.deviceToken, info.sessionId, info.customerName);
+        setSessionInfo(info);
+        setSessionState("active");
+      } catch (err: unknown) {
+        const msg = err instanceof Error ? err.message : "";
+        setNameEntryError(mapRpcError(msg));
+      } finally {
+        setIsStartingSession(false);
+      }
+    },
+    [qrToken]
+  );
 
   // ─── Actions ──────────────────────────────────────────────────────────────
 
@@ -386,10 +434,10 @@ export function useTableSession(qrToken: string) {
         p_items:        items,
       });
       if (error) throw new Error(mapRpcError(error.message));
-      return data as string; // order_id
+      return data as string;
     },
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["session_orders", deviceToken] });
+      qc.invalidateQueries({ queryKey: ["table_orders", deviceToken] });
     },
   });
 
@@ -423,6 +471,9 @@ export function useTableSession(qrToken: string) {
     orders,
     ordersLoading,
     billRequested,
+    nameEntryError,
+    isStartingSession,
+    startSession,
     placeOrder,
     requestBill,
     isPlacingOrder:    placeOrderMutation.isPending,
@@ -435,11 +486,13 @@ export function useTableSession(qrToken: string) {
 // ─── Internal types ────────────────────────────────────────────────────────────
 
 interface RawOrderRow {
-  order_id:   string;
-  status:     string;
-  staff_note: string | null;
-  created_at: string;
-  items:      GuestOrderItem[] | string;
+  order_id:      string;
+  session_id:    string;
+  customer_name: string;
+  status:        string;
+  staff_note:    string | null;
+  created_at:    string;
+  items:         GuestOrderItem[] | string;
 }
 
 function parseItems(raw: GuestOrderItem[] | string): GuestOrderItem[] {

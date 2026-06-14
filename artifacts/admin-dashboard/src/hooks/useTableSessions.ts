@@ -9,6 +9,7 @@ export interface ActiveSession {
   tableId: string;
   tableNumber: number;
   tableName: string | null;
+  customerName: string;
   status: string;
   expiresAt: string;
   createdAt: string;
@@ -34,7 +35,7 @@ export function useTableSessions() {
       const { data, error } = await supabase
         .from("table_sessions")
         .select(
-          `id, cafe_id, table_id, status, expires_at, created_at,
+          `id, cafe_id, table_id, status, expires_at, created_at, customer_name,
            cafe_tables (number, name),
            session_devices (id, is_active)`
         )
@@ -44,14 +45,15 @@ export function useTableSessions() {
       if (error) throw error;
 
       return (data ?? []).map((s: any) => ({
-        id: s.id,
-        cafeId: s.cafe_id,
-        tableId: s.table_id,
-        tableNumber: s.cafe_tables?.number ?? 0,
-        tableName: s.cafe_tables?.name ?? null,
-        status: s.status,
-        expiresAt: s.expires_at,
-        createdAt: s.created_at,
+        id:                s.id,
+        cafeId:            s.cafe_id,
+        tableId:           s.table_id,
+        tableNumber:       s.cafe_tables?.number ?? 0,
+        tableName:         s.cafe_tables?.name ?? null,
+        customerName:      s.customer_name ?? "",
+        status:            s.status,
+        expiresAt:         s.expires_at,
+        createdAt:         s.created_at,
         activeDeviceCount: (s.session_devices ?? []).filter(
           (d: any) => d.is_active
         ).length,
@@ -72,12 +74,12 @@ export function useTableSessions() {
       if (error) throw error;
 
       return (data ?? []).map((t: any) => ({
-        id: t.id,
-        cafeId: t.cafe_id,
-        number: t.number,
-        name: t.name ?? null,
-        qrCodeToken: t.qr_code_token ?? null,
-        isActive: t.is_active,
+        id:           t.id,
+        cafeId:       t.cafe_id,
+        number:       t.number,
+        name:         t.name ?? null,
+        qrCodeToken:  t.qr_code_token ?? null,
+        isActive:     t.is_active,
       }));
     },
     staleTime: 30_000,
@@ -105,12 +107,27 @@ export function useTableSessions() {
     };
   }, [qc]);
 
+  // End a single session
   const endSessionMutation = useMutation({
     mutationFn: async (sessionId: string) => {
       const { error } = await supabase.rpc("end_session", {
         p_session_id: sessionId,
       });
       if (error) throw error;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["staff_sessions"] });
+    },
+  });
+
+  // End all active sessions on a table
+  const endTableSessionsMutation = useMutation({
+    mutationFn: async (tableId: string) => {
+      const { data, error } = await supabase.rpc("end_table_sessions", {
+        p_table_id: tableId,
+      });
+      if (error) throw error;
+      return data as number;
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["staff_sessions"] });
@@ -137,11 +154,14 @@ export function useTableSessions() {
     sessionsLoading,
     tables,
     tablesLoading,
-    endSession: endSessionMutation.mutateAsync,
-    isEndingSession: endSessionMutation.isPending,
-    endingSessionId: endSessionMutation.variables as string | undefined,
-    regenerateQr: regenerateQrMutation.mutateAsync,
-    isRegeneratingQr: regenerateQrMutation.isPending,
+    endSession:          endSessionMutation.mutateAsync,
+    isEndingSession:     endSessionMutation.isPending,
+    endingSessionId:     endSessionMutation.variables as string | undefined,
+    endTableSessions:    endTableSessionsMutation.mutateAsync,
+    isEndingTable:       endTableSessionsMutation.isPending,
+    endingTableId:       endTableSessionsMutation.variables as string | undefined,
+    regenerateQr:        regenerateQrMutation.mutateAsync,
+    isRegeneratingQr:    regenerateQrMutation.isPending,
     regeneratingTableId: regenerateQrMutation.variables as string | undefined,
   };
 }

@@ -4,14 +4,12 @@ import { useQuery } from "@tanstack/react-query";
 import {
   Coffee, QrCode, Clock, AlertCircle, XCircle, CheckCircle2,
   ChefHat, Bell, ShoppingCart, Minus, Plus, X, Loader2,
-  UtensilsCrossed, Receipt,
+  UtensilsCrossed, Receipt, User,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { Textarea } from "@/components/ui/textarea";
 import { supabase } from "@/lib/supabase";
 import {
-  useTableSession, SessionState, GuestOrder, CartItem,
+  useTableSession, SessionState, GuestOrder, CartItem, SessionInfo,
 } from "@/hooks/useTableSession";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -47,6 +45,30 @@ function formatTimeLeft(expiresAt: string): string {
   const h = Math.floor(mins / 60);
   const m = mins % 60;
   return h > 0 ? `${h}h ${m}m left` : `${m}m left`;
+}
+
+// Group orders by sessionId; caller's session shown first.
+function groupOrdersBySession(
+  orders: GuestOrder[],
+  mySessionId: string
+): Array<{ sessionId: string; customerName: string; orders: GuestOrder[] }> {
+  const map = new Map<string, { sessionId: string; customerName: string; orders: GuestOrder[] }>();
+  for (const order of orders) {
+    if (!map.has(order.sessionId)) {
+      map.set(order.sessionId, {
+        sessionId:    order.sessionId,
+        customerName: order.customerName,
+        orders:       [],
+      });
+    }
+    map.get(order.sessionId)!.orders.push(order);
+  }
+  const groups = Array.from(map.values());
+  return groups.sort((a, b) => {
+    if (a.sessionId === mySessionId) return -1;
+    if (b.sessionId === mySessionId) return  1;
+    return 0;
+  });
 }
 
 const ORDER_STATUS_LABELS: Record<string, { label: string; color: string; icon: React.ReactNode }> = {
@@ -144,6 +166,84 @@ function OrderCard({ order }: { order: GuestOrder }) {
   );
 }
 
+// ─── Name Entry Screen ────────────────────────────────────────────────────────
+
+function NameEntryScreen({
+  onStart,
+  error,
+  isSubmitting,
+}: {
+  onStart: (name: string) => Promise<void>;
+  error: string | null;
+  isSubmitting: boolean;
+}) {
+  const [name, setName] = useState("");
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    if (!name.trim() || isSubmitting) return;
+    await onStart(name.trim());
+  }
+
+  return (
+    <div className="min-h-screen flex flex-col items-center justify-center px-6 bg-background">
+      <div className="w-full max-w-sm space-y-6">
+        {/* Branding */}
+        <div className="text-center space-y-2">
+          <div className="flex justify-center mb-3">
+            <div className="w-14 h-14 rounded-2xl bg-primary/10 flex items-center justify-center">
+              <Coffee className="h-7 w-7 text-primary" />
+            </div>
+          </div>
+          <h1 className="text-2xl font-bold tracking-tight">Welcome!</h1>
+          <p className="text-muted-foreground text-sm">
+            Enter your name to start ordering
+          </p>
+        </div>
+
+        {/* Form */}
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div className="relative">
+            <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
+            <input
+              type="text"
+              placeholder="Your name"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              autoFocus
+              autoComplete="given-name"
+              maxLength={50}
+              className="w-full pl-10 pr-4 py-3 rounded-xl border bg-background text-base placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary"
+            />
+          </div>
+
+          {error && (
+            <div className="flex gap-2 text-sm text-destructive bg-destructive/10 rounded-xl px-3 py-2.5">
+              <AlertCircle className="h-4 w-4 shrink-0 mt-0.5" />
+              <span>{error}</span>
+            </div>
+          )}
+
+          <Button
+            type="submit"
+            className="w-full h-12 text-base"
+            disabled={!name.trim() || isSubmitting}
+          >
+            {isSubmitting ? (
+              <>
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                Starting…
+              </>
+            ) : (
+              "Start Ordering"
+            )}
+          </Button>
+        </form>
+      </div>
+    </div>
+  );
+}
+
 // ─── Cart modal ───────────────────────────────────────────────────────────────
 
 function CartModal({
@@ -185,7 +285,6 @@ function CartModal({
           {items.map((item) => (
             <div key={item.menuItemId} className="space-y-2">
               <div className="flex items-center gap-3">
-                {/* Quantity control */}
                 <div className="flex items-center gap-1 shrink-0">
                   <button
                     onClick={() => onUpdateQty(item.menuItemId, -1)}
@@ -219,7 +318,6 @@ function CartModal({
                 </div>
               </div>
 
-              {/* Per-item note */}
               <input
                 type="text"
                 placeholder="Special instructions (optional)"
@@ -269,11 +367,7 @@ function CartModal({
 // ─── Active session UI ────────────────────────────────────────────────────────
 
 function ActiveSession({
-  cafeId,
-  cafeName,
-  tableNumber,
-  tableName,
-  expiresAt,
+  sessionInfo,
   orders,
   billRequested,
   placeOrder,
@@ -283,11 +377,7 @@ function ActiveSession({
   placeOrderError,
   requestBillError,
 }: {
-  cafeId: string;
-  cafeName: string;
-  tableNumber: number;
-  tableName: string | null;
-  expiresAt: string;
+  sessionInfo: SessionInfo;
   orders: GuestOrder[];
   billRequested: boolean;
   placeOrder: (items: CartItem[]) => Promise<string>;
@@ -297,13 +387,14 @@ function ActiveSession({
   placeOrderError: string | null;
   requestBillError: string | null;
 }) {
+  const { cafeId, cafeName, tableNumber, tableName, expiresAt, sessionId, customerName } = sessionInfo;
+
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [cart, setCart] = useState<Map<string, CartItem>>(new Map());
   const [cartOpen, setCartOpen] = useState(false);
   const [orderSuccess, setOrderSuccess] = useState(false);
   const [timeLeft, setTimeLeft] = useState(() => formatTimeLeft(expiresAt));
 
-  // Keep the time-remaining display updated
   useEffect(() => {
     const id = setInterval(() => setTimeLeft(formatTimeLeft(expiresAt)), 30_000);
     return () => clearInterval(id);
@@ -341,7 +432,6 @@ function ActiveSession({
     staleTime: 60_000,
   });
 
-  // Default to first category
   const activeCategoryId = selectedCategory ?? categories[0]?.id ?? null;
 
   const visibleItems = useMemo(
@@ -418,6 +508,28 @@ function ActiveSession({
     }
   }
 
+  // ── Derived order data ─────────────────────────────────────
+
+  const orderGroups = useMemo(
+    () => groupOrdersBySession(orders, sessionId),
+    [orders, sessionId]
+  );
+
+  const tableTotal = useMemo(
+    () =>
+      orders
+        .filter((o) => o.status !== "cancelled")
+        .reduce(
+          (sum, o) => sum + o.items.reduce((s, i) => s + i.unitPrice * i.quantity, 0),
+          0
+        ),
+    [orders]
+  );
+
+  const hasBillableOrder = orders.some(
+    (o) => o.status === "served" || o.status === "ready"
+  );
+
   const tableLabel = tableName ? `${tableName} (${tableNumber})` : `Table ${tableNumber}`;
 
   return (
@@ -437,11 +549,15 @@ function ActiveSession({
             </span>
           </div>
         </div>
+        {/* Guest greeting */}
+        <p className="text-xs text-muted-foreground mt-0.5">
+          Hi, <span className="font-medium text-foreground">{customerName}</span>
+        </p>
       </div>
 
       {/* ── Category tabs ── */}
       {categories.length > 0 && (
-        <div className="sticky top-[57px] z-20 bg-background border-b">
+        <div className="sticky top-[65px] z-20 bg-background border-b">
           <div className="flex gap-1 overflow-x-auto px-3 py-2 scrollbar-hide">
             {categories.map((cat) => (
               <button
@@ -508,7 +624,6 @@ function ActiveSession({
                   </span>
                 </div>
 
-                {/* Quantity control */}
                 <div className="mt-3 flex justify-end">
                   {qty === 0 ? (
                     <button
@@ -541,25 +656,68 @@ function ActiveSession({
           );
         })}
 
-        {/* ── Your Orders ── */}
-        {orders.length > 0 && (
+        {/* ── Table Orders ── */}
+        {orderGroups.length > 0 && (
           <div className="pt-2">
             <div className="flex items-center gap-2 mb-3">
               <Receipt className="h-4 w-4 text-muted-foreground" />
               <h2 className="font-semibold text-sm text-muted-foreground uppercase tracking-wide">
-                Your Orders
+                Table Orders
               </h2>
             </div>
-            <div className="space-y-3">
-              {orders.map((order) => (
-                <OrderCard key={order.orderId} order={order} />
-              ))}
+
+            <div className="space-y-5">
+              {orderGroups.map((group) => {
+                const isMe = group.sessionId === sessionId;
+                const groupSubtotal = group.orders
+                  .filter((o) => o.status !== "cancelled")
+                  .reduce(
+                    (sum, o) => sum + o.items.reduce((s, i) => s + i.unitPrice * i.quantity, 0),
+                    0
+                  );
+
+                return (
+                  <div key={group.sessionId}>
+                    {/* Customer name header */}
+                    <div className="flex items-center gap-2 mb-2">
+                      <div className="w-6 h-6 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+                        <User className="h-3.5 w-3.5 text-primary" />
+                      </div>
+                      <span className="text-sm font-semibold">
+                        {group.customerName}
+                        {isMe && (
+                          <span className="ml-1.5 text-xs font-normal text-muted-foreground">(You)</span>
+                        )}
+                      </span>
+                      {groupSubtotal > 0 && (
+                        <span className="ml-auto text-xs text-muted-foreground">
+                          {formatPrice(groupSubtotal)}
+                        </span>
+                      )}
+                    </div>
+
+                    <div className="space-y-2 pl-8">
+                      {group.orders.map((order) => (
+                        <OrderCard key={order.orderId} order={order} />
+                      ))}
+                    </div>
+                  </div>
+                );
+              })}
             </div>
+
+            {/* Table total */}
+            {tableTotal > 0 && (
+              <div className="mt-4 flex items-center justify-between rounded-xl bg-muted/60 border px-4 py-3">
+                <span className="text-sm font-semibold">Table Total</span>
+                <span className="text-base font-bold text-primary">{formatPrice(tableTotal)}</span>
+              </div>
+            )}
           </div>
         )}
 
         {/* ── Request bill ── */}
-        {orders.some((o) => o.status === "served" || o.status === "ready") && (
+        {hasBillableOrder && (
           <div className="pt-2 border-t">
             {requestBillError && (
               <p className="text-xs text-destructive mb-2">{requestBillError}</p>
@@ -622,6 +780,9 @@ export function TableSessionPage() {
     sessionInfo,
     orders,
     billRequested,
+    nameEntryError,
+    isStartingSession,
+    startSession,
     placeOrder,
     requestBill,
     isPlacingOrder,
@@ -630,16 +791,30 @@ export function TableSessionPage() {
     requestBillError,
   } = useTableSession(token ?? "");
 
-  // ── Static screens ────────────────────────────────────────
+  // ── Loading ────────────────────────────────────────────────
 
   if (sessionState === "loading") {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center gap-4 bg-background">
         <Coffee className="h-10 w-10 text-primary animate-pulse" />
-        <p className="text-muted-foreground text-sm">Joining your table…</p>
+        <p className="text-muted-foreground text-sm">Checking your session…</p>
       </div>
     );
   }
+
+  // ── Name entry ─────────────────────────────────────────────
+
+  if (sessionState === "entering_name") {
+    return (
+      <NameEntryScreen
+        onStart={startSession}
+        error={nameEntryError}
+        isSubmitting={isStartingSession}
+      />
+    );
+  }
+
+  // ── Static screens ─────────────────────────────────────────
 
   if (sessionState === "invalid") {
     return (
@@ -656,7 +831,7 @@ export function TableSessionPage() {
       <SessionScreen
         icon={<Clock className="h-12 w-12" />}
         title="Session expired"
-        body="Your session has expired after 2 hours. Please scan the QR code on your table to start a new session."
+        body="Your session has expired. Please scan the QR code on your table to start a new session."
       />
     );
   }
@@ -666,22 +841,18 @@ export function TableSessionPage() {
       <SessionScreen
         icon={<XCircle className="h-12 w-12" />}
         title="Session ended"
-        body="Session ended. Please scan the QR code again to start a new session."
+        body="Your session has been closed. Scan the QR code again and enter your name to start a new session."
       />
     );
   }
 
-  // ── Active session ────────────────────────────────────────
+  // ── Active session ─────────────────────────────────────────
 
   if (!sessionInfo) return null;
 
   return (
     <ActiveSession
-      cafeId={sessionInfo.cafeId}
-      cafeName={sessionInfo.cafeName}
-      tableNumber={sessionInfo.tableNumber}
-      tableName={sessionInfo.tableName}
-      expiresAt={sessionInfo.expiresAt}
+      sessionInfo={sessionInfo}
       orders={orders}
       billRequested={billRequested}
       placeOrder={placeOrder}

@@ -27,6 +27,7 @@ export interface StaffOrder {
   tableId: string;
   tableNumber: number | null;
   tableName: string | null;
+  customerName: string;
   status: OrderStatus;
   staffNote: string | null;
   createdAt: string;
@@ -55,6 +56,7 @@ export function useOrders() {
           `id, cafe_id, session_id, table_id, status, staff_note,
            created_at, updated_at,
            cafe_tables (number, name),
+           table_sessions (customer_name),
            order_items (
              id, menu_item_id, quantity, unit_price, notes,
              menu_items (name)
@@ -67,25 +69,26 @@ export function useOrders() {
 
       return (data ?? []).map((o: any) => {
         const items: StaffOrderItem[] = (o.order_items ?? []).map((oi: any) => ({
-          id: oi.id,
-          menuItemId: oi.menu_item_id,
-          name: oi.menu_items?.name ?? "Unknown item",
-          quantity: oi.quantity,
-          unitPrice: Number(oi.unit_price),
-          notes: oi.notes ?? null,
+          id:          oi.id,
+          menuItemId:  oi.menu_item_id,
+          name:        oi.menu_items?.name ?? "Unknown item",
+          quantity:    oi.quantity,
+          unitPrice:   Number(oi.unit_price),
+          notes:       oi.notes ?? null,
         }));
 
         return {
-          id: o.id,
-          cafeId: o.cafe_id,
-          sessionId: o.session_id,
-          tableId: o.table_id,
-          tableNumber: o.cafe_tables?.number ?? null,
-          tableName: o.cafe_tables?.name ?? null,
-          status: o.status as OrderStatus,
-          staffNote: o.staff_note ?? null,
-          createdAt: o.created_at,
-          updatedAt: o.updated_at,
+          id:           o.id,
+          cafeId:       o.cafe_id,
+          sessionId:    o.session_id,
+          tableId:      o.table_id,
+          tableNumber:  o.cafe_tables?.number ?? null,
+          tableName:    o.cafe_tables?.name ?? null,
+          customerName: o.table_sessions?.customer_name ?? "",
+          status:       o.status as OrderStatus,
+          staffNote:    o.staff_note ?? null,
+          createdAt:    o.created_at,
+          updatedAt:    o.updated_at,
           items,
           total: items.reduce((s, i) => s + i.unitPrice * i.quantity, 0),
         };
@@ -133,8 +136,8 @@ export function useOrders() {
     }) => {
       const patch: Record<string, unknown> = { status };
       if (staffNote !== undefined) patch.staff_note = staffNote;
-      if (status === "approved") patch.approved_at = new Date().toISOString();
-      if (status === "cancelled") patch.cancelled_at = new Date().toISOString();
+      if (status === "approved")   patch.approved_at   = new Date().toISOString();
+      if (status === "cancelled")  patch.cancelled_at  = new Date().toISOString();
 
       const { error } = await supabase
         .from("orders")
@@ -146,7 +149,7 @@ export function useOrders() {
     onSuccess: () => qc.invalidateQueries({ queryKey: ["staff_orders"] }),
   });
 
-  const pendingOrders = orders.filter((o) => o.status === "pending_approval");
+  const pendingOrders  = orders.filter((o) => o.status === "pending_approval");
   const preparingOrders = orders.filter(
     (o) => o.status === "approved" || o.status === "in_kitchen"
   );
@@ -163,7 +166,7 @@ export function useOrders() {
       status: OrderStatus,
       staffNote?: string | null
     ) => updateStatusMutation.mutateAsync({ orderId, status, staffNote }),
-    isUpdating: updateStatusMutation.isPending,
+    isUpdating:      updateStatusMutation.isPending,
     updatingOrderId: updateStatusMutation.variables?.orderId ?? null,
   };
 }

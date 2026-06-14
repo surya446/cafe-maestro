@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback } from "react";
+import { useState, useMemo, useRef, useCallback } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { format, formatDistanceToNow } from "date-fns";
 import {
@@ -19,6 +19,8 @@ import {
   Smartphone,
   TableProperties,
   Bell,
+  User,
+  Trash2,
 } from "lucide-react";
 import QRCode from "react-qr-code";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -92,8 +94,16 @@ function OrderCard({
     <div className="rounded-xl border bg-card shadow-sm flex flex-col">
       {/* Header */}
       <div className="flex items-center justify-between px-4 py-3 border-b">
-        <span className="font-semibold text-sm">{label}</span>
-        <span className="text-xs text-muted-foreground">{timeAgo(order.createdAt)}</span>
+        <div className="min-w-0">
+          <span className="font-semibold text-sm">{label}</span>
+          {order.customerName && (
+            <span className="ml-2 inline-flex items-center gap-1 text-xs text-muted-foreground">
+              <User className="h-3 w-3" />
+              {order.customerName}
+            </span>
+          )}
+        </div>
+        <span className="text-xs text-muted-foreground shrink-0 ml-2">{timeAgo(order.createdAt)}</span>
       </div>
 
       {/* Items */}
@@ -288,10 +298,46 @@ function OrdersTab() {
 
 // ─── Sessions Tab ─────────────────────────────────────────────────────────────
 
+interface TableGroup {
+  tableId: string;
+  tableLabel: string;
+  tableNumber: number;
+  sessions: ActiveSession[];
+}
+
 function SessionsTab() {
-  const { sessions, sessionsLoading, endSession, isEndingSession, endingSessionId } =
-    useTableSessions();
+  const {
+    sessions,
+    sessionsLoading,
+    endSession,
+    isEndingSession,
+    endingSessionId,
+    endTableSessions,
+    isEndingTable,
+    endingTableId,
+  } = useTableSessions();
+
+  // confirmId = sessionId for single-session confirm
   const [confirmId, setConfirmId] = useState<string | null>(null);
+  // confirmTableId = tableId for end-all confirm
+  const [confirmTableId, setConfirmTableId] = useState<string | null>(null);
+
+  const tableGroups = useMemo<TableGroup[]>(() => {
+    const map = new Map<string, TableGroup>();
+    for (const session of sessions) {
+      const label = tableLabel(session.tableNumber, session.tableName);
+      if (!map.has(session.tableId)) {
+        map.set(session.tableId, {
+          tableId:     session.tableId,
+          tableLabel:  label,
+          tableNumber: session.tableNumber,
+          sessions:    [],
+        });
+      }
+      map.get(session.tableId)!.sessions.push(session);
+    }
+    return Array.from(map.values()).sort((a, b) => a.tableNumber - b.tableNumber);
+  }, [sessions]);
 
   if (sessionsLoading) {
     return (
@@ -301,109 +347,184 @@ function SessionsTab() {
     );
   }
 
-  if (sessions.length === 0) {
+  if (tableGroups.length === 0) {
     return (
       <EmptyState
         icon={TableProperties}
         title="No active sessions"
-        description="Sessions appear here when guests scan a QR code and join a table."
+        description="Sessions appear here when guests scan a QR code and enter their name."
       />
     );
   }
 
-  async function handleEnd(sessionId: string) {
+  async function handleEndSession(sessionId: string) {
     try {
       await endSession(sessionId);
     } catch (err) {
-      console.error("[end_session] RPC error:", err);
+      console.error("[end_session] error:", err);
     } finally {
       setConfirmId(null);
     }
   }
 
-  return (
-    <div className="rounded-xl border overflow-hidden">
-      <table className="w-full text-sm">
-        <thead className="bg-muted/50 border-b">
-          <tr>
-            <th className="px-4 py-3 text-left font-medium text-muted-foreground">Table</th>
-            <th className="px-4 py-3 text-left font-medium text-muted-foreground">Started</th>
-            <th className="px-4 py-3 text-left font-medium text-muted-foreground">Expires In</th>
-            <th className="px-4 py-3 text-left font-medium text-muted-foreground">
-              <span className="flex items-center gap-1">
-                <Smartphone className="h-3.5 w-3.5" />
-                Devices
-              </span>
-            </th>
-            <th className="px-4 py-3 text-right font-medium text-muted-foreground">Action</th>
-          </tr>
-        </thead>
-        <tbody className="divide-y">
-          {sessions.map((session) => {
-            const label = tableLabel(session.tableNumber, session.tableName);
-            const isConfirming = confirmId === session.id;
-            const isEnding = isEndingSession && endingSessionId === session.id;
+  async function handleEndTable(tableId: string) {
+    try {
+      await endTableSessions(tableId);
+    } catch (err) {
+      console.error("[end_table_sessions] error:", err);
+    } finally {
+      setConfirmTableId(null);
+    }
+  }
 
-            return (
-              <tr key={session.id} className="hover:bg-muted/20 transition-colors">
-                <td className="px-4 py-3 font-medium">{label}</td>
-                <td className="px-4 py-3 text-muted-foreground">
-                  {format(new Date(session.createdAt), "HH:mm")}
-                </td>
-                <td className="px-4 py-3">
-                  <span
-                    className={cn(
-                      "text-sm",
-                      new Date(session.expiresAt) <= new Date()
-                        ? "text-destructive font-medium"
-                        : "text-muted-foreground"
-                    )}
+  return (
+    <div className="space-y-4">
+      {tableGroups.map((group) => {
+        const isConfirmingTable   = confirmTableId === group.tableId;
+        const isEndingThisTable   = isEndingTable && endingTableId === group.tableId;
+
+        return (
+          <div key={group.tableId} className="rounded-xl border overflow-hidden">
+            {/* Table group header */}
+            <div className="flex items-center justify-between px-4 py-3 bg-muted/40 border-b">
+              <div className="flex items-center gap-2">
+                <TableProperties className="h-4 w-4 text-muted-foreground" />
+                <span className="font-semibold text-sm">{group.tableLabel}</span>
+                <Badge variant="secondary" className="text-xs">
+                  {group.sessions.length} {group.sessions.length === 1 ? "guest" : "guests"}
+                </Badge>
+              </div>
+
+              {/* End All Sessions for this table */}
+              {isConfirmingTable ? (
+                <div className="flex items-center gap-2">
+                  <span className="text-xs text-muted-foreground">End all sessions?</span>
+                  <Button
+                    size="sm"
+                    variant="destructive"
+                    disabled={isEndingThisTable}
+                    onClick={() => handleEndTable(group.tableId)}
                   >
-                    {expiresIn(session.expiresAt)}
-                  </span>
-                </td>
-                <td className="px-4 py-3">
-                  <span className="flex items-center gap-1 text-muted-foreground">
-                    <Users className="h-3.5 w-3.5" />
-                    {session.activeDeviceCount}
-                  </span>
-                </td>
-                <td className="px-4 py-3 text-right">
-                  {isConfirming ? (
-                    <div className="flex items-center justify-end gap-2">
-                      <span className="text-xs text-muted-foreground">End session?</span>
-                      <Button
-                        size="sm"
-                        variant="destructive"
-                        disabled={isEnding}
-                        onClick={() => handleEnd(session.id)}
-                      >
-                        {isEnding ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : "Yes, end it"}
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        onClick={() => setConfirmId(null)}
-                      >
-                        Cancel
-                      </Button>
+                    {isEndingThisTable
+                      ? <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                      : "Yes, end all"
+                    }
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    onClick={() => setConfirmTableId(null)}
+                  >
+                    Cancel
+                  </Button>
+                </div>
+              ) : (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="text-destructive border-destructive/40 hover:bg-destructive/10 gap-1.5"
+                  onClick={() => {
+                    setConfirmId(null);
+                    setConfirmTableId(group.tableId);
+                  }}
+                >
+                  <Trash2 className="h-3.5 w-3.5" />
+                  End All Sessions
+                </Button>
+              )}
+            </div>
+
+            {/* Session rows */}
+            <div className="divide-y">
+              {group.sessions.map((session) => {
+                const isConfirming = confirmId === session.id;
+                const isEnding     = isEndingSession && endingSessionId === session.id;
+
+                return (
+                  <div
+                    key={session.id}
+                    className="flex items-center gap-4 px-4 py-3 hover:bg-muted/20 transition-colors"
+                  >
+                    {/* Customer avatar + name */}
+                    <div className="flex items-center gap-2 min-w-0 flex-1">
+                      <div className="w-7 h-7 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+                        <User className="h-3.5 w-3.5 text-primary" />
+                      </div>
+                      <div className="min-w-0">
+                        <p className="text-sm font-medium truncate">
+                          {session.customerName || "Guest"}
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          Started {format(new Date(session.createdAt), "HH:mm")}
+                        </p>
+                      </div>
                     </div>
-                  ) : (
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      className="text-destructive border-destructive/40 hover:bg-destructive/10"
-                      onClick={() => setConfirmId(session.id)}
-                    >
-                      End Session
-                    </Button>
-                  )}
-                </td>
-              </tr>
-            );
-          })}
-        </tbody>
-      </table>
+
+                    {/* Expiry */}
+                    <div className="hidden sm:block shrink-0">
+                      <span
+                        className={cn(
+                          "text-xs",
+                          new Date(session.expiresAt) <= new Date()
+                            ? "text-destructive font-medium"
+                            : "text-muted-foreground"
+                        )}
+                      >
+                        {expiresIn(session.expiresAt)}
+                      </span>
+                    </div>
+
+                    {/* Device count */}
+                    <div className="hidden sm:flex items-center gap-1 text-xs text-muted-foreground shrink-0">
+                      <Smartphone className="h-3.5 w-3.5" />
+                      {session.activeDeviceCount}
+                    </div>
+
+                    {/* Per-session action */}
+                    <div className="shrink-0">
+                      {isConfirming ? (
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs text-muted-foreground hidden sm:block">End?</span>
+                          <Button
+                            size="sm"
+                            variant="destructive"
+                            disabled={isEnding}
+                            onClick={() => handleEndSession(session.id)}
+                          >
+                            {isEnding
+                              ? <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                              : "Yes"
+                            }
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => setConfirmId(null)}
+                          >
+                            No
+                          </Button>
+                        </div>
+                      ) : (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="text-destructive border-destructive/40 hover:bg-destructive/10"
+                          onClick={() => {
+                            setConfirmTableId(null);
+                            setConfirmId(session.id);
+                          }}
+                        >
+                          End Session
+                        </Button>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        );
+      })}
     </div>
   );
 }
@@ -645,7 +766,6 @@ function QRTableCard({
           </div>
         )}
 
-        {/* URL display */}
         {guestUrl && (
           <div className="w-full bg-muted rounded-lg px-3 py-2">
             <p className="text-xs text-muted-foreground font-mono break-all line-clamp-2">
@@ -736,7 +856,7 @@ function QRTab() {
     );
   }
 
-  const activeTables = tables.filter((t) => t.isActive);
+  const activeTables   = tables.filter((t) => t.isActive);
   const inactiveTables = tables.filter((t) => !t.isActive);
 
   return (

@@ -1,4 +1,4 @@
-modules = ["nodejs-24"]
+modules = ["nodejs-24", "postgresql-16"]
 
 [deployment]
 router = "application"
@@ -36,3 +36,6 @@ externalPort = 3000
 [userenv.shared]
 VITE_SUPABASE_ANON_KEY = "sb_publishable_Wo9WRTgiL6wMdZ_TqoewxA_hgYZ142O"
 VITE_SUPABASE_URL = "https://usllfqogcdskfeszntwf.supabase.co"
+
+[nix]
+channel = "stable-25_05"
