@@ -478,6 +478,12 @@ function ActiveSession({
         { event: "*", schema: "public", table: "menu_items", filter: `cafe_id=eq.${cafeId}` },
         (payload) => {
           console.log("[RT-DIAG] Event received:", payload.eventType, "payload:", JSON.stringify(payload));
+
+          // Detect restore before entering setQueryData (which is synchronous)
+          const isRestore =
+            payload.eventType === "UPDATE" &&
+            !(payload.new as { is_archived?: boolean }).is_archived;
+
           qc.setQueryData<MenuItem[]>(["menu_items", cafeId], (old) => {
             console.log("[RT-DIAG] State before update — item count:", old?.length, "ids:", old?.map(i => i.id));
             if (!old) return old;
@@ -493,35 +499,30 @@ function ActiveSession({
               const updated = payload.new as unknown as MenuItem & { is_archived?: boolean };
               const existsInCache = old.some((i) => i.id === updated.id);
               console.log("[RT-DIAG][RESTORE] ── UPDATE received ──");
-              console.log("[RT-DIAG][RESTORE] Full payload:", JSON.stringify(payload));
-              console.log("[RT-DIAG][RESTORE] Item ID:", updated.id);
-              console.log("[RT-DIAG][RESTORE] is_archived:", updated.is_archived);
-              console.log("[RT-DIAG][RESTORE] is_available:", updated.is_available);
-              console.log("[RT-DIAG][RESTORE] category_id:", (updated as MenuItem & { is_archived?: boolean; category_id?: string }).category_id);
+              console.log("[RT-DIAG][RESTORE] Item ID:", updated.id, "is_archived:", updated.is_archived, "is_available:", updated.is_available);
               console.log("[RT-DIAG][RESTORE] Item exists in cache BEFORE update:", existsInCache);
-              console.log("[RT-DIAG][RESTORE] Cache IDs BEFORE update:", old.map(i => i.id));
               if (updated.is_archived) {
-                // Item archived → remove from active list
                 next = old.filter((i) => i.id !== updated.id);
               } else {
-                // Item active (restored or availability toggled)
                 const exists = old.some((i) => i.id === updated.id);
                 if (exists) {
-                  // Already in cache → update in place
                   next = old.map((i) => i.id === updated.id ? { ...i, ...updated } : i);
                 } else {
-                  // Was removed (e.g. previously archived) → re-insert
                   next = [...old, updated];
                 }
               }
-              console.log("[RT-DIAG][RESTORE] Cache IDs AFTER update:", next.map(i => i.id));
               console.log("[RT-DIAG][RESTORE] Item present in cache AFTER update:", next.some(i => i.id === updated.id));
             } else {
               next = old;
             }
-            console.log("[RT-DIAG] State after update — item count:", next.length, "ids:", next.map(i => i.id));
             return next;
           });
+
+          // PROOF: if restore, force a refetch so React Query re-renders from DB truth
+          if (isRestore) {
+            console.log("[RT-DIAG][RESTORE] Firing invalidateQueries as proof");
+            qc.invalidateQueries({ queryKey: ["menu_items", cafeId] });
+          }
         }
       )
       .subscribe((status, err) => {
