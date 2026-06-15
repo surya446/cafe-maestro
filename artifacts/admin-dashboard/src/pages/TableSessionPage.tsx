@@ -493,9 +493,18 @@ function ActiveSession({
               const updated = payload.new as unknown as MenuItem & { is_archived?: boolean };
               console.log("[RT-DIAG] UPDATE id:", updated.id, "is_archived:", updated.is_archived, "is_available:", updated.is_available);
               if (updated.is_archived) {
+                // Item archived → remove from active list
                 next = old.filter((i) => i.id !== updated.id);
               } else {
-                next = old.map((i) => i.id === updated.id ? { ...i, ...updated } : i);
+                // Item active (restored or availability toggled)
+                const exists = old.some((i) => i.id === updated.id);
+                if (exists) {
+                  // Already in cache → update in place
+                  next = old.map((i) => i.id === updated.id ? { ...i, ...updated } : i);
+                } else {
+                  // Was removed (e.g. previously archived) → re-insert
+                  next = [...old, updated];
+                }
               }
             } else {
               next = old;
