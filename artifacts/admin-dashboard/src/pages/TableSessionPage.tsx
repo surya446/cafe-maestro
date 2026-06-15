@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, useRef } from "react";
 import { useParams } from "wouter";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
@@ -469,6 +469,8 @@ function ActiveSession({
   // ── Realtime: menu_items for this cafe ─────────────────────
   const qc = useQueryClient();
   const DEVICE = /Mobi|Android|iPhone|iPad/i.test(navigator.userAgent) ? "MOBILE" : "DESKTOP";
+  const lastArchivedIdRef = useRef<string | null>(null);
+
   useEffect(() => {
     if (!cafeId) return;
     const channel = supabase
@@ -478,34 +480,52 @@ function ActiveSession({
         { event: "*", schema: "public", table: "menu_items", filter: `cafe_id=eq.${cafeId}` },
         (payload) => {
           const KEY = ["menu_items", cafeId];
+          const newRow = payload.new as Record<string, unknown>;
+          const oldRow = payload.old as Record<string, unknown>;
 
-          // ── STEP 3: raw realtime event ──────────────────────────
-          console.log(`[DIAG][${DEVICE}] STEP 3 — realtime event received`, {
+          // ── STEP 3: raw realtime event — focus on is_archived ───
+          console.log(`[DIAG][${DEVICE}] STEP 3 — UPDATE received`, {
             eventType: payload.eventType,
-            "payload.new": payload.new,
-            "payload.old": payload.old,
+            "new.id": newRow.id,
+            "new.is_archived": newRow.is_archived,
+            "new.is_archived typeof": typeof newRow.is_archived,
+            "new keys": Object.keys(newRow),
+            "old.id": oldRow.id,
+            "payload.new (full)": payload.new,
           });
 
-          // ── STEP 4 (before): cache snapshot ────────────────────
+          // ── STEP 4 BEFORE ──────────────────────────────────────
           const cacheBefore = qc.getQueryData<MenuItem[]>(KEY);
-          console.log(`[DIAG][${DEVICE}] STEP 4 BEFORE — cache snapshot`, {
-            count: cacheBefore?.length ?? 0,
-            ids: cacheBefore?.map((i) => i.id) ?? [],
+          const targetId = (newRow.id ?? oldRow.id) as string | undefined;
+          console.log(`[DIAG][${DEVICE}] STEP 4 BEFORE`, {
+            cacheCount: cacheBefore?.length ?? 0,
+            targetId,
+            targetInCache: targetId ? cacheBefore?.some((i) => i.id === targetId) : "unknown",
           });
 
           if (payload.eventType === "DELETE") {
-            const id = (payload.old as { id: string }).id;
+            const id = oldRow.id as string;
             qc.setQueryData<MenuItem[]>(KEY, (old) => old?.filter((i) => i.id !== id) ?? old);
           } else if (payload.eventType === "INSERT") {
-            const row = payload.new as unknown as MenuItem & { is_archived?: boolean };
+            const row = newRow as unknown as MenuItem & { is_archived?: boolean };
             if (!row.is_archived) {
               qc.setQueryData<MenuItem[]>(KEY, (old) => old ? [...old, row] : old);
             }
           } else if (payload.eventType === "UPDATE") {
-            const row = payload.new as unknown as MenuItem & { is_archived?: boolean };
+            const row = newRow as unknown as MenuItem & { is_archived?: boolean };
+
+            // ── STEP 3a: which branch will fire? ────────────────
+            console.log(`[DIAG][${DEVICE}] STEP 3a — branch check`, {
+              "row.is_archived": row.is_archived,
+              "!!row.is_archived": !!row.is_archived,
+              branch: row.is_archived ? "FILTER-OUT (archive)" : "UPDATE-IN-PLACE (restore/avail)",
+            });
+
             if (row.is_archived) {
+              lastArchivedIdRef.current = row.id ?? null;
               qc.setQueryData<MenuItem[]>(KEY, (old) => old?.filter((i) => i.id !== row.id) ?? old);
             } else {
+              lastArchivedIdRef.current = (oldRow.id as string) ?? null;
               qc.setQueryData<MenuItem[]>(KEY, (old) => {
                 if (!old) return old;
                 const exists = old.some((i) => i.id === row.id);
@@ -516,32 +536,19 @@ function ActiveSession({
             }
           }
 
-          // ── STEP 4 (after): cache snapshot ─────────────────────
+          // ── STEP 4 AFTER ───────────────────────────────────────
           const cacheAfter = qc.getQueryData<MenuItem[]>(KEY);
-          console.log(`[DIAG][${DEVICE}] STEP 4 AFTER — cache snapshot`, {
-            count: cacheAfter?.length ?? 0,
-            ids: cacheAfter?.map((i) => i.id) ?? [],
+          console.log(`[DIAG][${DEVICE}] STEP 4 AFTER`, {
+            cacheCount: cacheAfter?.length ?? 0,
+            targetId,
+            targetStillInCache: targetId ? cacheAfter?.some((i) => i.id === targetId) : "unknown",
+            cacheCountChanged: (cacheBefore?.length ?? 0) !== (cacheAfter?.length ?? 0),
           });
         }
       )
-      .subscribe((status, err) => {
-        // ── STEP 3.5: channel subscription status ───────────────
-        console.log(`[DIAG][${DEVICE}] STEP 3.5 — channel status`, { status, err: err ?? null });
-      });
+      .subscribe();
 
-    // ── Visibility diagnostic: detect mobile tab backgrounding ─
-    const onVisibility = () => {
-      console.log(`[DIAG][${DEVICE}] visibilitychange →`, document.visibilityState, {
-        channelState: channel.state,
-        time: new Date().toISOString(),
-      });
-    };
-    document.addEventListener("visibilitychange", onVisibility);
-
-    return () => {
-      document.removeEventListener("visibilitychange", onVisibility);
-      supabase.removeChannel(channel);
-    };
+    return () => { supabase.removeChannel(channel); };
   }, [cafeId, qc]);
 
   const activeCategoryId = selectedCategory ?? categories[0]?.id ?? null;
@@ -553,14 +560,17 @@ function ActiveSession({
 
   // ── STEP 5 & 6: render-layer diagnostic ────────────────────
   useEffect(() => {
-    console.log("[DIAG] STEP 5 — menuItems (render layer)", {
+    const tid = lastArchivedIdRef.current;
+    console.log(`[DIAG][${DEVICE}] STEP 5 — menuItems render layer`, {
       count: menuItems.length,
-      ids: menuItems.map((i) => i.id),
+      targetId: tid,
+      targetInMenuItems: tid ? menuItems.some((i) => i.id === tid) : "no target yet",
     });
-    console.log("[DIAG] STEP 6 — visibleItems + category filter", {
+    console.log(`[DIAG][${DEVICE}] STEP 6 — visibleItems`, {
       activeCategoryId,
       visibleCount: visibleItems.length,
-      visibleItems: visibleItems.map((i) => ({ id: i.id, category_id: i.category_id })),
+      targetId: tid,
+      targetInVisibleItems: tid ? visibleItems.some((i) => i.id === tid) : "no target yet",
     });
   }, [menuItems, visibleItems, activeCategoryId]);
 
