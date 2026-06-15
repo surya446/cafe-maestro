@@ -1,0 +1,160 @@
+CRITICAL BUG – QR MENU REALTIME ARCHIVE/RESTORE
+
+Do not guess.
+
+Do not apply speculative fixes.
+
+Do not add invalidateQueries, setQueryData hacks, category assumptions, or cache assumptions until the exact failure point is proven.
+
+Current behavior:
+
+AVAILABLE → UNAVAILABLE
+✅ updates instantly in QR menu
+
+UNAVAILABLE → AVAILABLE
+✅ updates instantly in QR menu
+
+ARCHIVE
+❌ sometimes updates instantly
+❌ sometimes requires refresh
+
+RESTORE
+❌ sometimes updates instantly
+❌ sometimes requires refresh
+
+Refresh always fixes it.
+
+This means:
+
+* Database state is correct.
+* Initial query is correct.
+* Some realtime events work.
+* Membership changes (item entering/leaving menu) are unreliable.
+
+---
+
+TASK
+
+Trace the ENTIRE lifecycle for one item.
+
+Choose one menu item.
+
+Log:
+
+1. Database state before change
+
+id
+name
+is_available
+is_archived
+category_id
+
+---
+
+2. Admin mutation
+
+When archive clicked:
+
+log:
+
+before update
+after update
+
+---
+
+3. Supabase realtime event
+
+log:
+
+event type
+payload.new
+payload.old
+
+---
+
+4. React Query
+
+Immediately before event:
+
+queryClient.getQueryData(["menu_items", cafeId])
+
+Immediately after event:
+
+queryClient.getQueryData(["menu_items", cafeId])
+
+Print:
+
+count
+ids
+
+---
+
+5. Render layer
+
+Print:
+
+menuItems count
+visibleItems count
+
+ids
+
+---
+
+6. Category filtering
+
+Print:
+
+activeCategoryId
+
+For every visible item:
+
+id
+category_id
+
+---
+
+7. Compare
+
+Find first point where the restored/archived item disappears.
+
+---
+
+REQUIRED OUTPUT
+
+I need a table:
+
+STEP | ITEM PRESENT? | EVIDENCE
+
+Database
+Realtime payload
+React Query cache
+menuItems
+visibleItems
+Rendered UI
+
+---
+
+IMPORTANT
+
+Do NOT implement fixes until this table is complete.
+
+If you need more evidence from me:
+
+Stop and tell me:
+
+EXACT console output required
+
+and I will provide it.
+
+Goal:
+
+Identify the exact layer where the item is lost:
+
+* database
+* realtime event
+* query cache
+* menuItems state
+* visibleItems filtering
+* rendering
+
+Only after that implement the fix.

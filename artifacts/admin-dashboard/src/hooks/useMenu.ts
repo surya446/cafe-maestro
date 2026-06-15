@@ -217,11 +217,15 @@ export function useArchiveMenuItem() {
 
   return useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await supabase
+      console.log("[DIAG][ARCHIVE] STEP 2 — before DB update", { id });
+      const { data, error } = await supabase
         .from("menu_items")
         .update({ is_archived: true, is_available: false })
-        .eq("id", id);
+        .eq("id", id)
+        .select("id, name, is_available, is_archived, category_id")
+        .single();
       if (error) throw error;
+      console.log("[DIAG][ARCHIVE] STEP 2 — after DB update (returned row)", data);
     },
     onError: () => {},
     onSuccess: () => {
@@ -237,11 +241,15 @@ export function useRestoreMenuItem() {
 
   return useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await supabase
+      console.log("[DIAG][RESTORE] STEP 2 — before DB update", { id });
+      const { data, error } = await supabase
         .from("menu_items")
         .update({ is_archived: false })
-        .eq("id", id);
+        .eq("id", id)
+        .select("id, name, is_available, is_archived, category_id")
+        .single();
       if (error) throw error;
+      console.log("[DIAG][RESTORE] STEP 2 — after DB update (returned row)", data);
     },
     onError: () => {},
     onSuccess: () => {

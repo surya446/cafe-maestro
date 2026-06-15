@@ -477,6 +477,21 @@ function ActiveSession({
         { event: "*", schema: "public", table: "menu_items", filter: `cafe_id=eq.${cafeId}` },
         (payload) => {
           const KEY = ["menu_items", cafeId];
+
+          // ── STEP 3: raw realtime event ──────────────────────────
+          console.log("[DIAG] STEP 3 — realtime event received", {
+            eventType: payload.eventType,
+            "payload.new": payload.new,
+            "payload.old": payload.old,
+          });
+
+          // ── STEP 4 (before): cache snapshot ────────────────────
+          const cacheBefore = qc.getQueryData<MenuItem[]>(KEY);
+          console.log("[DIAG] STEP 4 BEFORE — cache snapshot", {
+            count: cacheBefore?.length ?? 0,
+            ids: cacheBefore?.map((i) => i.id) ?? [],
+          });
+
           if (payload.eventType === "DELETE") {
             const id = (payload.old as { id: string }).id;
             qc.setQueryData<MenuItem[]>(KEY, (old) => old?.filter((i) => i.id !== id) ?? old);
@@ -499,6 +514,13 @@ function ActiveSession({
               });
             }
           }
+
+          // ── STEP 4 (after): cache snapshot ─────────────────────
+          const cacheAfter = qc.getQueryData<MenuItem[]>(KEY);
+          console.log("[DIAG] STEP 4 AFTER — cache snapshot", {
+            count: cacheAfter?.length ?? 0,
+            ids: cacheAfter?.map((i) => i.id) ?? [],
+          });
         }
       )
       .subscribe();
@@ -511,6 +533,19 @@ function ActiveSession({
     () => menuItems.filter((i) => i.category_id === activeCategoryId),
     [menuItems, activeCategoryId]
   );
+
+  // ── STEP 5 & 6: render-layer diagnostic ────────────────────
+  useEffect(() => {
+    console.log("[DIAG] STEP 5 — menuItems (render layer)", {
+      count: menuItems.length,
+      ids: menuItems.map((i) => i.id),
+    });
+    console.log("[DIAG] STEP 6 — visibleItems + category filter", {
+      activeCategoryId,
+      visibleCount: visibleItems.length,
+      visibleItems: visibleItems.map((i) => ({ id: i.id, category_id: i.category_id })),
+    });
+  }, [menuItems, visibleItems, activeCategoryId]);
 
   // ── Cart helpers ───────────────────────────────────────────
 
