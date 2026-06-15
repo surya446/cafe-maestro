@@ -475,39 +475,8 @@ function ActiveSession({
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "menu_items", filter: `cafe_id=eq.${cafeId}` },
-        (payload) => {
-          const newRow = payload.new as { is_archived?: boolean } | undefined;
-          const isArchiveOrRestore =
-            payload.eventType === "UPDATE" && newRow !== undefined;
-
-          qc.setQueryData<MenuItem[]>(["menu_items", cafeId], (old) => {
-            if (!old) return old;
-            if (payload.eventType === "DELETE") {
-              return old.filter((i) => i.id !== (payload.old as { id: string }).id);
-            }
-            if (payload.eventType === "INSERT") {
-              const inserted = payload.new as unknown as MenuItem & { is_archived?: boolean };
-              return inserted.is_archived ? old : [...old, inserted];
-            }
-            if (payload.eventType === "UPDATE") {
-              const updated = payload.new as unknown as MenuItem & { is_archived?: boolean };
-              if (updated.is_archived) {
-                return old.filter((i) => i.id !== updated.id);
-              }
-              const exists = old.some((i) => i.id === updated.id);
-              return exists
-                ? old.map((i) => i.id === updated.id ? { ...i, ...updated } : i)
-                : [...old, updated];
-            }
-            return old;
-          });
-
-          // Archive and restore both need a refetch to force a re-render.
-          // setQueryData alone does not reliably trigger React to re-render
-          // in all cases (race with staleTime / React batching).
-          if (isArchiveOrRestore) {
-            qc.invalidateQueries({ queryKey: ["menu_items", cafeId] });
-          }
+        () => {
+          qc.invalidateQueries({ queryKey: ["menu_items", cafeId] });
         }
       )
       .subscribe();
