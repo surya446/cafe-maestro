@@ -18,6 +18,7 @@ import { BookingsPage } from "@/pages/BookingsPage";
 import { StaffPage } from "@/pages/StaffPage";
 import { AnalyticsPage } from "@/pages/AnalyticsPage";
 import { SettingsPage } from "@/pages/SettingsPage";
+import { WebsiteSettingsPage } from "@/pages/WebsiteSettingsPage";
 import { ChangePasswordPage } from "@/pages/ChangePasswordPage";
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
@@ -96,6 +97,11 @@ function Router() {
       <Route path="/settings">
         <ProtectedRoute>
           <SettingsPage />
+        </ProtectedRoute>
+      </Route>
+      <Route path="/website-settings">
+        <ProtectedRoute>
+          <WebsiteSettingsPage />
         </ProtectedRoute>
       </Route>
       <Route>

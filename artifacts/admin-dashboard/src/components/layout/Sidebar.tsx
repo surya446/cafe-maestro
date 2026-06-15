@@ -9,6 +9,7 @@ import {
   Users,
   BarChart3,
   Settings,
+  Globe,
   LogOut,
   Coffee,
   ChevronRight,
@@ -32,6 +33,7 @@ const NAV_ITEMS: NavItem[] = [
   { href: "/bookings", label: "Bookings", icon: CalendarDays },
   { href: "/staff", label: "Staff", icon: Users, ownerOnly: false },
   { href: "/analytics", label: "Analytics", icon: BarChart3 },
+  { href: "/website-settings", label: "Website", icon: Globe, ownerOnly: true },
   { href: "/settings", label: "Settings", icon: Settings, ownerOnly: true },
 ];
 

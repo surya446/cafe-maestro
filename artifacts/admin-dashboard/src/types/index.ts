@@ -214,6 +214,38 @@ export interface DashboardStats {
   }[];
 }
 
+export interface OpeningHoursEntry {
+  day: string;
+  open: string;
+  close: string;
+  closed: boolean;
+}
+
+export interface WebsiteSettings {
+  id: string;
+  cafe_id: string;
+  cafe_name: string | null;
+  tagline: string | null;
+  hero_title: string | null;
+  hero_subtitle: string | null;
+  about_content: string | null;
+  logo_url: string | null;
+  logo_path: string | null;
+  hero_image_url: string | null;
+  hero_image_path: string | null;
+  address: string | null;
+  phone: string | null;
+  email: string | null;
+  google_maps_url: string | null;
+  instagram_url: string | null;
+  facebook_url: string | null;
+  opening_hours: OpeningHoursEntry[];
+  primary_color: string;
+  secondary_color: string;
+  created_at: string;
+  updated_at: string;
+}
+
 export interface AuthUser {
   id: string;
   email: string;
