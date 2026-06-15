@@ -1,0 +1,143 @@
+PROJECT CONTEXT SYNC
+
+Read first. Do not write code immediately.
+
+Current project:
+Cafe Maestro
+
+Architecture:
+
+* Public Website
+* QR Ordering
+* Kitchen Dashboard
+* Staff Dashboard
+* Admin Dashboard
+
+## Current issue #1
+
+When deleting a menu item from Admin → Menu Management, the UI shows:
+
+[plugin:runtime-error-plugin]
+(unknown runtime error)
+
+Need investigation.
+
+Tasks:
+
+1. Find the menu delete flow.
+2. Find the delete mutation.
+3. Find the Supabase query/RPC used.
+4. Check browser console errors.
+5. Check network response.
+6. Check database constraints.
+7. Check RLS policies.
+8. Identify exact root cause.
+9. Fix root cause.
+10. Report:
+
+* files modified
+* root cause
+* fix applied
+
+Do NOT guess.
+Trace the actual execution path.
+
+---
+
+## Current issue #2
+
+Implement menu item availability toggle.
+
+Current menu_items table already contains:
+
+is_available
+
+Use existing field if present.
+
+Requirements:
+
+## Admin Dashboard
+
+For each menu item:
+
+Available
+Unavailable
+
+Toggle switch.
+
+Examples:
+
+Cold Coffee
+[ON]
+
+Veg Burger
+[OFF]
+
+When OFF:
+
+* Item remains visible in admin
+* Item remains visible in public website
+* Item remains visible in QR ordering menu
+
+## QR Ordering Behaviour
+
+Unavailable items:
+
+* Show item card
+* Show "Unavailable" badge
+* Disable Add to Cart button
+* Disable quantity controls
+* User cannot order it
+
+Example:
+
+Cold Coffee
+₹220
+
+Unavailable
+
+[Add to Cart Disabled]
+
+## Public Website Behaviour
+
+Public website must NOT show:
+
+* Unavailable
+* Out of Stock
+
+It should simply display:
+
+Cold Coffee
+₹220
+
+No badge.
+
+Reason:
+Public website is marketing.
+QR ordering is operational.
+
+## Architecture Rules
+
+* One menu system only
+* Use existing menu_items table
+* No duplicate availability columns
+* No duplicate menu tables
+
+Before coding:
+
+1. Inspect current schema.
+2. Confirm whether is_available already exists.
+3. Identify every place where menu items are rendered:
+
+   * Admin
+   * QR ordering
+   * Public website
+4. Produce implementation plan.
+5. Then implement.
+
+After completion provide:
+
+* files modified
+* schema changes
+* build status
+* behaviour verification

@@ -145,16 +145,10 @@ export function CafeMenuPage() {
                 ) : (
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     {cat.items.map((item) => {
-                      const outOfStock = !item.is_available;
                       return (
                         <div
                           key={item.id}
-                          className={cn(
-                            "group relative rounded-2xl border border-gray-100 bg-white overflow-hidden transition-shadow",
-                            outOfStock
-                              ? "opacity-60"
-                              : "hover:shadow-md hover:border-gray-200"
-                          )}
+                          className="group relative rounded-2xl border border-gray-100 bg-white overflow-hidden transition-shadow hover:shadow-md hover:border-gray-200"
                         >
                           {/* Image */}
                           {item.image_url && (
@@ -162,10 +156,7 @@ export function CafeMenuPage() {
                               <img
                                 src={item.image_url}
                                 alt={item.name}
-                                className={cn(
-                                  "w-full h-full object-cover transition-transform",
-                                  !outOfStock && "group-hover:scale-105"
-                                )}
+                                className="w-full h-full object-cover transition-transform group-hover:scale-105"
                               />
                             </div>
                           )}
@@ -184,11 +175,6 @@ export function CafeMenuPage() {
                               </div>
                               <div className="flex flex-col items-end gap-1.5 shrink-0">
                                 <PriceBadge price={item.price} color={primaryColor} />
-                                {outOfStock && (
-                                  <span className="inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-full bg-gray-100 text-gray-500 uppercase tracking-wide">
-                                    Out of stock
-                                  </span>
-                                )}
                               </div>
                             </div>
 

@@ -30,6 +30,7 @@ interface MenuItem {
   tags: string[];
   prep_time_min: number | null;
   allergens: string[];
+  is_available: boolean;
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -422,9 +423,8 @@ function ActiveSession({
     queryFn: async () => {
       const { data, error } = await supabase
         .from("menu_items")
-        .select("id, category_id, name, description, price, tags, prep_time_min, allergens")
+        .select("id, category_id, name, description, price, tags, prep_time_min, allergens, is_available")
         .eq("cafe_id", cafeId)
-        .eq("is_available", true)
         .order("position");
       if (error) throw error;
       return (data ?? []) as MenuItem[];
@@ -597,16 +597,24 @@ function ActiveSession({
         {visibleItems.map((item) => {
           const cartItem = cart.get(item.id);
           const qty = cartItem?.quantity ?? 0;
+          const unavailable = !item.is_available;
 
           return (
             <div
               key={item.id}
-              className="flex items-start gap-3 rounded-xl border bg-card p-4"
+              className={`flex items-start gap-3 rounded-xl border bg-card p-4 ${unavailable ? "opacity-70" : ""}`}
             >
               <div className="flex-1 min-w-0">
                 <div className="flex items-start justify-between gap-2">
                   <div className="min-w-0">
-                    <p className="font-medium text-sm">{item.name}</p>
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <p className="font-medium text-sm">{item.name}</p>
+                      {unavailable && (
+                        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-gray-100 text-gray-500 uppercase tracking-wide">
+                          Unavailable
+                        </span>
+                      )}
+                    </div>
                     {item.description && (
                       <p className="text-xs text-muted-foreground mt-0.5 line-clamp-2">
                         {item.description}
@@ -625,7 +633,15 @@ function ActiveSession({
                 </div>
 
                 <div className="mt-3 flex justify-end">
-                  {qty === 0 ? (
+                  {unavailable ? (
+                    <button
+                      disabled
+                      className="flex items-center gap-1.5 px-4 py-1.5 rounded-full bg-muted text-muted-foreground text-sm font-medium cursor-not-allowed"
+                    >
+                      <Plus className="h-3.5 w-3.5" />
+                      Add to Cart
+                    </button>
+                  ) : qty === 0 ? (
                     <button
                       onClick={() => addToCart(item)}
                       className="flex items-center gap-1.5 px-4 py-1.5 rounded-full bg-primary text-primary-foreground text-sm font-medium"

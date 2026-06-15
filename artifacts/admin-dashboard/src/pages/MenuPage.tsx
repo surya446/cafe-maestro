@@ -9,6 +9,7 @@ import {
   EyeOff,
   AlertCircle,
 } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { PageHeader } from "@/components/common/PageHeader";
 import { EmptyState } from "@/components/common/EmptyState";
@@ -244,6 +245,7 @@ function ItemForm({
 
 /* ─── Main page ──────────────────────────────────────────────────────────── */
 export function MenuPage() {
+  const { toast } = useToast();
   const { data: categories = [], isLoading: catLoading } = useMenuCategories();
   const { data: items = [], isLoading: itemsLoading } = useMenuItems();
   const createCat = useCreateCategory();
@@ -594,9 +596,15 @@ export function MenuPage() {
           confirmLabel="Delete"
           loading={deleteItem.isPending}
           onConfirm={async () => {
-            if (deleteItemId) {
+            if (!deleteItemId) return;
+            try {
               await deleteItem.mutateAsync(deleteItemId);
               setDeleteItemId(null);
+            } catch (err) {
+              setDeleteItemId(null);
+              const msg =
+                err instanceof Error ? err.message : "Failed to delete item. It may be linked to existing orders.";
+              toast({ title: "Could not delete item", description: msg, variant: "destructive" });
             }
           }}
         />
