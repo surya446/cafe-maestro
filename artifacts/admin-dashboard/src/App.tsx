@@ -21,6 +21,7 @@ import { SettingsPage } from "@/pages/SettingsPage";
 import { WebsiteSettingsPage } from "@/pages/WebsiteSettingsPage";
 import { CafePage } from "@/pages/CafePage";
 import { CafeMenuPage } from "@/pages/CafeMenuPage";
+import { CafeComingSoonPage } from "@/pages/CafeComingSoonPage";
 import { ChangePasswordPage } from "@/pages/ChangePasswordPage";
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
@@ -57,6 +58,11 @@ function Router() {
       <Route path="/book" component={BookingFormPage} />
       <Route path="/table/:token" component={TableSessionPage} />
       <Route path="/cafe/menu" component={CafeMenuPage} />
+      <Route path="/cafe/gallery" component={CafeComingSoonPage} />
+      <Route path="/cafe/offers" component={CafeComingSoonPage} />
+      <Route path="/cafe/reviews" component={CafeComingSoonPage} />
+      <Route path="/cafe/about" component={CafeComingSoonPage} />
+      <Route path="/cafe/contact" component={CafeComingSoonPage} />
       <Route path="/cafe" component={CafePage} />
       <Route path="/">
         <ProtectedRoute>

@@ -149,7 +149,7 @@
   --chart-5: 270 40% 52%;
 
   --app-font-sans: 'Inter', ui-sans-serif, system-ui, sans-serif;
-  --app-font-serif: Georgia, serif;
+  --app-font-serif: 'Cormorant Garamond', Georgia, serif;
   --app-font-mono: Menlo, monospace;
   --radius: 0.5rem;
 
