@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect, useRef } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useParams } from "wouter";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
@@ -468,25 +468,8 @@ function ActiveSession({
 
   // ── Realtime: menu_items for this cafe ─────────────────────
   const qc = useQueryClient();
-  const DEVICE = /Mobi|Android|iPhone|iPad/i.test(navigator.userAgent) ? "MOBILE" : "DESKTOP";
-  const lastArchivedIdRef = useRef<string | null>(null);
-
   useEffect(() => {
     if (!cafeId) return;
-
-    // ── AUTH STATE: compare desktop vs phone ────────────────────
-    supabase.auth.getSession().then(({ data }) => {
-      const session = data.session;
-      console.log(`[RT][${DEVICE}] AUTH STATE on mount`, {
-        hasSession: !!session,
-        role: session?.user?.role ?? "anon",
-        userId: session?.user?.id ?? null,
-        expiresAt: session?.expires_at ?? null,
-        cafeId,
-        filter: `cafe_id=eq.${cafeId}`,
-      });
-    });
-
     const channel = supabase
       .channel(`menu_items:${cafeId}`)
       .on(
@@ -494,137 +477,31 @@ function ActiveSession({
         { event: "*", schema: "public", table: "menu_items", filter: `cafe_id=eq.${cafeId}` },
         (payload) => {
           const KEY = ["menu_items", cafeId];
-          const newRow = payload.new as Record<string, unknown>;
-          const oldRow = payload.old as Record<string, unknown>;
-
-          console.log(`[DIAG][${DEVICE}] STEP 3 — event received`, {
-            eventType: payload.eventType,
-            "new.id": newRow.id,
-            "new.is_archived": newRow.is_archived,
-            "new.is_archived typeof": typeof newRow.is_archived,
-            "new keys": Object.keys(newRow),
-            "old.id": oldRow.id,
-            "payload.new (full)": payload.new,
-          });
-
-          const cacheBefore = qc.getQueryData<MenuItem[]>(KEY);
-          const targetId = (newRow.id ?? oldRow.id) as string | undefined;
-          console.log(`[DIAG][${DEVICE}] STEP 4 BEFORE`, {
-            cacheCount: cacheBefore?.length ?? 0,
-            targetId,
-            targetInCache: targetId ? cacheBefore?.some((i) => i.id === targetId) : "unknown",
-          });
-
+          const newRow = payload.new as unknown as MenuItem & { is_archived?: boolean };
           if (payload.eventType === "DELETE") {
-            const id = oldRow.id as string;
+            const id = (payload.old as { id: string }).id;
             qc.setQueryData<MenuItem[]>(KEY, (old) => old?.filter((i) => i.id !== id) ?? old);
           } else if (payload.eventType === "INSERT") {
-            const row = newRow as unknown as MenuItem & { is_archived?: boolean };
-            if (!row.is_archived) {
-              qc.setQueryData<MenuItem[]>(KEY, (old) => old ? [...old, row] : old);
+            if (!newRow.is_archived) {
+              qc.setQueryData<MenuItem[]>(KEY, (old) => old ? [...old, newRow] : old);
             }
           } else if (payload.eventType === "UPDATE") {
-            const row = newRow as unknown as MenuItem & { is_archived?: boolean };
-            console.log(`[DIAG][${DEVICE}] STEP 3a — branch check`, {
-              "row.is_archived": row.is_archived,
-              "!!row.is_archived": !!row.is_archived,
-              branch: row.is_archived ? "FILTER-OUT (archive)" : "UPDATE-IN-PLACE (restore/avail)",
-            });
-
-            if (row.is_archived) {
-              lastArchivedIdRef.current = row.id ?? null;
-              qc.setQueryData<MenuItem[]>(KEY, (old) => {
-                console.log(`[DIAG][${DEVICE}] STEP 4 FILTER-RUN`, {
-                  oldIsNull: old == null,
-                  oldCount: old?.length ?? "null",
-                  targetId: row.id,
-                  targetFoundInOld: old?.some((i) => i.id === row.id) ?? false,
-                });
-                if (!old) return old;
-                const next = old.filter((i) => i.id !== row.id);
-                console.log(`[DIAG][${DEVICE}] STEP 4 FILTER-RESULT`, {
-                  nextCount: next.length,
-                  countDecreased: next.length < old.length,
-                });
-                return next;
-              });
+            if (newRow.is_archived) {
+              qc.setQueryData<MenuItem[]>(KEY, (old) => old?.filter((i) => i.id !== newRow.id) ?? old);
             } else {
-              lastArchivedIdRef.current = (oldRow.id as string) ?? null;
               qc.setQueryData<MenuItem[]>(KEY, (old) => {
                 if (!old) return old;
-                const exists = old.some((i) => i.id === row.id);
+                const exists = old.some((i) => i.id === newRow.id);
                 return exists
-                  ? old.map((i) => i.id === row.id ? { ...i, ...row } : i)
-                  : [...old, row];
+                  ? old.map((i) => i.id === newRow.id ? { ...i, ...newRow } : i)
+                  : [...old, newRow];
               });
             }
           }
-
-          const cacheAfter = qc.getQueryData<MenuItem[]>(KEY);
-          console.log(`[DIAG][${DEVICE}] STEP 4 AFTER`, {
-            cacheCount: cacheAfter?.length ?? 0,
-            targetStillInCache: targetId ? cacheAfter?.some((i) => i.id === targetId) : "unknown",
-            cacheCountChanged: (cacheBefore?.length ?? 0) !== (cacheAfter?.length ?? 0),
-          });
         }
       )
-      // ── RAW CATCH-ALL: no cafe_id filter — fires if event reaches client at all ──
-      .on(
-        "postgres_changes",
-        { event: "*", schema: "public", table: "menu_items" },
-        (payload) => {
-          console.log(`[RT][${DEVICE}] RAW-CATCH-ALL`, {
-            eventType: payload.eventType,
-            "new.id": (payload.new as Record<string, unknown>).id,
-            "new.is_archived": (payload.new as Record<string, unknown>).is_archived,
-            "new keys": Object.keys(payload.new as object),
-          });
-        }
-      )
-      .subscribe((status, err) => {
-        // ── CHANNEL STATUS: log every transition ─────────────────
-        console.log(`[RT][${DEVICE}] CHANNEL STATUS → ${status}`, {
-          err: err ?? null,
-          channelState: channel.state,
-          online: navigator.onLine,
-          visibility: document.visibilityState,
-          time: new Date().toISOString(),
-        });
-      });
-
-    // ── HEARTBEAT every 30 s ────────────────────────────────────
-    const heartbeat = setInterval(() => {
-      console.log(`[RT-HEARTBEAT][${DEVICE}]`, {
-        channelState: channel.state,
-        online: navigator.onLine,
-        visibility: document.visibilityState,
-        time: new Date().toISOString(),
-      });
-    }, 30_000);
-
-    // ── VISIBILITY CHANGE: detect tab backgrounding on mobile ───
-    const onVisibility = () => {
-      console.log(`[RT][${DEVICE}] VISIBILITY CHANGE → ${document.visibilityState}`, {
-        channelState: channel.state,
-        online: navigator.onLine,
-        time: new Date().toISOString(),
-      });
-    };
-    document.addEventListener("visibilitychange", onVisibility);
-
-    // ── ONLINE/OFFLINE: detect network drops ────────────────────
-    const onOnline  = () => console.log(`[RT][${DEVICE}] NETWORK → online`,  { channelState: channel.state, time: new Date().toISOString() });
-    const onOffline = () => console.log(`[RT][${DEVICE}] NETWORK → offline`, { channelState: channel.state, time: new Date().toISOString() });
-    window.addEventListener("online",  onOnline);
-    window.addEventListener("offline", onOffline);
-
-    return () => {
-      clearInterval(heartbeat);
-      document.removeEventListener("visibilitychange", onVisibility);
-      window.removeEventListener("online",  onOnline);
-      window.removeEventListener("offline", onOffline);
-      supabase.removeChannel(channel);
-    };
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
   }, [cafeId, qc]);
 
   const activeCategoryId = selectedCategory ?? categories[0]?.id ?? null;
@@ -633,22 +510,6 @@ function ActiveSession({
     () => menuItems.filter((i) => i.category_id === activeCategoryId),
     [menuItems, activeCategoryId]
   );
-
-  // ── STEP 5 & 6: render-layer diagnostic ────────────────────
-  useEffect(() => {
-    const tid = lastArchivedIdRef.current;
-    console.log(`[DIAG][${DEVICE}] STEP 5 — menuItems render layer`, {
-      count: menuItems.length,
-      targetId: tid,
-      targetInMenuItems: tid ? menuItems.some((i) => i.id === tid) : "no target yet",
-    });
-    console.log(`[DIAG][${DEVICE}] STEP 6 — visibleItems`, {
-      activeCategoryId,
-      visibleCount: visibleItems.length,
-      targetId: tid,
-      targetInVisibleItems: tid ? visibleItems.some((i) => i.id === tid) : "no target yet",
-    });
-  }, [menuItems, visibleItems, activeCategoryId]);
 
   // ── Cart helpers ───────────────────────────────────────────
 

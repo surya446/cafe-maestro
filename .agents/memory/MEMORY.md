@@ -4,3 +4,4 @@
 - [Schema field names](schema-field-names.md) — `position` (not `display_order`), `number`/`name` on tables (not `table_number`/`label`), `qr_code_token`, `expires_at` on sessions.
 - [Mutation input omissions](mutation-input-omissions.md) — always omit `updated_at`, `confirmed_at`, `confirmed_by` and other server-managed fields from mutation input types.
 - [Env var restart required](env-var-restart.md) — after setting env vars, always restart the affected workflow so Vite picks them up.
+- [Realtime RLS anon suppression](realtime-rls-anon.md) — never put visibility-changing columns in anon SELECT RLS policies on tables with realtime; Supabase drops the event server-side when the new row fails RLS for the subscriber.
