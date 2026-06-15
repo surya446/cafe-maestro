@@ -563,7 +563,25 @@ function ActiveSession({
           });
         }
       )
-      .subscribe();
+      // ── RAW CATCH-ALL: no filter, no table — fires for ANY postgres change ──
+      // If STEP 3 never fires but this does, it proves client-side filter drops it.
+      // If this also never fires, the event is suppressed entirely server-side (RLS).
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "menu_items" },
+        (payload) => {
+          console.log(`[DIAG][${DEVICE}] RAW-CATCH-ALL — event reached client`, {
+            eventType: payload.eventType,
+            "new.id": (payload.new as Record<string, unknown>).id,
+            "new.is_archived": (payload.new as Record<string, unknown>).is_archived,
+            "new keys": Object.keys(payload.new as object),
+            "old.id": (payload.old as Record<string, unknown>).id,
+          });
+        }
+      )
+      .subscribe((status, err) => {
+        console.log(`[DIAG][${DEVICE}] channel status`, { status, err: err ?? null });
+      });
 
     return () => { supabase.removeChannel(channel); };
   }, [cafeId, qc]);
