@@ -11,7 +11,7 @@ import { cn } from "@/lib/utils";
 function PriceBadge({ price, color }: { price: number; color: string }) {
   return (
     <span className="font-semibold text-sm" style={{ color }}>
-      ₹{price.toFixed(2)}
+      ₹{price % 1 === 0 ? price : price.toFixed(2)}
     </span>
   );
 }
