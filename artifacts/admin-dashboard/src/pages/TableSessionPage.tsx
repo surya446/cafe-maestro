@@ -470,37 +470,48 @@ function ActiveSession({
   const qc = useQueryClient();
   useEffect(() => {
     if (!cafeId) return;
+    console.log("[RT-DIAG] Subscribing to menu_items for cafeId:", cafeId);
     const channel = supabase
       .channel(`menu_items:${cafeId}`)
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "menu_items", filter: `cafe_id=eq.${cafeId}` },
         (payload) => {
+          console.log("[RT-DIAG] Event received:", payload.eventType, "payload:", JSON.stringify(payload));
           qc.setQueryData<MenuItem[]>(["menu_items", cafeId], (old) => {
+            console.log("[RT-DIAG] State before update — item count:", old?.length, "ids:", old?.map(i => i.id));
             if (!old) return old;
+            let next: MenuItem[];
             if (payload.eventType === "DELETE") {
-              return old.filter((i) => i.id !== (payload.old as { id: string }).id);
-            }
-            if (payload.eventType === "INSERT") {
-              const inserted = payload.new as MenuItem;
-              if (inserted.is_archived) return old;
-              return [...old, inserted];
-            }
-            if (payload.eventType === "UPDATE") {
-              const updated = payload.new as MenuItem;
+              next = old.filter((i) => i.id !== (payload.old as { id: string }).id);
+            } else if (payload.eventType === "INSERT") {
+              const inserted = payload.new as unknown as MenuItem & { is_archived?: boolean };
+              console.log("[RT-DIAG] INSERT is_archived:", inserted.is_archived);
+              if (inserted.is_archived) { next = old; }
+              else { next = [...old, inserted]; }
+            } else if (payload.eventType === "UPDATE") {
+              const updated = payload.new as unknown as MenuItem & { is_archived?: boolean };
+              console.log("[RT-DIAG] UPDATE id:", updated.id, "is_archived:", updated.is_archived, "is_available:", updated.is_available);
               if (updated.is_archived) {
-                return old.filter((i) => i.id !== updated.id);
+                next = old.filter((i) => i.id !== updated.id);
+              } else {
+                next = old.map((i) => i.id === updated.id ? { ...i, ...updated } : i);
               }
-              return old.map((i) =>
-                i.id === updated.id ? { ...i, ...updated } : i
-              );
+            } else {
+              next = old;
             }
-            return old;
+            console.log("[RT-DIAG] State after update — item count:", next.length, "ids:", next.map(i => i.id));
+            return next;
           });
         }
       )
-      .subscribe();
-    return () => { supabase.removeChannel(channel); };
+      .subscribe((status, err) => {
+        console.log("[RT-DIAG] Subscription status:", status, err ?? "");
+      });
+    return () => {
+      console.log("[RT-DIAG] Removing channel for cafeId:", cafeId);
+      supabase.removeChannel(channel);
+    };
   }, [cafeId, qc]);
 
   const activeCategoryId = selectedCategory ?? categories[0]?.id ?? null;
