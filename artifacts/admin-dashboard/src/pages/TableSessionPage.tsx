@@ -523,7 +523,24 @@ function ActiveSession({
 
             if (row.is_archived) {
               lastArchivedIdRef.current = row.id ?? null;
-              qc.setQueryData<MenuItem[]>(KEY, (old) => old?.filter((i) => i.id !== row.id) ?? old);
+              qc.setQueryData<MenuItem[]>(KEY, (old) => {
+                console.log(`[DIAG][${DEVICE}] STEP 4 FILTER-RUN`, {
+                  oldIsNull: old == null,
+                  oldCount: old?.length ?? "null",
+                  targetId: row.id,
+                  targetFoundInOld: old?.some((i) => i.id === row.id) ?? false,
+                  oldIds: old?.map((i) => i.id) ?? [],
+                });
+                if (!old) return old;
+                const next = old.filter((i) => i.id !== row.id);
+                console.log(`[DIAG][${DEVICE}] STEP 4 FILTER-RESULT`, {
+                  nextCount: next.length,
+                  countDecreased: next.length < old.length,
+                  sameReference: next === old,
+                  nextIds: next.map((i) => i.id),
+                });
+                return next;
+              });
             } else {
               lastArchivedIdRef.current = (oldRow.id as string) ?? null;
               qc.setQueryData<MenuItem[]>(KEY, (old) => {
