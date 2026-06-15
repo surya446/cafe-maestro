@@ -1,0 +1,133 @@
+Public Website Polish Pass (Mobile + Booking Modal)
+
+Do not add new sections or features.
+
+Focus only on visual quality, responsiveness, spacing consistency, and booking modal UX.
+
+Issues observed:
+
+1. Mobile layout quality is not premium.
+
+   * Uneven spacing between sections
+   * Some sections have too much padding
+   * Some sections have too little padding
+   * Empty/unused areas
+   * Inconsistent vertical rhythm
+   * Some content feels cramped
+   * Some content feels sparse
+
+2. Booking modal is visually disconnected from the luxury dark theme.
+
+   * Colors do not match the public website
+   * Feels like an admin form
+   * Not premium
+   * Not elegant
+
+3. Booking modal should NOT scroll.
+
+   * Entire modal must fit within mobile viewport
+   * Entire modal must fit within tablet viewport
+   * Entire modal must fit within desktop viewport
+   * No internal scrollbars
+   * No body scroll while modal is open
+
+Requirements:
+
+MOBILE AUDIT
+
+Audit every public page:
+
+* /cafe
+* /cafe/menu
+* /cafe/gallery
+* /cafe/offers
+* /cafe/reviews
+* /cafe/about
+* /cafe/contact
+
+For each section provide:
+
+Section Name
+Current Padding
+Current Margin
+Recommended Padding
+Recommended Margin
+
+Then standardize spacing system:
+
+Examples:
+
+* Section spacing
+* Card spacing
+* Heading spacing
+* CTA spacing
+
+Use a consistent design scale.
+
+BOOKING MODAL REDESIGN
+
+Target style:
+
+Luxury dark theme.
+
+Colors:
+
+* #050505
+* #0B0B0B
+* #111111
+* #171717
+
+Text:
+
+* #FAFAFA
+
+Accent:
+
+* #C9A46C
+
+Requirements:
+
+* Glass effect
+* Soft blur backdrop
+* Premium shadows
+* Smooth open animation
+* Smooth close animation
+* Consistent button styling
+* Premium input fields
+* Better typography
+
+MODAL SIZING
+
+Desktop:
+
+* Centered
+* No scrolling
+
+Tablet:
+
+* Centered
+* No scrolling
+
+Mobile:
+
+* Full-screen style if needed
+* No scrolling
+* All fields visible
+
+Verify:
+
+* iPhone viewport
+* Android viewport
+* Tablet viewport
+* Desktop viewport
+
+Deliver:
+
+1. Files modified
+2. Mobile spacing improvements
+3. Modal redesign summary
+4. Verification screenshots
+5. Build status
+
+Do not add new functionality.
+Only improve visual quality and UX.

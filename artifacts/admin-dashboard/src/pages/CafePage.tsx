@@ -1,6 +1,6 @@
 import { useRef } from "react";
 import { Link } from "wouter";
-import { MapPin, Phone, Mail, ExternalLink, Clock, ArrowRight, Coffee, Star } from "lucide-react";
+import { MapPin, Phone, Mail, ExternalLink, ArrowRight, Coffee, Star } from "lucide-react";
 import { motion } from "framer-motion";
 import { CafeLayout } from "@/components/layout/CafeLayout";
 import { usePublicCafe } from "@/hooks/usePublicBooking";
@@ -15,24 +15,24 @@ import { cn } from "@/lib/utils";
 const GOLD = "#C9A46C";
 
 const fadeUp = {
-  hidden: { opacity: 0, y: 32 },
+  hidden: { opacity: 0, y: 28 },
   show: { opacity: 1, y: 0, transition: { duration: 0.75, ease: [0.16, 1, 0.3, 1] } },
 };
 const stagger = {
   hidden: {},
-  show: { transition: { staggerChildren: 0.1, delayChildren: 0.05 } },
+  show: { transition: { staggerChildren: 0.09, delayChildren: 0.04 } },
 };
 
 function SectionLabel({ children }: { children: React.ReactNode }) {
   return (
-    <p className="text-[10px] font-semibold uppercase tracking-[0.28em] mb-4" style={{ color: GOLD }}>
+    <p className="text-[10px] font-semibold uppercase tracking-[0.28em] mb-3.5" style={{ color: GOLD }}>
       {children}
     </p>
   );
 }
 
-function GoldRule() {
-  return <div className="w-10 h-px mb-8" style={{ background: GOLD }} />;
+function GoldRule({ className }: { className?: string }) {
+  return <div className={cn("w-10 h-px mb-7", className)} style={{ background: GOLD }} />;
 }
 
 function HeroWordSplit({ text }: { text: string }) {
@@ -44,7 +44,7 @@ function HeroWordSplit({ text }: { text: string }) {
           key={i}
           initial={{ y: "100%", opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
-          transition={{ duration: 0.9, delay: 0.3 + i * 0.13, ease: [0.16, 1, 0.3, 1] }}
+          transition={{ duration: 0.9, delay: 0.3 + i * 0.12, ease: [0.16, 1, 0.3, 1] }}
           className="inline-block mr-[0.22em]"
         >
           {word}
@@ -57,22 +57,19 @@ function HeroWordSplit({ text }: { text: string }) {
 function OpeningHoursCard({ hours }: { hours: OpeningHoursEntry[] }) {
   const today = new Date().toLocaleDateString("en-US", { weekday: "long" });
   return (
-    <div className="divide-y divide-white/[0.06]">
+    <div className="divide-y divide-white/[0.05]">
       {hours.map((entry) => {
         const isToday = entry.day === today;
         return (
           <div
             key={entry.day}
-            className={cn(
-              "flex items-center justify-between py-3 text-sm",
-              isToday ? "font-semibold" : ""
-            )}
+            className={cn("flex items-center justify-between py-3 text-sm", isToday ? "font-semibold" : "")}
           >
-            <span className={cn("w-28", isToday ? "text-white" : "text-white/45")}>{entry.day}</span>
+            <span className={cn("w-28", isToday ? "text-white" : "text-white/40")}>{entry.day}</span>
             {entry.closed ? (
-              <span className="text-white/25 italic">Closed</span>
+              <span className="text-white/20 italic text-xs">Closed</span>
             ) : (
-              <span className={isToday ? "" : "text-white/45"} style={isToday ? { color: GOLD } : {}}>
+              <span style={isToday ? { color: GOLD } : {}} className={isToday ? "" : "text-white/40"}>
                 {entry.open} – {entry.close}
               </span>
             )}
@@ -90,6 +87,7 @@ export function CafePage() {
   const { data: gallery } = usePublicGallery(cafe?.id);
   const { data: offers } = usePublicOffers(cafe?.id);
   const { data: reviews } = usePublicReviews(cafe?.id);
+
   const isLoading = cafeLoading || settingsLoading;
   const displayName = settings?.cafe_name ?? cafe?.name ?? "Our Cafe";
   const primaryColor = settings?.primary_color ?? "#1a1a1a";
@@ -109,11 +107,8 @@ export function CafePage() {
     return (
       <CafeLayout cafeName="Loading…" primaryColor={primaryColor}>
         <div className="h-screen flex items-center justify-center" style={{ background: "#050505" }}>
-          <motion.div
-            animate={{ opacity: [0.3, 1, 0.3] }}
-            transition={{ duration: 2, repeat: Infinity }}
-          >
-            <Coffee className="w-12 h-12" style={{ color: GOLD }} />
+          <motion.div animate={{ opacity: [0.3, 1, 0.3] }} transition={{ duration: 2, repeat: Infinity }}>
+            <Coffee className="w-10 h-10" style={{ color: GOLD }} />
           </motion.div>
         </div>
       </CafeLayout>
@@ -124,8 +119,8 @@ export function CafePage() {
     return (
       <CafeLayout cafeName="Cafe" primaryColor={primaryColor}>
         <div className="flex flex-col items-center justify-center min-h-screen gap-4" style={{ background: "#050505" }}>
-          <Coffee className="w-16 h-16" style={{ color: GOLD }} />
-          <p className="text-white/40 text-lg font-light">Coming soon</p>
+          <Coffee className="w-14 h-14" style={{ color: GOLD }} />
+          <p className="text-white/35 text-base font-light">Coming soon</p>
         </div>
       </CafeLayout>
     );
@@ -140,11 +135,6 @@ export function CafePage() {
         }
         .cafe-marquee { animation: cafe-marquee-x 35s linear infinite; }
         .cafe-marquee:hover { animation-play-state: paused; }
-        @keyframes cafe-scroll-bounce {
-          0%, 100% { transform: translateY(0); opacity: 0.6; }
-          50% { transform: translateY(6px); opacity: 1; }
-        }
-        .cafe-scroll-hint { animation: cafe-scroll-bounce 2s ease-in-out infinite; }
       `}</style>
 
       <CafeLayout
@@ -166,26 +156,26 @@ export function CafePage() {
                 animate={{ scale: 1, opacity: 1 }}
                 transition={{ duration: 1.6, ease: [0.16, 1, 0.3, 1] }}
               />
-              <div className="absolute inset-0" style={{ background: "linear-gradient(to top, #050505 0%, rgba(5,5,5,0.7) 45%, rgba(5,5,5,0.2) 100%)" }} />
+              <div className="absolute inset-0" style={{ background: "linear-gradient(to top, #050505 0%, rgba(5,5,5,0.65) 45%, rgba(5,5,5,0.15) 100%)" }} />
             </>
           ) : (
             <div className="absolute inset-0" style={{ background: `radial-gradient(ellipse at 20% 50%, ${primaryColor}33 0%, #050505 70%)` }} />
           )}
 
-          {/* Hero content — editorial bottom-left */}
-          <div className="relative z-10 px-6 sm:px-12 lg:px-20 pb-24 max-w-4xl">
+          {/* Content — editorial bottom-left */}
+          <div className="relative z-10 px-5 sm:px-12 lg:px-20 pb-14 sm:pb-20 max-w-4xl">
             {settings?.tagline && (
               <motion.p
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 transition={{ delay: 0.2, duration: 0.8 }}
-                className="text-[11px] font-semibold uppercase tracking-[0.3em] mb-6"
+                className="text-[11px] font-semibold uppercase tracking-[0.3em] mb-5"
                 style={{ color: GOLD }}
               >
                 {settings.tagline}
               </motion.p>
             )}
-            <h1 className="font-serif text-5xl sm:text-6xl lg:text-7xl xl:text-8xl font-light text-white leading-[1.02] tracking-tight overflow-hidden">
+            <h1 className="font-serif text-4xl sm:text-5xl lg:text-7xl xl:text-8xl font-light text-white leading-[1.03] tracking-tight overflow-hidden">
               <HeroWordSplit text={settings?.hero_title ?? displayName} />
             </h1>
             {settings?.hero_subtitle && (
@@ -193,51 +183,41 @@ export function CafePage() {
                 initial={{ opacity: 0, y: 12 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.9, duration: 0.7 }}
-                className="mt-5 text-base sm:text-lg text-white/55 font-light max-w-xl"
+                className="mt-4 text-sm sm:text-base text-white/50 font-light max-w-lg"
               >
                 {settings.hero_subtitle}
               </motion.p>
             )}
             <motion.div
-              initial={{ opacity: 0, y: 16 }}
+              initial={{ opacity: 0, y: 14 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 1.1, duration: 0.7 }}
-              className="mt-10 flex flex-wrap items-center gap-3"
+              className="mt-7 sm:mt-9 flex flex-wrap items-center gap-3"
             >
               <Link
                 href="/cafe/menu"
-                className="inline-flex items-center gap-2 px-7 py-3.5 rounded-full text-sm font-semibold text-[#050505] transition-all hover:opacity-90 active:scale-95"
+                className="inline-flex items-center gap-2 px-6 sm:px-7 py-3 sm:py-3.5 rounded-full text-sm font-semibold text-[#050505] transition-all hover:opacity-90 active:scale-95"
                 style={{ background: GOLD }}
               >
-                View Menu <ArrowRight className="w-4 h-4" />
+                View Menu <ArrowRight className="w-3.5 h-3.5" />
               </Link>
-              <BookingCTAButton className="inline-flex items-center gap-2 px-7 py-3.5 rounded-full text-sm font-semibold text-white border border-white/25 hover:bg-white/[0.08] transition-colors backdrop-blur-sm">
+              <BookingCTAButton className="inline-flex items-center gap-2 px-6 sm:px-7 py-3 sm:py-3.5 rounded-full text-sm font-semibold text-white border border-white/20 hover:bg-white/[0.08] transition-colors">
                 Book a Table
               </BookingCTAButton>
             </motion.div>
           </div>
-
-          {/* Scroll hint */}
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ delay: 1.8, duration: 0.6 }}
-            className="absolute bottom-8 right-10 flex flex-col items-center gap-2 cafe-scroll-hint"
-          >
-            <span className="text-[10px] tracking-[0.2em] uppercase text-white/30 rotate-90 origin-center">Scroll</span>
-          </motion.div>
         </section>
 
         {/* ── MARQUEE DIVIDER ───────────────────────────────────── */}
         <div
-          className="overflow-hidden py-5 border-y border-white/[0.05]"
+          className="overflow-hidden py-4 sm:py-5 border-y border-white/[0.05]"
           style={{ background: "#0B0B0B" }}
         >
           <div ref={marqueeRef} className="flex cafe-marquee whitespace-nowrap" style={{ width: "max-content" }}>
             {[...marqueeItems, ...marqueeItems].map((item, i) => (
-              <span key={i} className="inline-flex items-center gap-6 mr-12 text-sm font-light tracking-[0.12em] text-white/25">
+              <span key={i} className="inline-flex items-center gap-5 mr-10 text-xs sm:text-sm font-light tracking-[0.1em] text-white/20">
                 {item}
-                <span className="w-1 h-1 rounded-full" style={{ background: GOLD }} />
+                <span className="w-1 h-1 rounded-full shrink-0" style={{ background: GOLD }} />
               </span>
             ))}
           </div>
@@ -245,62 +225,50 @@ export function CafePage() {
 
         {/* ── ABOUT ─────────────────────────────────────────────── */}
         {settings?.about_content && (
-          <section className="py-28 px-4 sm:px-6" style={{ background: "#0B0B0B" }}>
-            <div className="max-w-6xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
-              <motion.div
-                initial="hidden"
-                whileInView="show"
-                viewport={{ once: true, margin: "-80px" }}
-                variants={stagger}
-              >
+          <section className="py-16 sm:py-24 px-4 sm:px-6" style={{ background: "#0B0B0B" }}>
+            <div className="max-w-6xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-10 sm:gap-16 items-center">
+              <motion.div initial="hidden" whileInView="show" viewport={{ once: true, margin: "-60px" }} variants={stagger}>
                 <motion.div variants={fadeUp}>
                   <SectionLabel>Our Story</SectionLabel>
                   <GoldRule />
                 </motion.div>
-                <motion.h2 variants={fadeUp} className="font-serif text-3xl sm:text-4xl lg:text-5xl font-light text-white leading-tight tracking-tight mb-8">
+                <motion.h2 variants={fadeUp} className="font-serif text-2xl sm:text-3xl lg:text-4xl font-light text-white leading-tight tracking-tight mb-6">
                   {displayName}
                 </motion.h2>
                 <motion.div variants={fadeUp}>
                   {settings.about_content.split("\n").map((line, i) =>
-                    line.trim() ? (
-                      <p key={i} className="text-white/50 leading-relaxed mb-4 text-[15px]">{line}</p>
-                    ) : null
+                    line.trim() ? <p key={i} className="text-white/45 leading-relaxed mb-3.5 text-[15px]">{line}</p> : null
                   )}
                 </motion.div>
-                <motion.div variants={fadeUp} className="mt-8">
-                  <Link
-                    href="/cafe/about"
-                    className="inline-flex items-center gap-2 text-sm font-medium transition-colors hover:opacity-70"
-                    style={{ color: GOLD }}
-                  >
+                <motion.div variants={fadeUp} className="mt-7">
+                  <Link href="/cafe/about" className="inline-flex items-center gap-1.5 text-sm font-medium hover:opacity-70 transition-opacity" style={{ color: GOLD }}>
                     Read more <ArrowRight className="w-3.5 h-3.5" />
                   </Link>
                 </motion.div>
               </motion.div>
 
-              {/* Decorative right panel */}
+              {/* Right — stat panel */}
               <motion.div
-                initial={{ opacity: 0, x: 40 }}
+                initial={{ opacity: 0, x: 30 }}
                 whileInView={{ opacity: 1, x: 0 }}
                 viewport={{ once: true }}
                 transition={{ duration: 0.9, ease: [0.16, 1, 0.3, 1] }}
                 className="hidden lg:flex items-center justify-center"
               >
-                <div className="w-full aspect-square rounded-2xl flex items-center justify-center border border-white/[0.06]" style={{ background: "#111111" }}>
+                <div className="w-full aspect-square rounded-2xl flex items-center justify-center border border-white/[0.05]" style={{ background: "#111111" }}>
                   <div className="text-center px-12">
-                    {avgRating !== null && (
+                    {avgRating !== null ? (
                       <>
                         <p className="font-serif text-7xl font-light" style={{ color: GOLD }}>{avgRating.toFixed(1)}</p>
                         <div className="flex justify-center gap-1 mt-3 mb-2">
                           {Array.from({ length: 5 }).map((_, i) => (
-                            <Star key={i} className={`w-4 h-4 ${i < Math.round(avgRating) ? "fill-[#C9A46C] text-[#C9A46C]" : "text-white/15"}`} />
+                            <Star key={i} className={`w-4 h-4 ${i < Math.round(avgRating) ? "fill-[#C9A46C] text-[#C9A46C]" : "text-white/12"}`} />
                           ))}
                         </div>
-                        <p className="text-xs tracking-[0.2em] uppercase text-white/25 mt-3">Guest Rating</p>
+                        <p className="text-[10px] tracking-[0.2em] uppercase text-white/25 mt-3">Guest Rating</p>
                       </>
-                    )}
-                    {avgRating === null && (
-                      <Coffee className="w-20 h-20 text-white/10" />
+                    ) : (
+                      <Coffee className="w-16 h-16 text-white/8" />
                     )}
                   </div>
                 </div>
@@ -311,39 +279,23 @@ export function CafePage() {
 
         {/* ── GALLERY ───────────────────────────────────────────── */}
         {previewGallery.length > 0 && (
-          <section className="py-24 px-4 sm:px-6" style={{ background: "#111111" }}>
+          <section className="py-14 sm:py-24 px-4 sm:px-6" style={{ background: "#111111" }}>
             <div className="max-w-6xl mx-auto">
-              <motion.div
-                initial="hidden"
-                whileInView="show"
-                viewport={{ once: true }}
-                variants={stagger}
-                className="flex items-end justify-between mb-10"
-              >
+              <motion.div initial="hidden" whileInView="show" viewport={{ once: true }} variants={stagger}
+                className="flex items-end justify-between mb-7 sm:mb-10">
                 <div>
                   <motion.div variants={fadeUp}><SectionLabel>Our Space</SectionLabel></motion.div>
-                  <motion.h2 variants={fadeUp} className="font-serif text-3xl sm:text-4xl font-light text-white tracking-tight">
-                    Gallery
-                  </motion.h2>
+                  <motion.h2 variants={fadeUp} className="font-serif text-2xl sm:text-3xl lg:text-4xl font-light text-white tracking-tight">Gallery</motion.h2>
                 </div>
                 <motion.div variants={fadeUp}>
-                  <Link
-                    href="/cafe/gallery"
-                    className="hidden sm:inline-flex items-center gap-1.5 text-sm font-medium transition-colors hover:opacity-70"
-                    style={{ color: GOLD }}
-                  >
+                  <Link href="/cafe/gallery" className="hidden sm:inline-flex items-center gap-1.5 text-sm font-medium hover:opacity-70 transition-opacity" style={{ color: GOLD }}>
                     View all <ArrowRight className="w-3.5 h-3.5" />
                   </Link>
                 </motion.div>
               </motion.div>
 
-              <motion.div
-                initial="hidden"
-                whileInView="show"
-                viewport={{ once: true, margin: "-60px" }}
-                variants={stagger}
-                className="grid grid-cols-2 sm:grid-cols-3 gap-3"
-              >
+              <motion.div initial="hidden" whileInView="show" viewport={{ once: true, margin: "-50px" }} variants={stagger}
+                className="grid grid-cols-2 sm:grid-cols-3 gap-2.5 sm:gap-3">
                 {previewGallery.map((img, i) => (
                   <motion.div
                     key={img.id}
@@ -353,15 +305,12 @@ export function CafePage() {
                       i === 0 ? "aspect-[4/3] sm:row-span-2 sm:aspect-auto" : "aspect-square"
                     )}
                   >
-                    <img
-                      src={img.url}
-                      alt={img.alt_text ?? img.caption ?? displayName}
-                      className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
-                      loading="lazy"
-                    />
+                    <img src={img.url} alt={img.alt_text ?? img.caption ?? displayName}
+                      className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110" loading="lazy" />
                     <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition-colors duration-300" />
                     {img.caption && (
-                      <div className="absolute inset-x-0 bottom-0 p-4 translate-y-full group-hover:translate-y-0 transition-transform duration-300" style={{ background: "linear-gradient(to top, rgba(5,5,5,0.9) 0%, transparent 100%)" }}>
+                      <div className="absolute inset-x-0 bottom-0 p-3 translate-y-full group-hover:translate-y-0 transition-transform duration-300"
+                        style={{ background: "linear-gradient(to top, rgba(5,5,5,0.88) 0%, transparent 100%)" }}>
                         <p className="text-white text-xs font-medium">{img.caption}</p>
                       </div>
                     )}
@@ -374,52 +323,36 @@ export function CafePage() {
 
         {/* ── OFFERS ────────────────────────────────────────────── */}
         {previewOffers.length > 0 && (
-          <section className="py-24 px-4 sm:px-6" style={{ background: "#0B0B0B" }}>
+          <section className="py-14 sm:py-24 px-4 sm:px-6" style={{ background: "#0B0B0B" }}>
             <div className="max-w-6xl mx-auto">
-              <motion.div
-                initial="hidden"
-                whileInView="show"
-                viewport={{ once: true }}
-                variants={stagger}
-                className="flex items-end justify-between mb-10"
-              >
+              <motion.div initial="hidden" whileInView="show" viewport={{ once: true }} variants={stagger}
+                className="flex items-end justify-between mb-7 sm:mb-10">
                 <div>
                   <motion.div variants={fadeUp}><SectionLabel>Deals & Promotions</SectionLabel></motion.div>
-                  <motion.h2 variants={fadeUp} className="font-serif text-3xl sm:text-4xl font-light text-white tracking-tight">
-                    Current Offers
-                  </motion.h2>
+                  <motion.h2 variants={fadeUp} className="font-serif text-2xl sm:text-3xl lg:text-4xl font-light text-white tracking-tight">Current Offers</motion.h2>
                 </div>
                 <motion.div variants={fadeUp}>
-                  <Link href="/cafe/offers" className="hidden sm:inline-flex items-center gap-1.5 text-sm font-medium transition-colors hover:opacity-70" style={{ color: GOLD }}>
+                  <Link href="/cafe/offers" className="hidden sm:inline-flex items-center gap-1.5 text-sm font-medium hover:opacity-70 transition-opacity" style={{ color: GOLD }}>
                     View all <ArrowRight className="w-3.5 h-3.5" />
                   </Link>
                 </motion.div>
               </motion.div>
 
-              <motion.div
-                initial="hidden"
-                whileInView="show"
-                viewport={{ once: true, margin: "-60px" }}
-                variants={stagger}
-                className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5"
-              >
+              <motion.div initial="hidden" whileInView="show" viewport={{ once: true, margin: "-50px" }} variants={stagger}
+                className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-5">
                 {previewOffers.map((offer) => (
-                  <motion.div
-                    key={offer.id}
-                    variants={fadeUp}
+                  <motion.div key={offer.id} variants={fadeUp}
                     className="rounded-2xl border overflow-hidden group transition-all duration-300 hover:border-[#C9A46C]/30"
-                    style={{ background: "#171717", borderColor: "rgba(201,164,108,0.12)" }}
-                  >
-                    {offer.image_url && (
-                      <div className="h-40 overflow-hidden">
+                    style={{ background: "#171717", borderColor: "rgba(201,164,108,0.1)" }}>
+                    {offer.image_url ? (
+                      <div className="h-36 sm:h-40 overflow-hidden">
                         <img src={offer.image_url} alt={offer.title} className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" loading="lazy" />
                       </div>
-                    )}
-                    {!offer.image_url && (
+                    ) : (
                       <div className="h-1 rounded-t-2xl" style={{ background: GOLD }} />
                     )}
-                    <div className="p-5">
-                      <div className="flex items-start justify-between gap-2 mb-1.5">
+                    <div className="p-4 sm:p-5">
+                      <div className="flex items-start justify-between gap-2 mb-1">
                         <h3 className="font-semibold text-white text-sm leading-snug">{offer.title}</h3>
                         {offer.discount_value && (
                           <span className="shrink-0 text-xs font-bold text-[#050505] px-2.5 py-1 rounded-full" style={{ background: GOLD }}>
@@ -427,9 +360,7 @@ export function CafePage() {
                           </span>
                         )}
                       </div>
-                      {offer.description && (
-                        <p className="text-sm text-white/40 line-clamp-2">{offer.description}</p>
-                      )}
+                      {offer.description && <p className="text-xs text-white/35 line-clamp-2">{offer.description}</p>}
                     </div>
                   </motion.div>
                 ))}
@@ -440,51 +371,37 @@ export function CafePage() {
 
         {/* ── REVIEWS MARQUEE ───────────────────────────────────── */}
         {previewReviews.length > 0 && (
-          <section className="py-24 overflow-hidden" style={{ background: "#050505" }}>
-            <div className="max-w-6xl mx-auto px-4 sm:px-6 mb-12">
-              <motion.div
-                initial="hidden"
-                whileInView="show"
-                viewport={{ once: true }}
-                variants={stagger}
-                className="flex items-end justify-between"
-              >
+          <section className="py-14 sm:py-24 overflow-hidden" style={{ background: "#050505" }}>
+            <div className="max-w-6xl mx-auto px-4 sm:px-6 mb-8 sm:mb-12">
+              <motion.div initial="hidden" whileInView="show" viewport={{ once: true }} variants={stagger}
+                className="flex items-end justify-between">
                 <div>
                   <motion.div variants={fadeUp}><SectionLabel>What People Say</SectionLabel></motion.div>
-                  <motion.h2 variants={fadeUp} className="font-serif text-3xl sm:text-4xl font-light text-white tracking-tight">
+                  <motion.h2 variants={fadeUp} className="font-serif text-2xl sm:text-3xl lg:text-4xl font-light text-white tracking-tight">
                     Guest Reviews
                     {avgRating !== null && (
-                      <span className="ml-3 text-xl font-normal" style={{ color: GOLD }}>
-                        ★ {avgRating.toFixed(1)}
-                      </span>
+                      <span className="ml-3 text-lg sm:text-xl font-normal" style={{ color: GOLD }}>★ {avgRating.toFixed(1)}</span>
                     )}
                   </motion.h2>
                 </div>
                 <motion.div variants={fadeUp}>
-                  <Link href="/cafe/reviews" className="hidden sm:inline-flex items-center gap-1.5 text-sm font-medium transition-colors hover:opacity-70" style={{ color: GOLD }}>
+                  <Link href="/cafe/reviews" className="hidden sm:inline-flex items-center gap-1.5 text-sm font-medium hover:opacity-70 transition-opacity" style={{ color: GOLD }}>
                     All reviews <ArrowRight className="w-3.5 h-3.5" />
                   </Link>
                 </motion.div>
               </motion.div>
             </div>
 
-            {/* Infinite marquee */}
             <div className="flex cafe-marquee" style={{ width: "max-content" }}>
               {[...previewReviews, ...previewReviews].map((review, i) => (
-                <div
-                  key={i}
-                  className="shrink-0 w-[340px] sm:w-[380px] mx-4 rounded-2xl p-6 border border-white/[0.07]"
-                  style={{ background: "#0B0B0B" }}
-                >
-                  <div className="flex gap-0.5 mb-4">
+                <div key={i} className="shrink-0 w-[300px] sm:w-[360px] mx-3 sm:mx-4 rounded-2xl p-5 border border-white/[0.06]" style={{ background: "#0B0B0B" }}>
+                  <div className="flex gap-0.5 mb-3">
                     {Array.from({ length: 5 }).map((_, j) => (
-                      <Star key={j} className={`w-3.5 h-3.5 ${j < review.rating ? "fill-[#C9A46C] text-[#C9A46C]" : "text-white/10"}`} />
+                      <Star key={j} className={`w-3 h-3 ${j < review.rating ? "fill-[#C9A46C] text-[#C9A46C]" : "text-white/10"}`} />
                     ))}
                   </div>
-                  <p className="text-white/55 text-sm leading-relaxed line-clamp-3 mb-5">
-                    "{review.content}"
-                  </p>
-                  <p className="text-xs font-semibold text-white/35">{review.name}</p>
+                  <p className="text-white/50 text-sm leading-relaxed line-clamp-3 mb-4">"{review.content}"</p>
+                  <p className="text-xs font-semibold text-white/30">{review.name}</p>
                 </div>
               ))}
             </div>
@@ -492,47 +409,33 @@ export function CafePage() {
         )}
 
         {/* ── HOURS + CONTACT ───────────────────────────────────── */}
-        <section className="py-24 px-4 sm:px-6" style={{ background: "#0B0B0B" }}>
-          <div className="max-w-6xl mx-auto grid grid-cols-1 md:grid-cols-2 gap-12">
+        <section className="py-14 sm:py-24 px-4 sm:px-6" style={{ background: "#0B0B0B" }}>
+          <div className="max-w-6xl mx-auto grid grid-cols-1 md:grid-cols-2 gap-10 sm:gap-12">
             {hasHours && (
-              <motion.div
-                initial="hidden"
-                whileInView="show"
-                viewport={{ once: true }}
-                variants={stagger}
-              >
+              <motion.div initial="hidden" whileInView="show" viewport={{ once: true }} variants={stagger}>
                 <motion.div variants={fadeUp}>
                   <SectionLabel>When We're Open</SectionLabel>
                   <GoldRule />
-                  <h2 className="text-2xl font-serif font-light text-white mb-6">Opening Hours</h2>
+                  <h2 className="text-xl sm:text-2xl font-serif font-light text-white mb-5">Opening Hours</h2>
                 </motion.div>
-                <motion.div
-                  variants={fadeUp}
-                  className="rounded-2xl p-6 border border-white/[0.07]"
-                  style={{ background: "#111111" }}
-                >
+                <motion.div variants={fadeUp} className="rounded-2xl p-5 sm:p-6 border border-white/[0.06]" style={{ background: "#111111" }}>
                   <OpeningHoursCard hours={settings!.opening_hours} />
                 </motion.div>
               </motion.div>
             )}
 
-            <motion.div
-              initial="hidden"
-              whileInView="show"
-              viewport={{ once: true }}
-              variants={stagger}
-            >
+            <motion.div initial="hidden" whileInView="show" viewport={{ once: true }} variants={stagger}>
               <motion.div variants={fadeUp}>
                 <SectionLabel>Where To Find Us</SectionLabel>
                 <GoldRule />
-                <h2 className="text-2xl font-serif font-light text-white mb-6">Find Us</h2>
+                <h2 className="text-xl sm:text-2xl font-serif font-light text-white mb-5">Find Us</h2>
               </motion.div>
-              <motion.div variants={fadeUp} className="space-y-5">
-                {settings?.address ? (
+              <motion.div variants={fadeUp} className="space-y-4">
+                {settings?.address && (
                   <div className="flex items-start gap-3">
                     <MapPin className="w-4 h-4 mt-0.5 shrink-0" style={{ color: GOLD }} />
                     <div>
-                      <p className="text-white/60 text-sm">{settings.address}</p>
+                      <p className="text-white/55 text-sm leading-relaxed">{settings.address}</p>
                       {settings.google_maps_url && (
                         <a href={settings.google_maps_url} target="_blank" rel="noopener noreferrer"
                           className="inline-flex items-center gap-1 text-xs font-medium mt-1.5 hover:opacity-70 transition-opacity" style={{ color: GOLD }}>
@@ -541,17 +444,17 @@ export function CafePage() {
                       )}
                     </div>
                   </div>
-                ) : null}
+                )}
                 {settings?.phone && (
                   <div className="flex items-center gap-3">
                     <Phone className="w-4 h-4 shrink-0" style={{ color: GOLD }} />
-                    <a href={`tel:${settings.phone}`} className="text-sm text-white/60 hover:text-white transition-colors">{settings.phone}</a>
+                    <a href={`tel:${settings.phone}`} className="text-sm text-white/55 hover:text-white transition-colors">{settings.phone}</a>
                   </div>
                 )}
                 {settings?.email && (
                   <div className="flex items-center gap-3">
                     <Mail className="w-4 h-4 shrink-0" style={{ color: GOLD }} />
-                    <a href={`mailto:${settings.email}`} className="text-sm text-white/60 hover:text-white transition-colors">{settings.email}</a>
+                    <a href={`mailto:${settings.email}`} className="text-sm text-white/55 hover:text-white transition-colors">{settings.email}</a>
                   </div>
                 )}
               </motion.div>
@@ -560,32 +463,25 @@ export function CafePage() {
         </section>
 
         {/* ── BOTTOM CTA ────────────────────────────────────────── */}
-        <section className="py-32 px-4 sm:px-6 text-center relative overflow-hidden" style={{ background: "#111111" }}>
+        <section className="py-20 sm:py-32 px-4 sm:px-6 text-center relative overflow-hidden" style={{ background: "#111111" }}>
           <div className="absolute inset-0 opacity-[0.03]" style={{ backgroundImage: `radial-gradient(circle at 50% 50%, ${GOLD} 0%, transparent 70%)` }} />
-          <motion.div
-            initial="hidden"
-            whileInView="show"
-            viewport={{ once: true }}
-            variants={stagger}
-            className="relative z-10 max-w-2xl mx-auto"
-          >
+          <motion.div initial="hidden" whileInView="show" viewport={{ once: true }} variants={stagger}
+            className="relative z-10 max-w-2xl mx-auto">
             <motion.div variants={fadeUp}><SectionLabel>Reserve Your Experience</SectionLabel></motion.div>
-            <motion.div variants={fadeUp} className="w-10 h-px mx-auto mb-8" style={{ background: GOLD }} />
-            <motion.h2 variants={fadeUp} className="font-serif text-4xl sm:text-5xl font-light text-white tracking-tight mb-3">
+            <motion.div variants={fadeUp} className="w-10 h-px mx-auto mb-7" style={{ background: GOLD }} />
+            <motion.h2 variants={fadeUp} className="font-serif text-3xl sm:text-4xl lg:text-5xl font-light text-white tracking-tight mb-3">
               {displayName}
             </motion.h2>
             {settings?.tagline && (
-              <motion.p variants={fadeUp} className="text-white/40 mb-12 font-light">{settings.tagline}</motion.p>
+              <motion.p variants={fadeUp} className="text-white/35 mb-10 font-light text-sm sm:text-base">{settings.tagline}</motion.p>
             )}
             <motion.div variants={fadeUp} className="flex flex-wrap items-center justify-center gap-3">
-              <Link
-                href="/cafe/menu"
-                className="inline-flex items-center gap-2 px-7 py-3.5 rounded-full text-sm font-semibold text-[#050505] transition-all hover:opacity-90 active:scale-95"
-                style={{ background: GOLD }}
-              >
+              <Link href="/cafe/menu"
+                className="inline-flex items-center gap-2 px-6 sm:px-7 py-3 sm:py-3.5 rounded-full text-sm font-semibold text-[#050505] hover:opacity-90 active:scale-95 transition-all"
+                style={{ background: GOLD }}>
                 Browse Menu <ArrowRight className="w-4 h-4" />
               </Link>
-              <BookingCTAButton className="inline-flex items-center gap-2 px-7 py-3.5 rounded-full text-sm font-semibold text-white border border-white/20 hover:border-[#C9A46C]/40 hover:text-[#C9A46C] transition-all">
+              <BookingCTAButton className="inline-flex items-center gap-2 px-6 sm:px-7 py-3 sm:py-3.5 rounded-full text-sm font-semibold text-white border border-white/18 hover:border-[#C9A46C]/40 hover:text-[#C9A46C] transition-all">
                 Reserve a Table
               </BookingCTAButton>
             </motion.div>

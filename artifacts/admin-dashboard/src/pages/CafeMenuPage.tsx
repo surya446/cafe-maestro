@@ -12,13 +12,10 @@ import { cn } from "@/lib/utils";
 const GOLD = "#C9A46C";
 
 const fadeUp = {
-  hidden: { opacity: 0, y: 24 },
-  show: { opacity: 1, y: 0, transition: { duration: 0.7, ease: [0.16, 1, 0.3, 1] } },
+  hidden: { opacity: 0, y: 22 },
+  show: { opacity: 1, y: 0, transition: { duration: 0.68, ease: [0.16, 1, 0.3, 1] } },
 };
-const stagger = {
-  hidden: {},
-  show: { transition: { staggerChildren: 0.08 } },
-};
+const stagger = { hidden: {}, show: { transition: { staggerChildren: 0.07 } } };
 
 function PriceBadge({ price }: { price: number }) {
   return (
@@ -55,28 +52,24 @@ export function CafeMenuPage() {
       settings={settings}
     >
       {/* ── Page header ─────────────────────────────────────── */}
-      <div className="relative pt-32 pb-16 px-4 sm:px-6 text-center overflow-hidden" style={{ background: "#0B0B0B" }}>
-        <div className="absolute inset-0 opacity-[0.04]" style={{ backgroundImage: `radial-gradient(ellipse at 50% 100%, ${GOLD}, transparent 70%)` }} />
+      <div className="relative pt-24 sm:pt-32 pb-12 sm:pb-16 px-4 sm:px-6 text-center overflow-hidden" style={{ background: "#0B0B0B" }}>
+        <div className="absolute inset-0 opacity-[0.04]" style={{ backgroundImage: `radial-gradient(ellipse at 50% 100%, ${GOLD}, transparent 68%)` }} />
         <div className="relative z-10">
           <Link href="/cafe">
-            <span className="inline-flex items-center gap-1.5 text-xs font-medium text-white/30 hover:text-white/60 mb-8 transition-colors cursor-pointer tracking-[0.15em] uppercase">
+            <span className="inline-flex items-center gap-1.5 text-xs font-medium text-white/28 hover:text-white/55 mb-6 sm:mb-8 transition-colors cursor-pointer tracking-[0.12em] uppercase">
               <ArrowLeft className="w-3.5 h-3.5" /> Back to home
             </span>
           </Link>
-          <motion.div
-            initial={{ opacity: 0, y: 8 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6 }}
-          >
-            <p className="text-[10px] font-semibold uppercase tracking-[0.28em] mb-4" style={{ color: GOLD }}>
+          <motion.div initial="hidden" animate="show" variants={stagger}>
+            <motion.p variants={fadeUp} className="text-[10px] font-semibold uppercase tracking-[0.28em] mb-3.5" style={{ color: GOLD }}>
               {displayName}
-            </p>
-            <div className="w-10 h-px mx-auto mb-6" style={{ background: GOLD }} />
-            <h1 className="font-serif text-4xl sm:text-5xl lg:text-6xl font-light text-white tracking-tight">
+            </motion.p>
+            <motion.div variants={fadeUp} className="w-10 h-px mx-auto mb-5" style={{ background: GOLD }} />
+            <motion.h1 variants={fadeUp} className="font-serif text-4xl sm:text-5xl lg:text-6xl font-light text-white tracking-tight">
               Our Menu
-            </h1>
+            </motion.h1>
             {settings?.tagline && (
-              <p className="text-white/35 mt-3 font-light">{settings.tagline}</p>
+              <motion.p variants={fadeUp} className="text-white/28 mt-3 font-light text-sm">{settings.tagline}</motion.p>
             )}
           </motion.div>
         </div>
@@ -84,14 +77,12 @@ export function CafeMenuPage() {
 
       {/* ── Sticky category nav ─────────────────────────────── */}
       {menu && menu.length > 0 && (
-        <div className="sticky top-[72px] z-30 border-b border-white/[0.05]" style={{ background: "rgba(5,5,5,0.92)", backdropFilter: "blur(20px)" }}>
-          <div className="max-w-5xl mx-auto px-4 sm:px-6 flex gap-2 overflow-x-auto py-3 scrollbar-hide">
+        <div className="sticky top-[72px] z-30 border-b border-white/[0.05]"
+          style={{ background: "rgba(5,5,5,0.93)", backdropFilter: "blur(20px)" }}>
+          <div className="max-w-5xl mx-auto px-4 sm:px-6 flex gap-1.5 sm:gap-2 overflow-x-auto py-2.5 sm:py-3">
             {menu.map((cat) => (
-              <button
-                key={cat.id}
-                onClick={() => scrollTo(cat.id)}
-                className="shrink-0 px-4 py-1.5 rounded-full text-[13px] font-medium text-white/50 hover:text-white transition-colors whitespace-nowrap border border-transparent hover:border-white/[0.08]"
-              >
+              <button key={cat.id} onClick={() => scrollTo(cat.id)}
+                className="shrink-0 px-3.5 sm:px-4 py-1.5 rounded-full text-xs sm:text-[13px] font-medium text-white/45 hover:text-white transition-colors whitespace-nowrap border border-transparent hover:border-white/[0.07]">
                 {cat.name}
               </button>
             ))}
@@ -101,13 +92,13 @@ export function CafeMenuPage() {
 
       {/* ── Menu content ────────────────────────────────────── */}
       {isLoading ? (
-        <div className="max-w-5xl mx-auto px-4 sm:px-6 py-16 space-y-14" style={{ background: "#050505" }}>
+        <div className="max-w-5xl mx-auto px-4 sm:px-6 py-12 sm:py-16 space-y-10 sm:space-y-14" style={{ background: "#050505" }}>
           {Array.from({ length: 3 }).map((_, i) => (
-            <div key={i} className="space-y-4">
-              <div className="h-7 w-40 rounded-lg animate-pulse" style={{ background: "#1a1a1a" }} />
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div key={i} className="space-y-3.5">
+              <div className="h-6 w-36 rounded-lg animate-pulse" style={{ background: "#1a1a1a" }} />
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
                 {Array.from({ length: 4 }).map((_, j) => (
-                  <div key={j} className="h-28 rounded-xl animate-pulse" style={{ background: "#111" }} />
+                  <div key={j} className="h-24 rounded-xl animate-pulse" style={{ background: "#111" }} />
                 ))}
               </div>
             </div>
@@ -115,64 +106,44 @@ export function CafeMenuPage() {
         </div>
       ) : !menu || menu.length === 0 ? (
         <div className="flex flex-col items-center justify-center min-h-[50vh] gap-4 px-4" style={{ background: "#050505" }}>
-          <Coffee className="w-14 h-14 text-white/10" />
-          <p className="text-base font-medium text-white/30">Menu coming soon</p>
-          <p className="text-sm text-white/20">We're curating something special.</p>
+          <Coffee className="w-12 h-12 text-white/10" />
+          <p className="text-sm font-medium text-white/28">Menu coming soon</p>
+          <p className="text-xs text-white/18">We're curating something special.</p>
         </div>
       ) : (
-        <div className="py-16" style={{ background: "#050505" }}>
+        <div className="py-10 sm:py-14" style={{ background: "#050505" }}>
           {menu.map((category, catIdx) => (
             <section
               key={category.id}
               ref={(el) => { sectionRefs.current[category.id] = el; }}
-              className={cn("px-4 sm:px-6 pb-20", catIdx > 0 ? "pt-4" : "")}
+              className={cn("px-4 sm:px-6 pb-12 sm:pb-16", catIdx > 0 ? "pt-2" : "")}
             >
               <div className="max-w-5xl mx-auto">
                 {/* Category header */}
-                <motion.div
-                  initial="hidden"
-                  whileInView="show"
-                  viewport={{ once: true, margin: "-60px" }}
-                  variants={stagger}
-                  className="mb-8"
-                >
-                  <motion.div variants={fadeUp} className="flex items-center gap-4 mb-1">
-                    <div className="w-8 h-px" style={{ background: GOLD }} />
-                    <p className="text-[10px] font-semibold uppercase tracking-[0.25em]" style={{ color: GOLD }}>
-                      {category.name}
-                    </p>
+                <motion.div initial="hidden" whileInView="show" viewport={{ once: true, margin: "-40px" }} variants={stagger} className="mb-5 sm:mb-7">
+                  <motion.div variants={fadeUp} className="flex items-center gap-3.5 mb-1">
+                    <div className="w-7 h-px" style={{ background: GOLD }} />
+                    <p className="text-[10px] font-semibold uppercase tracking-[0.22em]" style={{ color: GOLD }}>{category.name}</p>
                   </motion.div>
-                  <motion.h2 variants={fadeUp} className="font-serif text-2xl sm:text-3xl font-light text-white tracking-tight">
+                  <motion.h2 variants={fadeUp} className="font-serif text-xl sm:text-2xl lg:text-3xl font-light text-white tracking-tight">
                     {category.name}
                   </motion.h2>
                   {category.description && (
-                    <motion.p variants={fadeUp} className="text-white/35 text-sm mt-1.5">{category.description}</motion.p>
+                    <motion.p variants={fadeUp} className="text-white/30 text-sm mt-1">{category.description}</motion.p>
                   )}
                 </motion.div>
 
                 {/* Items grid */}
-                <motion.div
-                  initial="hidden"
-                  whileInView="show"
-                  viewport={{ once: true, margin: "-40px" }}
-                  variants={stagger}
-                  className="grid grid-cols-1 sm:grid-cols-2 gap-4"
-                >
+                <motion.div initial="hidden" whileInView="show" viewport={{ once: true, margin: "-30px" }} variants={stagger}
+                  className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
                   {(category.items ?? []).map((item) => (
-                    <motion.div
-                      key={item.id}
-                      variants={fadeUp}
-                      className="group flex gap-4 rounded-xl p-4 border border-white/[0.05] hover:border-[#C9A46C]/20 transition-all duration-300"
-                      style={{ background: "#111111" }}
-                    >
+                    <motion.div key={item.id} variants={fadeUp}
+                      className="group flex gap-3 sm:gap-4 rounded-xl p-3.5 sm:p-4 border border-white/[0.04] hover:border-[#C9A46C]/18 transition-all duration-300"
+                      style={{ background: "#111111" }}>
                       {item.image_url && (
-                        <div className="w-20 h-20 rounded-lg overflow-hidden shrink-0">
-                          <img
-                            src={item.image_url}
-                            alt={item.name}
-                            className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
-                            loading="lazy"
-                          />
+                        <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-lg overflow-hidden shrink-0">
+                          <img src={item.image_url} alt={item.name}
+                            className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" loading="lazy" />
                         </div>
                       )}
                       <div className="flex-1 min-w-0">
@@ -180,23 +151,22 @@ export function CafeMenuPage() {
                           <div>
                             <h3 className="font-semibold text-white text-sm leading-snug">{item.name}</h3>
                             {item.description && (
-                              <p className="text-xs text-white/35 mt-1 leading-relaxed line-clamp-2">{item.description}</p>
+                              <p className="text-xs text-white/32 mt-1 leading-relaxed line-clamp-2">{item.description}</p>
                             )}
                           </div>
                           <PriceBadge price={item.price} />
                         </div>
-                        {/* Tags */}
                         {item.tags && item.tags.length > 0 && (
-                          <div className="flex flex-wrap gap-1.5 mt-2.5">
+                          <div className="flex flex-wrap gap-1.5 mt-2">
                             {item.tags.map((tag: string) => (
-                              <span key={tag} className="text-[10px] font-medium px-2 py-0.5 rounded-full text-white/40 border border-white/[0.08]">
+                              <span key={tag} className="text-[10px] font-medium px-2 py-0.5 rounded-full text-white/35 border border-white/[0.07]">
                                 {tag}
                               </span>
                             ))}
                           </div>
                         )}
                         {!item.available && (
-                          <span className="mt-2 inline-block text-[10px] font-semibold uppercase tracking-wider text-white/20 bg-white/[0.04] px-2 py-0.5 rounded-full">
+                          <span className="mt-2 inline-block text-[10px] font-semibold uppercase tracking-wider text-white/18 bg-white/[0.04] px-2 py-0.5 rounded-full">
                             Unavailable
                           </span>
                         )}
@@ -209,26 +179,21 @@ export function CafeMenuPage() {
           ))}
 
           {/* Bottom CTA */}
-          <div className="px-4 sm:px-6 pt-8 pb-4">
+          <div className="px-4 sm:px-6 pt-4">
             <div className="max-w-5xl mx-auto">
-              <motion.div
-                initial="hidden"
-                whileInView="show"
-                viewport={{ once: true }}
-                variants={stagger}
-                className="rounded-2xl p-8 sm:p-12 text-center border border-white/[0.07]"
-                style={{ background: "#0B0B0B" }}
-              >
-                <motion.div variants={fadeUp} className="w-10 h-px mx-auto mb-6" style={{ background: GOLD }} />
-                <motion.h3 variants={fadeUp} className="font-serif text-2xl sm:text-3xl font-light text-white mb-3">
+              <motion.div initial="hidden" whileInView="show" viewport={{ once: true }} variants={stagger}
+                className="rounded-2xl p-7 sm:p-10 text-center border border-white/[0.06]"
+                style={{ background: "#0B0B0B" }}>
+                <motion.div variants={fadeUp} className="w-10 h-px mx-auto mb-5" style={{ background: GOLD }} />
+                <motion.h3 variants={fadeUp} className="font-serif text-xl sm:text-2xl lg:text-3xl font-light text-white mb-2.5">
                   Ready to dine with us?
                 </motion.h3>
-                <motion.p variants={fadeUp} className="text-white/35 text-sm mb-8">
+                <motion.p variants={fadeUp} className="text-white/30 text-sm mb-6 sm:mb-8">
                   Reserve your table and we'll have it ready for you.
                 </motion.p>
                 <motion.div variants={fadeUp}>
                   <BookingCTAButton
-                    className="inline-flex items-center gap-2 px-8 py-3.5 rounded-full text-sm font-semibold text-[#050505] transition-all hover:opacity-90 active:scale-95"
+                    className="inline-flex items-center px-7 py-3.5 rounded-full text-sm font-semibold text-[#050505] hover:opacity-90 active:scale-95 transition-all"
                     style={{ background: GOLD }}
                   >
                     Book a Table
