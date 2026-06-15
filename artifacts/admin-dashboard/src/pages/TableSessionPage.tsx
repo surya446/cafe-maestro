@@ -534,23 +534,32 @@ function ActiveSession({
   }, [cafeId, qc]);
 
   // ── Render-side diagnostics ────────────────────────────────
+  const activeCategoryId = selectedCategory ?? categories[0]?.id ?? null;
+
   useEffect(() => {
     console.log(
       "[RT-DIAG] RENDER menuItems changed — cafeId:", cafeId,
       "count:", menuItems.length,
-      "ids:", menuItems.map(i => i.id)
+      "activeCategoryId:", activeCategoryId,
+      "knownCategoryIds:", categories.map(c => c.id)
     );
-  }, [menuItems, cafeId]);
-
-  const activeCategoryId = selectedCategory ?? categories[0]?.id ?? null;
+    menuItems.forEach(i => {
+      const matchesActive = i.category_id === activeCategoryId;
+      console.log(
+        `[RT-DIAG]   item id=${i.id} name="${i.name}" category_id=${i.category_id} is_available=${i.is_available} → visibleInCurrentTab=${matchesActive}`
+      );
+    });
+  }, [menuItems, cafeId, activeCategoryId, categories]);
 
   const visibleItems = useMemo(
     () => {
       const result = menuItems.filter((i) => i.category_id === activeCategoryId);
       console.log(
-        "[RT-DIAG] RENDER visibleItems — category:", activeCategoryId,
-        "count:", result.length,
-        "ids:", result.map(i => i.id)
+        "[RT-DIAG] visibleItems recomputed — activeCategoryId:", activeCategoryId,
+        "totalInCache:", menuItems.length,
+        "visibleCount:", result.length,
+        "hiddenCount:", menuItems.length - result.length,
+        "hiddenItemIds:", menuItems.filter(i => i.category_id !== activeCategoryId).map(i => `${i.id}(cat=${i.category_id})`)
       );
       return result;
     },
