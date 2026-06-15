@@ -19,6 +19,8 @@ import { StaffPage } from "@/pages/StaffPage";
 import { AnalyticsPage } from "@/pages/AnalyticsPage";
 import { SettingsPage } from "@/pages/SettingsPage";
 import { WebsiteSettingsPage } from "@/pages/WebsiteSettingsPage";
+import { CafePage } from "@/pages/CafePage";
+import { CafeMenuPage } from "@/pages/CafeMenuPage";
 import { ChangePasswordPage } from "@/pages/ChangePasswordPage";
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
@@ -54,6 +56,8 @@ function Router() {
       <Route path="/change-password" component={ChangePasswordPage} />
       <Route path="/book" component={BookingFormPage} />
       <Route path="/table/:token" component={TableSessionPage} />
+      <Route path="/cafe/menu" component={CafeMenuPage} />
+      <Route path="/cafe" component={CafePage} />
       <Route path="/">
         <ProtectedRoute>
           <DashboardPage />
