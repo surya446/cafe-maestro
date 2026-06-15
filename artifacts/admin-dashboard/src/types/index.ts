@@ -246,6 +246,20 @@ export interface WebsiteSettings {
   updated_at: string;
 }
 
+export interface Review {
+  id: string;
+  cafe_id: string;
+  name: string;
+  email: string | null;
+  rating: number;
+  content: string;
+  is_visible: boolean;
+  moderated_at: string | null;
+  moderated_by: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
 export interface AuthUser {
   id: string;
   email: string;
