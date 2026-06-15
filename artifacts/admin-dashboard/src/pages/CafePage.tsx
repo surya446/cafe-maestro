@@ -191,34 +191,47 @@ export function CafePage() {
               <h2 className="text-2xl font-bold text-gray-900">Find Us</h2>
             </div>
             <div className="space-y-4">
-              {(settings?.address ?? cafe.address) && (
-                <div className="flex items-start gap-3">
-                  <MapPin className="w-4.5 h-4.5 text-gray-400 mt-0.5 shrink-0" />
-                  <div>
-                    <p className="text-gray-700">{settings?.address ?? cafe.address}</p>
-                    {settings?.google_maps_url && (
-                      <a
-                        href={settings.google_maps_url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="inline-flex items-center gap-1 text-sm font-medium mt-1 hover:opacity-75 transition-opacity"
-                        style={{ color: primaryColor }}
-                      >
-                        Open in Google Maps <ExternalLink className="w-3 h-3" />
-                      </a>
-                    )}
-                  </div>
+              {/* Address — settings only, never cafe table fallback */}
+              <div className="flex items-start gap-3">
+                <MapPin className="w-4.5 h-4.5 text-gray-400 mt-0.5 shrink-0" />
+                <div>
+                  {settings?.address ? (
+                    <>
+                      <p className="text-gray-700">{settings.address}</p>
+                      {settings.google_maps_url && (
+                        <a
+                          href={settings.google_maps_url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center gap-1 text-sm font-medium mt-1 hover:opacity-75 transition-opacity"
+                          style={{ color: primaryColor }}
+                        >
+                          Open in Google Maps <ExternalLink className="w-3 h-3" />
+                        </a>
+                      )}
+                    </>
+                  ) : (
+                    <p className="text-gray-400 italic">Address coming soon</p>
+                  )}
                 </div>
-              )}
-              {(settings?.phone ?? cafe.phone) && (
-                <a
-                  href={`tel:${settings?.phone ?? cafe.phone}`}
-                  className="flex items-center gap-3 text-gray-700 hover:text-gray-900 group"
-                >
-                  <Phone className="w-4.5 h-4.5 text-gray-400 group-hover:text-gray-600 shrink-0" />
-                  {settings?.phone ?? cafe.phone}
-                </a>
-              )}
+              </div>
+
+              {/* Phone — settings only, never cafe table fallback */}
+              <div className="flex items-center gap-3">
+                <Phone className="w-4.5 h-4.5 text-gray-400 shrink-0" />
+                {settings?.phone ? (
+                  <a
+                    href={`tel:${settings.phone}`}
+                    className="text-gray-700 hover:text-gray-900 transition-colors"
+                  >
+                    {settings.phone}
+                  </a>
+                ) : (
+                  <span className="text-gray-400 italic">Contact coming soon</span>
+                )}
+              </div>
+
+              {/* Email — only show when present */}
               {settings?.email && (
                 <a
                   href={`mailto:${settings.email}`}
