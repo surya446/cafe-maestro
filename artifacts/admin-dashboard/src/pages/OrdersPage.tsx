@@ -488,9 +488,9 @@ function TableCard({
                   {session.activeDeviceCount}
                 </div>
 
-                {/* End Session action */}
+                {/* End Session action — only for non-expired sessions */}
                 <div className="shrink-0">
-                  {isConfirming ? (
+                  {new Date(session.expiresAt) <= new Date() ? null : isConfirming ? (
                     <div className="flex items-center gap-2">
                       <span className="text-xs text-muted-foreground hidden sm:block">End?</span>
                       <Button

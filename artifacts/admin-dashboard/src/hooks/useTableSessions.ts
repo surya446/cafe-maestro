@@ -29,9 +29,19 @@ export function useTableSessions() {
   const qc = useQueryClient();
   const channelRef = useRef<RealtimeChannel | null>(null);
 
+  // Eagerly expire overdue sessions in the DB on mount so the admin
+  // never sees stale "active" sessions with a passed expires_at.
+  useEffect(() => {
+    supabase.rpc("expire_sessions").then(() => {
+      qc.invalidateQueries({ queryKey: ["staff_sessions"] });
+    });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   const { data: sessions = [], isLoading: sessionsLoading } = useQuery<ActiveSession[]>({
     queryKey: ["staff_sessions"],
     queryFn: async () => {
+      const now = new Date().toISOString();
       const { data, error } = await supabase
         .from("table_sessions")
         .select(
@@ -40,6 +50,7 @@ export function useTableSessions() {
            session_devices (id, is_active)`
         )
         .eq("status", "active")
+        .gt("expires_at", now)
         .order("created_at", { ascending: false });
 
       if (error) throw error;

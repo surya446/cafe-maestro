@@ -51,7 +51,13 @@ export interface CartItem {
   notes: string;
 }
 
-// ─── localStorage helpers ──────────────────────────────────────────────────────
+// ─── sessionStorage helpers ────────────────────────────────────────────────────
+//
+// sessionStorage is intentionally used instead of localStorage so that:
+//   • Same-tab refresh  → data persists  → session continues without re-entering name
+//   • New tab / window  → storage is empty → fresh name-entry screen (new session)
+//
+// This is the correct behaviour for a per-device QR ordering flow.
 
 interface StoredDevice {
   deviceToken: string;
@@ -69,7 +75,7 @@ function storageKey(qrToken: string) {
 
 function loadStored(qrToken: string): StoredDevice | EndedMarker | null {
   try {
-    const raw = localStorage.getItem(storageKey(qrToken));
+    const raw = sessionStorage.getItem(storageKey(qrToken));
     return raw ? (JSON.parse(raw) as StoredDevice | EndedMarker) : null;
   } catch {
     return null;
@@ -86,28 +92,20 @@ function saveStored(
   sessionId: string,
   customerName: string
 ) {
-  localStorage.setItem(
+  sessionStorage.setItem(
     storageKey(qrToken),
     JSON.stringify({ deviceToken, sessionId, customerName })
   );
 }
 
 function clearStored(qrToken: string) {
-  localStorage.removeItem(storageKey(qrToken));
+  sessionStorage.removeItem(storageKey(qrToken));
 }
 
-// Writes an ended marker so reloads stay on the ended screen.
+// Writes an ended marker so same-tab reloads stay on the ended screen.
+// A new tab will have empty sessionStorage and show the name-entry screen instead.
 function markEnded(qrToken: string) {
-  localStorage.setItem(storageKey(qrToken), JSON.stringify({ ended: true }));
-}
-
-// Returns true when the page was opened via fresh navigation (QR scan, link,
-// address-bar) rather than a reload or back/forward traversal.
-function isFreshNavigation(): boolean {
-  const entries = performance.getEntriesByType(
-    "navigation"
-  ) as PerformanceNavigationTiming[];
-  return entries.length === 0 || entries[0].type === "navigate";
+  sessionStorage.setItem(storageKey(qrToken), JSON.stringify({ ended: true }));
 }
 
 // ─── RPC types ─────────────────────────────────────────────────────────────────
@@ -207,19 +205,12 @@ export function useTableSession(qrToken: string) {
     let cancelled = false;
 
     async function init() {
-      const freshNav = isFreshNavigation();
       const stored = loadStored(qrToken);
 
-      // Ended marker present
+      // Ended marker present → same-tab reload after session was ended.
+      // New tabs always have empty sessionStorage, so they never reach this branch.
       if (stored && !isStoredDevice(stored)) {
-        if (!freshNav) {
-          // Reload after staff-ended session → keep showing ended screen.
-          setSessionState("ended");
-          return;
-        }
-        // Fresh QR scan → clear ended marker and show name entry.
-        clearStored(qrToken);
-        setSessionState("entering_name");
+        setSessionState("ended");
         return;
       }
 
