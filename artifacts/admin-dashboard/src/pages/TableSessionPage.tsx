@@ -463,7 +463,6 @@ function ActiveSession({
       if (error) throw error;
       return (data ?? []) as MenuItem[];
     },
-    staleTime: 60_000,
   });
 
   // ── Realtime: menu_items for this cafe ─────────────────────
@@ -476,7 +475,7 @@ function ActiveSession({
         "postgres_changes",
         { event: "*", schema: "public", table: "menu_items", filter: `cafe_id=eq.${cafeId}` },
         () => {
-          qc.invalidateQueries({ queryKey: ["menu_items", cafeId] });
+          qc.refetchQueries({ queryKey: ["menu_items", cafeId] });
         }
       )
       .subscribe();
