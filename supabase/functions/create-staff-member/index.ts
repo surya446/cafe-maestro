@@ -433,7 +433,7 @@ Deno.serve(async (req: Request) => {
   // ── Generate temporary password ───────────────────────────────
   const tempPassword = generateTempPassword();
 
-  // ── Check if auth user already exists ────────────────────────
+  // ── Block if email already exists in auth.users ──────────────
   const { data: listData, error: listError } =
     await adminClient.auth.admin.listUsers({ page: 1, perPage: 1000 });
 
@@ -446,44 +446,60 @@ Deno.serve(async (req: Request) => {
     (u) => u.email?.toLowerCase() === normalizedEmail,
   );
 
-  let targetUserId: string;
-  let alreadyRegistered = false;
-
   if (existingAuthUser) {
-    alreadyRegistered = true;
-    targetUserId = existingAuthUser.id;
-
-    const { error: pwError } = await adminClient.auth.admin.updateUserById(
-      targetUserId,
-      { password: tempPassword },
+    console.warn(
+      `[create-staff-member] email check: ${normalizedEmail} → EXISTS in auth.users (id=${existingAuthUser.id}) — blocked`,
     );
-
-    if (pwError) {
-      console.error("[create-staff-member] password reset error:", pwError);
-      return json(
-        { error: "Failed to reset password for existing user", detail: pwError.message },
-        500,
-      );
-    }
-  } else {
-    const { data: newUser, error: createError } =
-      await adminClient.auth.admin.createUser({
-        email: normalizedEmail,
-        password: tempPassword,
-        email_confirm: true,
-        user_metadata: { full_name: trimmedName, cafe_id, role: staffRole },
-      });
-
-    if (createError || !newUser?.user) {
-      console.error("[create-staff-member] createUser error:", createError);
-      return json(
-        { error: "Failed to create auth user", detail: createError?.message },
-        500,
-      );
-    }
-
-    targetUserId = newUser.user.id;
+    return json(
+      { error: "An account with this email already exists.", code: "EMAIL_ALREADY_EXISTS" },
+      409,
+    );
   }
+
+  // ── Block if email already exists in staff_users ──────────────
+  const { data: existingStaffRow, error: staffCheckError } = await adminClient
+    .from("staff_users")
+    .select("id, role")
+    .eq("email", normalizedEmail)
+    .maybeSingle<{ id: string; role: string }>();
+
+  if (staffCheckError) {
+    console.error("[create-staff-member] staff_users email check error:", staffCheckError);
+    return json({ error: "Failed to check existing staff records", detail: staffCheckError.message }, 500);
+  }
+
+  if (existingStaffRow) {
+    console.warn(
+      `[create-staff-member] email check: ${normalizedEmail} → EXISTS in staff_users (role=${existingStaffRow.role}) — blocked`,
+    );
+    return json(
+      { error: "An account with this email already exists.", code: "EMAIL_ALREADY_EXISTS" },
+      409,
+    );
+  }
+
+  console.log(`[create-staff-member] email check: ${normalizedEmail} → not found in auth.users or staff_users — proceeding`);
+
+  // ── Create brand-new auth user ────────────────────────────────
+  let targetUserId: string;
+
+  const { data: newUser, error: createError } =
+    await adminClient.auth.admin.createUser({
+      email: normalizedEmail,
+      password: tempPassword,
+      email_confirm: true,
+      user_metadata: { full_name: trimmedName, cafe_id, role: staffRole },
+    });
+
+  if (createError || !newUser?.user) {
+    console.error("[create-staff-member] createUser error:", createError);
+    return json(
+      { error: "Failed to create auth user", detail: createError?.message },
+      500,
+    );
+  }
+
+  targetUserId = newUser.user.id;
 
   // ── Write staff_users row ─────────────────────────────────────
   const result = await applyStaffRow(adminClient, {

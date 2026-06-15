@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import {
   Users,
   UserPlus,
@@ -45,6 +45,7 @@ import {
   useCreateStaffMember,
 } from "@/hooks/useStaff";
 import { useAuth } from "@/hooks/useAuth";
+import { supabase } from "@/lib/supabase";
 import { StaffUser, UserRole, AuthUser } from "@/types";
 import { ROLE_LABELS, formatDate } from "@/lib/utils";
 import { cn } from "@/lib/utils";
@@ -130,6 +131,9 @@ function DeleteConfirmDialog({
   );
 }
 
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const EMAIL_EXISTS_MSG = "An account with this email already exists.";
+
 function CreateMemberDialog({
   open,
   onOpenChange,
@@ -148,19 +152,72 @@ function CreateMemberDialog({
   } | null>(null);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
+  // ── Real-time email duplicate check ───────────────────────────
+  const [emailFieldError, setEmailFieldError] = useState<string | null>(null);
+  const [emailChecking, setEmailChecking] = useState(false);
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    const trimmed = email.trim().toLowerCase();
+
+    // Reset immediately when field clears or format is invalid
+    if (!trimmed || !EMAIL_RE.test(trimmed)) {
+      setEmailFieldError(null);
+      setEmailChecking(false);
+      if (debounceRef.current) clearTimeout(debounceRef.current);
+      return;
+    }
+
+    setEmailChecking(true);
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+
+    debounceRef.current = setTimeout(async () => {
+      try {
+        const { data, error } = await supabase.rpc("check_email_exists", {
+          p_email: trimmed,
+        });
+        if (error) {
+          setEmailFieldError(null);
+        } else if (data?.exists) {
+          setEmailFieldError(EMAIL_EXISTS_MSG);
+        } else {
+          setEmailFieldError(null);
+        }
+      } catch {
+        setEmailFieldError(null);
+      } finally {
+        setEmailChecking(false);
+      }
+    }, 400);
+
+    return () => {
+      if (debounceRef.current) clearTimeout(debounceRef.current);
+    };
+  }, [email]);
+
+  const emailFormatValid = EMAIL_RE.test(email.trim());
+  const submitBlocked =
+    create.isPending ||
+    emailChecking ||
+    !emailFormatValid ||
+    !!emailFieldError;
+
   async function handle(e: React.FormEvent) {
     e.preventDefault();
+    if (submitBlocked) return;
     setErrorMsg(null);
     try {
-      const data = await create.mutateAsync({ email, role, full_name: displayName });
+      const data = await create.mutateAsync({ email: email.trim(), role, full_name: displayName });
       setResult({
         emailSent: data.email_sent,
         tempPassword: data.temp_password,
         message: data.message,
       });
     } catch (err: unknown) {
-      const msg =
-        err instanceof Error ? err.message : "Failed to create account. Please try again.";
+      const raw = err instanceof Error ? err.message : "";
+      const msg = raw.includes("EMAIL_ALREADY_EXISTS") || raw.includes("already exists")
+        ? EMAIL_EXISTS_MSG
+        : raw || "Failed to create account. Please try again.";
       setErrorMsg(msg);
     }
   }
@@ -169,9 +226,12 @@ function CreateMemberDialog({
     onOpenChange(false);
     setResult(null);
     setErrorMsg(null);
+    setEmailFieldError(null);
+    setEmailChecking(false);
     setEmail("");
     setDisplayName("");
     setRole("staff");
+    if (debounceRef.current) clearTimeout(debounceRef.current);
   }
 
   return (
@@ -233,7 +293,14 @@ function CreateMemberDialog({
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="staff@example.com"
                 required
+                className={emailFieldError ? "border-destructive focus-visible:ring-destructive" : ""}
               />
+              {emailChecking && (
+                <p className="text-xs text-muted-foreground">Checking…</p>
+              )}
+              {emailFieldError && !emailChecking && (
+                <p className="text-xs text-destructive">{emailFieldError}</p>
+              )}
             </div>
             <div className="space-y-1.5">
               <Label>Role</Label>
@@ -266,8 +333,12 @@ function CreateMemberDialog({
               <Button variant="outline" type="button" onClick={handleClose}>
                 Cancel
               </Button>
-              <Button type="submit" disabled={create.isPending}>
-                {create.isPending ? "Creating…" : "Create account"}
+              <Button type="submit" disabled={submitBlocked}>
+                {create.isPending
+                  ? "Creating…"
+                  : emailChecking
+                  ? "Checking…"
+                  : "Create account"}
               </Button>
             </DialogFooter>
           </form>
