@@ -6,14 +6,15 @@ export function cn(...inputs: ClassValue[]) {
 }
 
 export function formatCurrency(value: number): string {
-  return new Intl.NumberFormat("en-AU", {
+  return new Intl.NumberFormat("en-IN", {
     style: "currency",
-    currency: "AUD",
+    currency: "INR",
+    maximumFractionDigits: 2,
   }).format(value);
 }
 
 export function formatDate(dateStr: string): string {
-  return new Intl.DateTimeFormat("en-AU", {
+  return new Intl.DateTimeFormat("en-IN", {
     day: "numeric",
     month: "short",
     year: "numeric",
@@ -24,7 +25,7 @@ export function formatTime(timeStr: string): string {
   const [h, m] = timeStr.split(":");
   const date = new Date();
   date.setHours(Number(h), Number(m));
-  return new Intl.DateTimeFormat("en-AU", {
+  return new Intl.DateTimeFormat("en-IN", {
     hour: "numeric",
     minute: "2-digit",
     hour12: true,
@@ -32,7 +33,7 @@ export function formatTime(timeStr: string): string {
 }
 
 export function formatDateTime(dateStr: string): string {
-  return new Intl.DateTimeFormat("en-AU", {
+  return new Intl.DateTimeFormat("en-IN", {
     day: "numeric",
     month: "short",
     hour: "numeric",

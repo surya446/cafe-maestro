@@ -35,7 +35,7 @@ interface MenuItem {
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 function formatPrice(n: number) {
-  return `$${n.toFixed(2)}`;
+  return `₹${n.toFixed(2)}`;
 }
 
 function formatTimeLeft(expiresAt: string): string {

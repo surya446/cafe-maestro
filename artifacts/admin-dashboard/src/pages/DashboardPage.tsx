@@ -153,7 +153,7 @@ export function DashboardPage() {
                     tick={{ fontSize: 11, fill: "hsl(25 20% 48%)" }}
                     axisLine={false}
                     tickLine={false}
-                    tickFormatter={(v) => `$${v}`}
+                    tickFormatter={(v) => `₹${v}`}
                   />
                   <Tooltip
                     formatter={(v: number) => [formatCurrency(v), "Revenue"]}
