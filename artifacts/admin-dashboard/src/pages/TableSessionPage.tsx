@@ -463,6 +463,7 @@ function ActiveSession({
       if (error) throw error;
       return (data ?? []) as MenuItem[];
     },
+    staleTime: Infinity,
   });
 
   // ── Realtime: menu_items for this cafe ─────────────────────
@@ -475,7 +476,6 @@ function ActiveSession({
         "postgres_changes",
         { event: "*", schema: "public", table: "menu_items", filter: `cafe_id=eq.${cafeId}` },
         (payload) => {
-          // Optimistic update: instant visual change before the refetch returns
           const KEY = ["menu_items", cafeId];
           if (payload.eventType === "DELETE") {
             const id = (payload.old as { id: string }).id;
@@ -488,10 +488,8 @@ function ActiveSession({
           } else if (payload.eventType === "UPDATE") {
             const row = payload.new as unknown as MenuItem & { is_archived?: boolean };
             if (row.is_archived) {
-              // Archive: remove immediately
               qc.setQueryData<MenuItem[]>(KEY, (old) => old?.filter((i) => i.id !== row.id) ?? old);
             } else {
-              // Restore or field update: upsert into cache
               qc.setQueryData<MenuItem[]>(KEY, (old) => {
                 if (!old) return old;
                 const exists = old.some((i) => i.id === row.id);
@@ -501,8 +499,6 @@ function ActiveSession({
               });
             }
           }
-          // Background refetch to reconcile with DB truth
-          qc.refetchQueries({ queryKey: KEY });
         }
       )
       .subscribe();
