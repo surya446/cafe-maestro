@@ -1,8 +1,23 @@
+import { Coffee } from "lucide-react";
+import { motion } from "framer-motion";
 import { CafeLayout } from "@/components/layout/CafeLayout";
 import { usePublicCafe } from "@/hooks/usePublicBooking";
 import { usePublicWebsiteSettings } from "@/hooks/usePublicWebsiteSettings";
 import { BookingCTAButton } from "@/contexts/BookingModalContext";
-import { Coffee } from "lucide-react";
+
+const GOLD = "#C9A46C";
+
+const fadeUp = {
+  hidden: { opacity: 0, y: 28 },
+  show: { opacity: 1, y: 0, transition: { duration: 0.75, ease: [0.16, 1, 0.3, 1] } },
+};
+const stagger = { hidden: {}, show: { transition: { staggerChildren: 0.1 } } };
+
+const VALUES = [
+  { icon: "☕", title: "Craft & Quality", body: "Every cup is a deliberate act. We source, roast, and brew with intention." },
+  { icon: "🌿", title: "Sourced Responsibly", body: "Direct trade relationships with farmers who share our values." },
+  { icon: "✦", title: "Refined Experience", body: "From the first sip to the last, every detail of your visit is considered." },
+];
 
 export function CafeAboutPage() {
   const { data: cafe, isLoading: cafeLoading } = usePublicCafe();
@@ -10,88 +25,147 @@ export function CafeAboutPage() {
   const isLoading = cafeLoading || settingsLoading;
   const displayName = settings?.cafe_name ?? cafe?.name ?? "About";
   const primaryColor = settings?.primary_color ?? "#1a1a1a";
-  const secondaryColor = settings?.secondary_color ?? "#f5f0eb";
 
   return (
     <CafeLayout
       cafeName={displayName}
       logoUrl={settings?.logo_url}
       primaryColor={primaryColor}
-      secondaryColor={secondaryColor}
       settings={settings}
     >
-      {/* Page header */}
-      <div
-        className="py-16 px-4 sm:px-6 text-center border-b border-gray-100"
-        style={{ background: secondaryColor }}
-      >
-        <p
-          className="text-xs font-semibold uppercase tracking-[0.18em] mb-3"
-          style={{ color: primaryColor, opacity: 0.45 }}
-        >
-          {displayName}
-        </p>
-        <h1
-          className="font-serif text-5xl sm:text-6xl font-light tracking-tight"
-          style={{ color: primaryColor }}
-        >
-          Our Story
-        </h1>
-      </div>
 
-      <div className="max-w-3xl mx-auto px-4 sm:px-6 py-16">
+      {/* ── Cinematic header ─────────────────────────────────── */}
+      <div className="relative pt-36 pb-24 px-4 sm:px-6 text-center overflow-hidden" style={{ background: "#050505" }}>
+        <div className="absolute inset-0 opacity-[0.05]" style={{ backgroundImage: `radial-gradient(ellipse at 50% 0%, ${GOLD}, transparent 60%)` }} />
         {isLoading ? (
-          <div className="space-y-3">
-            {Array.from({ length: 6 }).map((_, i) => (
-              <div key={i} className={`h-4 bg-gray-100 rounded animate-pulse ${i === 5 ? "w-2/3" : ""}`} />
-            ))}
-          </div>
-        ) : settings?.about_content ? (
-          <div className="prose prose-gray max-w-none">
-            {settings.about_content.split("\n").map((line, i) =>
-              line.trim() ? (
-                <p key={i} className="text-gray-700 leading-relaxed text-lg mb-5">
-                  {line}
-                </p>
-              ) : null
-            )}
+          <div className="flex justify-center items-center h-24">
+            <motion.div animate={{ opacity: [0.3, 1, 0.3] }} transition={{ duration: 2, repeat: Infinity }}>
+              <Coffee className="w-10 h-10" style={{ color: GOLD }} />
+            </motion.div>
           </div>
         ) : (
-          <div className="flex flex-col items-center justify-center min-h-[35vh] gap-4 text-center">
-            <div
-              className="flex items-center justify-center w-14 h-14 rounded-2xl"
-              style={{ background: `${primaryColor}15` }}
-            >
-              <Coffee className="w-7 h-7" style={{ color: primaryColor }} />
-            </div>
-            <p className="text-gray-500 font-medium">{displayName}</p>
-            <p className="text-gray-400 text-sm max-w-xs leading-relaxed">
-              Our story is being written. Add your cafe's story in Website Settings.
-            </p>
-          </div>
-        )}
-
-        {/* CTA */}
-        {!isLoading && (
-          <div
-            className="mt-16 rounded-2xl p-8 text-center"
-            style={{ background: `${primaryColor}10` }}
+          <motion.div
+            initial="hidden"
+            animate="show"
+            variants={stagger}
+            className="relative z-10 max-w-2xl mx-auto"
           >
-            <h3 className="text-xl font-bold mb-2" style={{ color: primaryColor }}>
-              Come visit us
-            </h3>
-            <p className="text-gray-500 text-sm mb-5">
-              Reserve a table and experience it for yourself.
-            </p>
+            <motion.p variants={fadeUp} className="text-[10px] font-semibold uppercase tracking-[0.28em] mb-5" style={{ color: GOLD }}>
+              {displayName}
+            </motion.p>
+            <motion.div variants={fadeUp} className="w-10 h-px mx-auto mb-7" style={{ background: GOLD }} />
+            <motion.h1 variants={fadeUp} className="font-serif text-5xl sm:text-6xl lg:text-7xl font-light text-white leading-tight tracking-tight">
+              Our Story
+            </motion.h1>
+            {settings?.tagline && (
+              <motion.p variants={fadeUp} className="text-white/35 mt-5 font-light text-lg">
+                {settings.tagline}
+              </motion.p>
+            )}
+          </motion.div>
+        )}
+      </div>
+
+      {/* ── Story content ─────────────────────────────────────── */}
+      {settings?.about_content && (
+        <section className="py-24 px-4 sm:px-6" style={{ background: "#0B0B0B" }}>
+          <div className="max-w-3xl mx-auto">
+            <motion.div
+              initial="hidden"
+              whileInView="show"
+              viewport={{ once: true, margin: "-60px" }}
+              variants={stagger}
+            >
+              <motion.div variants={fadeUp} className="flex items-center gap-4 mb-10">
+                <div className="w-12 h-px" style={{ background: GOLD }} />
+                <p className="text-[10px] font-semibold uppercase tracking-[0.25em]" style={{ color: GOLD }}>About us</p>
+              </motion.div>
+
+              {settings.about_content.split("\n").map((line, i) =>
+                line.trim() ? (
+                  <motion.p
+                    key={i}
+                    variants={fadeUp}
+                    className="text-white/55 leading-relaxed mb-5 text-[15px]"
+                  >
+                    {line}
+                  </motion.p>
+                ) : null
+              )}
+            </motion.div>
+          </div>
+        </section>
+      )}
+
+      {/* ── Values grid ───────────────────────────────────────── */}
+      <section className="py-24 px-4 sm:px-6" style={{ background: "#111111" }}>
+        <div className="max-w-5xl mx-auto">
+          <motion.div
+            initial="hidden"
+            whileInView="show"
+            viewport={{ once: true }}
+            variants={stagger}
+            className="text-center mb-14"
+          >
+            <motion.p variants={fadeUp} className="text-[10px] font-semibold uppercase tracking-[0.28em] mb-4" style={{ color: GOLD }}>
+              What We Stand For
+            </motion.p>
+            <motion.div variants={fadeUp} className="w-10 h-px mx-auto mb-6" style={{ background: GOLD }} />
+            <motion.h2 variants={fadeUp} className="font-serif text-3xl sm:text-4xl font-light text-white tracking-tight">
+              Our Values
+            </motion.h2>
+          </motion.div>
+
+          <motion.div
+            initial="hidden"
+            whileInView="show"
+            viewport={{ once: true, margin: "-40px" }}
+            variants={stagger}
+            className="grid grid-cols-1 sm:grid-cols-3 gap-5"
+          >
+            {VALUES.map((v) => (
+              <motion.div
+                key={v.title}
+                variants={fadeUp}
+                className="rounded-2xl p-8 border border-white/[0.06] hover:border-[#C9A46C]/20 transition-all duration-300 group"
+                style={{ background: "#0B0B0B" }}
+              >
+                <div className="text-3xl mb-5 group-hover:scale-110 transition-transform duration-300">{v.icon}</div>
+                <h3 className="font-semibold text-white mb-3">{v.title}</h3>
+                <p className="text-white/40 text-sm leading-relaxed">{v.body}</p>
+              </motion.div>
+            ))}
+          </motion.div>
+        </div>
+      </section>
+
+      {/* ── CTA ───────────────────────────────────────────────── */}
+      <section className="py-28 px-4 sm:px-6 text-center relative overflow-hidden" style={{ background: "#0B0B0B" }}>
+        <div className="absolute inset-0 opacity-[0.03]" style={{ backgroundImage: `radial-gradient(circle at 50% 50%, ${GOLD}, transparent 60%)` }} />
+        <motion.div
+          initial="hidden"
+          whileInView="show"
+          viewport={{ once: true }}
+          variants={stagger}
+          className="relative z-10 max-w-xl mx-auto"
+        >
+          <motion.div variants={fadeUp} className="w-10 h-px mx-auto mb-8" style={{ background: GOLD }} />
+          <motion.h3 variants={fadeUp} className="font-serif text-3xl sm:text-4xl font-light text-white tracking-tight mb-3">
+            Come visit us
+          </motion.h3>
+          <motion.p variants={fadeUp} className="text-white/35 text-sm mb-10">
+            Reserve a table and experience it for yourself.
+          </motion.p>
+          <motion.div variants={fadeUp}>
             <BookingCTAButton
-              className="inline-flex items-center gap-2 px-6 py-3 rounded-full text-sm font-semibold text-white transition-opacity hover:opacity-85"
-              style={{ background: primaryColor }}
+              className="inline-flex items-center gap-2 px-8 py-3.5 rounded-full text-sm font-semibold text-[#050505] transition-all hover:opacity-90 active:scale-95"
+              style={{ background: GOLD }}
             >
               Book a Table
             </BookingCTAButton>
-          </div>
-        )}
-      </div>
+          </motion.div>
+        </motion.div>
+      </section>
     </CafeLayout>
   );
 }
