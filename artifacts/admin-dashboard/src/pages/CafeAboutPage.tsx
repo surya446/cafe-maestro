@@ -1,14 +1,12 @@
 import { CafeLayout } from "@/components/layout/CafeLayout";
 import { usePublicCafe } from "@/hooks/usePublicBooking";
 import { usePublicWebsiteSettings } from "@/hooks/usePublicWebsiteSettings";
-import { useBookingModal } from "@/contexts/BookingModalContext";
+import { BookingCTAButton } from "@/contexts/BookingModalContext";
 import { Coffee } from "lucide-react";
 
 export function CafeAboutPage() {
   const { data: cafe, isLoading: cafeLoading } = usePublicCafe();
   const { data: settings, isLoading: settingsLoading } = usePublicWebsiteSettings(cafe?.id);
-  const { openBooking } = useBookingModal();
-
   const isLoading = cafeLoading || settingsLoading;
   const displayName = settings?.cafe_name ?? cafe?.name ?? "About";
   const primaryColor = settings?.primary_color ?? "#1a1a1a";
@@ -85,13 +83,12 @@ export function CafeAboutPage() {
             <p className="text-gray-500 text-sm mb-5">
               Reserve a table and experience it for yourself.
             </p>
-            <button
-              onClick={openBooking}
+            <BookingCTAButton
               className="inline-flex items-center gap-2 px-6 py-3 rounded-full text-sm font-semibold text-white transition-opacity hover:opacity-85"
               style={{ background: primaryColor }}
             >
               Book a Table
-            </button>
+            </BookingCTAButton>
           </div>
         )}
       </div>

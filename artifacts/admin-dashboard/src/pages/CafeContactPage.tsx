@@ -1,7 +1,7 @@
 import { CafeLayout } from "@/components/layout/CafeLayout";
 import { usePublicCafe } from "@/hooks/usePublicBooking";
 import { usePublicWebsiteSettings } from "@/hooks/usePublicWebsiteSettings";
-import { useBookingModal } from "@/contexts/BookingModalContext";
+import { BookingCTAButton } from "@/contexts/BookingModalContext";
 import { MapPin, Phone, Mail, Clock, ExternalLink, Instagram, Facebook } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { OpeningHoursEntry } from "@/types";
@@ -37,8 +37,6 @@ function OpeningHoursTable({ hours, primaryColor }: { hours: OpeningHoursEntry[]
 export function CafeContactPage() {
   const { data: cafe, isLoading: cafeLoading } = usePublicCafe();
   const { data: settings, isLoading: settingsLoading } = usePublicWebsiteSettings(cafe?.id);
-  const { openBooking } = useBookingModal();
-
   const isLoading = cafeLoading || settingsLoading;
   const displayName = settings?.cafe_name ?? cafe?.name ?? "Contact";
   const primaryColor = settings?.primary_color ?? "#1a1a1a";
@@ -183,13 +181,12 @@ export function CafeContactPage() {
                   Ready to visit?
                 </h3>
                 <p className="text-gray-500 text-xs mb-4">Reserve your table online in seconds.</p>
-                <button
-                  onClick={openBooking}
+                <BookingCTAButton
                   className="inline-flex items-center px-5 py-2.5 rounded-full text-sm font-semibold text-white transition-opacity hover:opacity-85"
                   style={{ background: primaryColor }}
                 >
                   Book a Table
-                </button>
+                </BookingCTAButton>
               </div>
             </div>
 

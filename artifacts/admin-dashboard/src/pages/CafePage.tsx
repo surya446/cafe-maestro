@@ -9,7 +9,7 @@ import { usePublicWebsiteSettings } from "@/hooks/usePublicWebsiteSettings";
 import { usePublicGallery } from "@/hooks/usePublicGallery";
 import { usePublicOffers } from "@/hooks/usePublicOffers";
 import { usePublicReviews } from "@/hooks/usePublicReviews";
-import { useBookingModal } from "@/contexts/BookingModalContext";
+import { BookingCTAButton } from "@/contexts/BookingModalContext";
 import { OpeningHoursEntry } from "@/types";
 import { cn } from "@/lib/utils";
 
@@ -54,8 +54,6 @@ export function CafePage() {
   const { data: gallery } = usePublicGallery(cafe?.id);
   const { data: offers } = usePublicOffers(cafe?.id);
   const { data: reviews } = usePublicReviews(cafe?.id);
-  const { openBooking } = useBookingModal();
-
   const isLoading = cafeLoading || settingsLoading;
   const displayName = settings?.cafe_name ?? cafe?.name ?? "Our Cafe";
   const primaryColor = settings?.primary_color ?? "#1a1a1a";
@@ -138,12 +136,9 @@ export function CafePage() {
             >
               View Menu <ArrowRight className="w-4 h-4" />
             </Link>
-            <button
-              onClick={openBooking}
-              className="inline-flex items-center gap-2 px-7 py-3.5 rounded-full text-sm font-semibold text-white bg-white/20 hover:bg-white/30 transition-colors backdrop-blur-sm border border-white/30"
-            >
+            <BookingCTAButton className="inline-flex items-center gap-2 px-7 py-3.5 rounded-full text-sm font-semibold text-white bg-white/20 hover:bg-white/30 transition-colors backdrop-blur-sm border border-white/30">
               Book a Table
-            </button>
+            </BookingCTAButton>
           </div>
         </div>
       </section>
@@ -474,12 +469,9 @@ export function CafePage() {
           >
             Browse the Menu <ArrowRight className="w-4 h-4" />
           </Link>
-          <button
-            onClick={openBooking}
-            className="inline-flex items-center gap-2 px-6 py-3 rounded-full text-sm font-semibold text-white border border-white/40 hover:bg-white/10 transition-colors"
-          >
+          <BookingCTAButton className="inline-flex items-center gap-2 px-6 py-3 rounded-full text-sm font-semibold text-white border border-white/40 hover:bg-white/10 transition-colors">
             Reserve a Table
-          </button>
+          </BookingCTAButton>
         </div>
       </section>
     </CafeLayout>
