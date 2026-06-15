@@ -1,0 +1,231 @@
+NEW REQUIREMENTS – MENU AVAILABILITY REAL-TIME BEHAVIOR
+
+Read completely before coding.
+
+Current project:
+Cafe Maestro
+
+# Problem 1
+
+Admin can toggle menu item availability using is_available.
+
+Current behavior:
+
+Admin:
+Cold Coffee
+Available → OFF
+
+QR Ordering:
+Customer still sees old state until page refresh.
+
+This is incorrect.
+
+Required behavior:
+
+Admin:
+Available → OFF
+
+QR Ordering:
+Updates automatically without refresh.
+
+Implementation requirements:
+
+1. Use Supabase Realtime.
+
+2. Subscribe to menu_items changes.
+
+3. React immediately to:
+
+   * INSERT
+   * UPDATE
+   * DELETE
+
+4. Any change to:
+
+   * is_available
+   * name
+   * price
+   * image_url
+   * description
+
+must update customer view instantly.
+
+No page refresh.
+
+---
+
+# Problem 2
+
+Unavailable item already exists inside cart.
+
+Scenario:
+
+Customer cart:
+
+Cold Coffee
+Veg Burger
+
+Admin:
+
+Cold Coffee → OFF
+
+Current cart:
+
+Cold Coffee
+Veg Burger
+
+Required behavior:
+
+Cart immediately re-validates.
+
+Result:
+
+Cold Coffee
+→ marked unavailable
+
+Veg Burger
+→ remains normal
+
+Show:
+
+Out of Stock
+
+Customer can still place order.
+
+When placing order:
+
+Unavailable items:
+
+* removed from bill
+* removed from order payload
+* not charged
+
+Remaining items:
+
+* proceed normally
+
+---
+
+# Problem 3
+
+Single-item cart edge case.
+
+Scenario:
+
+Cart:
+
+Cold Coffee
+
+Admin:
+
+Cold Coffee → OFF
+
+Required behavior:
+
+Cart updates instantly.
+
+Show:
+
+Cold Coffee
+Out of Stock
+
+Then:
+
+Cart total becomes ₹0
+
+Place Order disabled.
+
+Show message:
+
+"This item is no longer available. Please add another item."
+
+Customer must add a different item.
+
+---
+
+# Problem 4
+
+Server-side validation.
+
+Even if customer never receives realtime event:
+
+When order is submitted:
+
+Backend must validate:
+
+menu_items.is_available = true
+
+before creating order.
+
+Unavailable items must never reach kitchen.
+
+This validation must exist server-side.
+
+Client-side only validation is not sufficient.
+
+---
+
+# Problem 5
+
+Menu Item Images Missing in QR Ordering.
+
+Current behavior:
+
+Admin menu item:
+image_url exists
+
+Public website:
+image visible
+
+QR ordering:
+image missing
+
+Required:
+
+Display image.
+
+Card layout:
+
+[ image ] 80x80 or similar
+Name
+Description
+Price
+Add button
+
+Image rules:
+
+* square image
+* object-cover
+* rounded corners
+* lazy loading
+* fallback placeholder if image missing
+
+Must work for:
+
+* uploaded images
+* external image URLs
+* existing image_url values
+
+---
+
+Investigation Required
+
+Before coding:
+
+1. Find current QR menu component.
+2. Find current cart store/state.
+3. Find current order submission flow.
+4. Find existing Supabase realtime usage.
+5. Find menu item image field.
+6. Report architecture.
+
+Then implement.
+
+After implementation provide:
+
+* files modified
+* realtime architecture
+* server-side validation location
+* cart reconciliation logic
+* image rendering changes
+* build status

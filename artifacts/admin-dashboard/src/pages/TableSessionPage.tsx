@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect } from "react";
 import { useParams } from "wouter";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   Coffee, QrCode, Clock, AlertCircle, XCircle, CheckCircle2,
   ChefHat, Bell, ShoppingCart, Minus, Plus, X, Loader2,
@@ -27,6 +27,7 @@ interface MenuItem {
   name: string;
   description: string | null;
   price: number;
+  image_url: string | null;
   tags: string[];
   prep_time_min: number | null;
   allergens: string[];
@@ -249,6 +250,7 @@ function NameEntryScreen({
 
 function CartModal({
   cart,
+  unavailableInCart,
   onUpdateQty,
   onUpdateNote,
   onRemove,
@@ -258,6 +260,7 @@ function CartModal({
   placeError,
 }: {
   cart: Map<string, CartItem>;
+  unavailableInCart: Set<string>;
   onUpdateQty: (id: string, delta: number) => void;
   onUpdateNote: (id: string, note: string) => void;
   onRemove: (id: string) => void;
@@ -267,7 +270,10 @@ function CartModal({
   placeError: string | null;
 }) {
   const items = Array.from(cart.values());
-  const total = items.reduce((s, i) => s + i.price * i.quantity, 0);
+  const availableItems = items.filter((i) => !unavailableInCart.has(i.menuItemId));
+  const unavailableItems = items.filter((i) => unavailableInCart.has(i.menuItemId));
+  const total = availableItems.reduce((s, i) => s + i.price * i.quantity, 0);
+  const allUnavailable = items.length > 0 && availableItems.length === 0;
 
   return (
     <div className="fixed inset-0 z-50 flex flex-col">
@@ -283,59 +289,86 @@ function CartModal({
 
         {/* Item list */}
         <div className="overflow-y-auto flex-1 px-4 py-3 space-y-4">
-          {items.map((item) => (
-            <div key={item.menuItemId} className="space-y-2">
-              <div className="flex items-center gap-3">
-                <div className="flex items-center gap-1 shrink-0">
-                  <button
-                    onClick={() => onUpdateQty(item.menuItemId, -1)}
-                    className="w-8 h-8 rounded-full border flex items-center justify-center hover:bg-muted"
-                  >
-                    <Minus className="h-3 w-3" />
-                  </button>
-                  <span className="w-6 text-center text-sm font-medium">{item.quantity}</span>
-                  <button
-                    onClick={() => onUpdateQty(item.menuItemId, +1)}
-                    className="w-8 h-8 rounded-full border flex items-center justify-center hover:bg-muted"
-                  >
-                    <Plus className="h-3 w-3" />
-                  </button>
-                </div>
-
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium truncate">{item.name}</p>
-                </div>
-
-                <div className="flex items-center gap-2 shrink-0">
-                  <span className="text-sm font-medium">
-                    {formatPrice(item.price * item.quantity)}
-                  </span>
-                  <button
-                    onClick={() => onRemove(item.menuItemId)}
-                    className="p-0.5 text-muted-foreground hover:text-destructive"
-                  >
-                    <X className="h-4 w-4" />
-                  </button>
-                </div>
-              </div>
-
-              <input
-                type="text"
-                placeholder="Special instructions (optional)"
-                value={item.notes}
-                onChange={(e) => onUpdateNote(item.menuItemId, e.target.value)}
-                className="w-full text-xs px-3 py-1.5 rounded-lg border bg-muted/50 placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary"
-              />
+          {unavailableItems.length > 0 && (
+            <div className="flex gap-2 text-sm bg-amber-50 border border-amber-200 text-amber-800 rounded-xl px-3 py-2.5">
+              <AlertCircle className="h-4 w-4 shrink-0 mt-0.5 text-amber-500" />
+              <span>
+                {allUnavailable
+                  ? "This item is no longer available. Please add another item."
+                  : "Some items are unavailable and will be removed from your order."}
+              </span>
             </div>
-          ))}
+          )}
+
+          {items.map((item) => {
+            const isUnavailable = unavailableInCart.has(item.menuItemId);
+            return (
+              <div key={item.menuItemId} className={`space-y-2 ${isUnavailable ? "opacity-60" : ""}`}>
+                <div className="flex items-center gap-3">
+                  <div className="flex items-center gap-1 shrink-0">
+                    <button
+                      onClick={() => onUpdateQty(item.menuItemId, -1)}
+                      disabled={isUnavailable}
+                      className="w-8 h-8 rounded-full border flex items-center justify-center hover:bg-muted disabled:opacity-40 disabled:cursor-not-allowed"
+                    >
+                      <Minus className="h-3 w-3" />
+                    </button>
+                    <span className="w-6 text-center text-sm font-medium">{item.quantity}</span>
+                    <button
+                      onClick={() => onUpdateQty(item.menuItemId, +1)}
+                      disabled={isUnavailable}
+                      className="w-8 h-8 rounded-full border flex items-center justify-center hover:bg-muted disabled:opacity-40 disabled:cursor-not-allowed"
+                    >
+                      <Plus className="h-3 w-3" />
+                    </button>
+                  </div>
+
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium truncate">{item.name}</p>
+                    {isUnavailable && (
+                      <span className="text-[10px] font-semibold text-red-500 uppercase tracking-wide">
+                        Out of Stock
+                      </span>
+                    )}
+                  </div>
+
+                  <div className="flex items-center gap-2 shrink-0">
+                    {!isUnavailable && (
+                      <span className="text-sm font-medium">
+                        {formatPrice(item.price * item.quantity)}
+                      </span>
+                    )}
+                    <button
+                      onClick={() => onRemove(item.menuItemId)}
+                      className="p-0.5 text-muted-foreground hover:text-destructive"
+                    >
+                      <X className="h-4 w-4" />
+                    </button>
+                  </div>
+                </div>
+
+                {!isUnavailable && (
+                  <input
+                    type="text"
+                    placeholder="Special instructions (optional)"
+                    value={item.notes}
+                    onChange={(e) => onUpdateNote(item.menuItemId, e.target.value)}
+                    className="w-full text-xs px-3 py-1.5 rounded-lg border bg-muted/50 placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary"
+                  />
+                )}
+              </div>
+            );
+          })}
         </div>
 
         {/* Footer */}
         <div className="shrink-0 border-t px-4 pt-3 pb-6 space-y-3">
-          <div className="flex justify-between font-semibold">
-            <span>Total</span>
-            <span>{formatPrice(total)}</span>
-          </div>
+          {!allUnavailable && (
+            <div className="flex justify-between font-semibold">
+              <span>Total</span>
+              <span>{formatPrice(total)}</span>
+            </div>
+          )}
 
           {placeError && (
             <div className="flex gap-2 text-sm text-destructive bg-destructive/10 rounded-lg px-3 py-2">
@@ -348,7 +381,7 @@ function CartModal({
             className="w-full"
             size="lg"
             onClick={onPlace}
-            disabled={isPlacing || items.length === 0}
+            disabled={isPlacing || allUnavailable}
           >
             {isPlacing ? (
               <>
@@ -423,7 +456,7 @@ function ActiveSession({
     queryFn: async () => {
       const { data, error } = await supabase
         .from("menu_items")
-        .select("id, category_id, name, description, price, tags, prep_time_min, allergens, is_available")
+        .select("id, category_id, name, description, price, image_url, tags, prep_time_min, allergens, is_available")
         .eq("cafe_id", cafeId)
         .order("position");
       if (error) throw error;
@@ -431,6 +464,37 @@ function ActiveSession({
     },
     staleTime: 60_000,
   });
+
+  // ── Realtime: menu_items for this cafe ─────────────────────
+  const qc = useQueryClient();
+  useEffect(() => {
+    if (!cafeId) return;
+    const channel = supabase
+      .channel(`menu_items:${cafeId}`)
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "menu_items", filter: `cafe_id=eq.${cafeId}` },
+        (payload) => {
+          qc.setQueryData<MenuItem[]>(["menu_items", cafeId], (old) => {
+            if (!old) return old;
+            if (payload.eventType === "DELETE") {
+              return old.filter((i) => i.id !== (payload.old as { id: string }).id);
+            }
+            if (payload.eventType === "INSERT") {
+              return [...old, payload.new as MenuItem];
+            }
+            if (payload.eventType === "UPDATE") {
+              return old.map((i) =>
+                i.id === (payload.new as MenuItem).id ? { ...i, ...(payload.new as MenuItem) } : i
+              );
+            }
+            return old;
+          });
+        }
+      )
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, [cafeId, qc]);
 
   const activeCategoryId = selectedCategory ?? categories[0]?.id ?? null;
 
@@ -441,8 +505,21 @@ function ActiveSession({
 
   // ── Cart helpers ───────────────────────────────────────────
 
+  const unavailableInCart = useMemo(() => {
+    const unavailableIds = new Set(
+      menuItems.filter((m) => !m.is_available).map((m) => m.id)
+    );
+    const result = new Set<string>();
+    for (const [id] of cart) {
+      if (unavailableIds.has(id)) result.add(id);
+    }
+    return result;
+  }, [cart, menuItems]);
+
   const cartCount = Array.from(cart.values()).reduce((s, i) => s + i.quantity, 0);
-  const cartTotal = Array.from(cart.values()).reduce((s, i) => s + i.price * i.quantity, 0);
+  const cartTotal = Array.from(cart.values())
+    .filter((i) => !unavailableInCart.has(i.menuItemId))
+    .reduce((s, i) => s + i.price * i.quantity, 0);
 
   function addToCart(item: MenuItem) {
     setCart((prev) => {
@@ -497,8 +574,12 @@ function ActiveSession({
   }
 
   async function handlePlaceOrder() {
+    const availableItems = Array.from(cart.values()).filter(
+      (i) => !unavailableInCart.has(i.menuItemId)
+    );
+    if (availableItems.length === 0) return;
     try {
-      await placeOrder(Array.from(cart.values()));
+      await placeOrder(availableItems);
       setCart(new Map());
       setCartOpen(false);
       setOrderSuccess(true);
@@ -602,8 +683,22 @@ function ActiveSession({
           return (
             <div
               key={item.id}
-              className={`flex items-start gap-3 rounded-xl border bg-card p-4 ${unavailable ? "opacity-70" : ""}`}
+              className={`flex items-start gap-3 rounded-xl border bg-card p-3 ${unavailable ? "opacity-70" : ""}`}
             >
+              {/* Item image */}
+              {item.image_url ? (
+                <img
+                  src={item.image_url}
+                  alt={item.name}
+                  loading="lazy"
+                  className="w-20 h-20 rounded-lg object-cover shrink-0 bg-muted"
+                />
+              ) : (
+                <div className="w-20 h-20 rounded-lg bg-muted flex items-center justify-center shrink-0">
+                  <UtensilsCrossed className="h-6 w-6 text-muted-foreground/40" />
+                </div>
+              )}
+
               <div className="flex-1 min-w-0">
                 <div className="flex items-start justify-between gap-2">
                   <div className="min-w-0">
@@ -764,7 +859,8 @@ function ActiveSession({
             onClick={() => setCartOpen(true)}
           >
             <ShoppingCart className="h-5 w-5 mr-2" />
-            View Order · {cartCount} {cartCount === 1 ? "item" : "items"} · {formatPrice(cartTotal)}
+            View Order · {cartCount} {cartCount === 1 ? "item" : "items"}
+            {cartTotal > 0 && ` · ${formatPrice(cartTotal)}`}
           </Button>
         </div>
       )}
@@ -773,6 +869,7 @@ function ActiveSession({
       {cartOpen && (
         <CartModal
           cart={cart}
+          unavailableInCart={unavailableInCart}
           onUpdateQty={updateCartQty}
           onUpdateNote={updateCartNote}
           onRemove={removeFromCart}
