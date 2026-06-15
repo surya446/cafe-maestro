@@ -468,6 +468,7 @@ function ActiveSession({
 
   // ── Realtime: menu_items for this cafe ─────────────────────
   const qc = useQueryClient();
+  const DEVICE = /Mobi|Android|iPhone|iPad/i.test(navigator.userAgent) ? "MOBILE" : "DESKTOP";
   useEffect(() => {
     if (!cafeId) return;
     const channel = supabase
@@ -479,7 +480,7 @@ function ActiveSession({
           const KEY = ["menu_items", cafeId];
 
           // ── STEP 3: raw realtime event ──────────────────────────
-          console.log("[DIAG] STEP 3 — realtime event received", {
+          console.log(`[DIAG][${DEVICE}] STEP 3 — realtime event received`, {
             eventType: payload.eventType,
             "payload.new": payload.new,
             "payload.old": payload.old,
@@ -487,7 +488,7 @@ function ActiveSession({
 
           // ── STEP 4 (before): cache snapshot ────────────────────
           const cacheBefore = qc.getQueryData<MenuItem[]>(KEY);
-          console.log("[DIAG] STEP 4 BEFORE — cache snapshot", {
+          console.log(`[DIAG][${DEVICE}] STEP 4 BEFORE — cache snapshot`, {
             count: cacheBefore?.length ?? 0,
             ids: cacheBefore?.map((i) => i.id) ?? [],
           });
@@ -517,14 +518,30 @@ function ActiveSession({
 
           // ── STEP 4 (after): cache snapshot ─────────────────────
           const cacheAfter = qc.getQueryData<MenuItem[]>(KEY);
-          console.log("[DIAG] STEP 4 AFTER — cache snapshot", {
+          console.log(`[DIAG][${DEVICE}] STEP 4 AFTER — cache snapshot`, {
             count: cacheAfter?.length ?? 0,
             ids: cacheAfter?.map((i) => i.id) ?? [],
           });
         }
       )
-      .subscribe();
-    return () => { supabase.removeChannel(channel); };
+      .subscribe((status, err) => {
+        // ── STEP 3.5: channel subscription status ───────────────
+        console.log(`[DIAG][${DEVICE}] STEP 3.5 — channel status`, { status, err: err ?? null });
+      });
+
+    // ── Visibility diagnostic: detect mobile tab backgrounding ─
+    const onVisibility = () => {
+      console.log(`[DIAG][${DEVICE}] visibilitychange →`, document.visibilityState, {
+        channelState: channel.state,
+        time: new Date().toISOString(),
+      });
+    };
+    document.addEventListener("visibilitychange", onVisibility);
+
+    return () => {
+      document.removeEventListener("visibilitychange", onVisibility);
+      supabase.removeChannel(channel);
+    };
   }, [cafeId, qc]);
 
   const activeCategoryId = selectedCategory ?? categories[0]?.id ?? null;
