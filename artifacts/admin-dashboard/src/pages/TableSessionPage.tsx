@@ -491,7 +491,15 @@ function ActiveSession({
               else { next = [...old, inserted]; }
             } else if (payload.eventType === "UPDATE") {
               const updated = payload.new as unknown as MenuItem & { is_archived?: boolean };
-              console.log("[RT-DIAG] UPDATE id:", updated.id, "is_archived:", updated.is_archived, "is_available:", updated.is_available);
+              const existsInCache = old.some((i) => i.id === updated.id);
+              console.log("[RT-DIAG][RESTORE] ── UPDATE received ──");
+              console.log("[RT-DIAG][RESTORE] Full payload:", JSON.stringify(payload));
+              console.log("[RT-DIAG][RESTORE] Item ID:", updated.id);
+              console.log("[RT-DIAG][RESTORE] is_archived:", updated.is_archived);
+              console.log("[RT-DIAG][RESTORE] is_available:", updated.is_available);
+              console.log("[RT-DIAG][RESTORE] category_id:", (updated as MenuItem & { is_archived?: boolean; category_id?: string }).category_id);
+              console.log("[RT-DIAG][RESTORE] Item exists in cache BEFORE update:", existsInCache);
+              console.log("[RT-DIAG][RESTORE] Cache IDs BEFORE update:", old.map(i => i.id));
               if (updated.is_archived) {
                 // Item archived → remove from active list
                 next = old.filter((i) => i.id !== updated.id);
@@ -506,6 +514,8 @@ function ActiveSession({
                   next = [...old, updated];
                 }
               }
+              console.log("[RT-DIAG][RESTORE] Cache IDs AFTER update:", next.map(i => i.id));
+              console.log("[RT-DIAG][RESTORE] Item present in cache AFTER update:", next.some(i => i.id === updated.id));
             } else {
               next = old;
             }
