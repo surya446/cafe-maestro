@@ -18,6 +18,7 @@ import {
   Link,
   Type,
   FileText,
+  ExternalLink,
 } from "lucide-react";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { PageHeader } from "@/components/common/PageHeader";
@@ -347,17 +348,27 @@ export function WebsiteSettingsPage() {
             title="Website Settings"
             subtitle="Control your public website's content and branding"
           />
-          <Button
-            onClick={handleSave}
-            disabled={saving || uploadingLogo || uploadingHero}
-            className="shrink-0 ml-4"
-          >
-            {saving ? (
-              <><Loader2 className="w-4 h-4 mr-1.5 animate-spin" />Saving…</>
-            ) : (
-              <><Save className="w-4 h-4 mr-1.5" />Save changes</>
-            )}
-          </Button>
+          <div className="flex flex-col items-end gap-2 shrink-0 ml-4">
+            <Button
+              onClick={handleSave}
+              disabled={saving || uploadingLogo || uploadingHero}
+            >
+              {saving ? (
+                <><Loader2 className="w-4 h-4 mr-1.5 animate-spin" />Saving…</>
+              ) : (
+                <><Save className="w-4 h-4 mr-1.5" />Save changes</>
+              )}
+            </Button>
+            <a
+              href={`${import.meta.env.BASE_URL}cafe`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1.5 text-xs font-medium text-muted-foreground hover:text-foreground transition-colors"
+            >
+              <ExternalLink className="w-3.5 h-3.5" />
+              Visit website
+            </a>
+          </div>
         </div>
 
         {isLoading ? (
@@ -604,7 +615,7 @@ export function WebsiteSettingsPage() {
             </SectionCard>
 
             {/* ── Bottom save ───────────────────────────────────── */}
-            <div className="flex justify-end pt-2">
+            <div className="flex flex-col items-end gap-2 pt-2">
               <Button
                 onClick={handleSave}
                 disabled={saving || uploadingLogo || uploadingHero}
@@ -616,6 +627,15 @@ export function WebsiteSettingsPage() {
                   <><Save className="w-4 h-4 mr-1.5" />Save all changes</>
                 )}
               </Button>
+              <a
+                href={`${import.meta.env.BASE_URL}cafe`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1.5 text-xs font-medium text-muted-foreground hover:text-foreground transition-colors"
+              >
+                <ExternalLink className="w-3.5 h-3.5" />
+                Visit website
+              </a>
             </div>
           </div>
         )}
