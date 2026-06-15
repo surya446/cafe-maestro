@@ -514,10 +514,27 @@ function ActiveSession({
     };
   }, [cafeId, qc]);
 
+  // ── Render-side diagnostics ────────────────────────────────
+  useEffect(() => {
+    console.log(
+      "[RT-DIAG] RENDER menuItems changed — cafeId:", cafeId,
+      "count:", menuItems.length,
+      "ids:", menuItems.map(i => i.id)
+    );
+  }, [menuItems, cafeId]);
+
   const activeCategoryId = selectedCategory ?? categories[0]?.id ?? null;
 
   const visibleItems = useMemo(
-    () => menuItems.filter((i) => i.category_id === activeCategoryId),
+    () => {
+      const result = menuItems.filter((i) => i.category_id === activeCategoryId);
+      console.log(
+        "[RT-DIAG] RENDER visibleItems — category:", activeCategoryId,
+        "count:", result.length,
+        "ids:", result.map(i => i.id)
+      );
+      return result;
+    },
     [menuItems, activeCategoryId]
   );
 
