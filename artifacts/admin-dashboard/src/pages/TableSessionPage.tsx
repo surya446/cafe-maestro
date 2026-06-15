@@ -470,100 +470,54 @@ function ActiveSession({
   const qc = useQueryClient();
   useEffect(() => {
     if (!cafeId) return;
-    console.log("[RT-DIAG] Subscribing to menu_items for cafeId:", cafeId);
     const channel = supabase
       .channel(`menu_items:${cafeId}`)
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "menu_items", filter: `cafe_id=eq.${cafeId}` },
         (payload) => {
-          console.log("[RT-DIAG] Event received:", payload.eventType, "payload:", JSON.stringify(payload));
-
-          // Detect restore before entering setQueryData (which is synchronous)
-          const isRestore =
-            payload.eventType === "UPDATE" &&
-            !(payload.new as { is_archived?: boolean }).is_archived;
+          const newRow = payload.new as { is_archived?: boolean } | undefined;
+          const isArchiveOrRestore =
+            payload.eventType === "UPDATE" && newRow !== undefined;
 
           qc.setQueryData<MenuItem[]>(["menu_items", cafeId], (old) => {
-            console.log("[RT-DIAG] State before update — item count:", old?.length, "ids:", old?.map(i => i.id));
             if (!old) return old;
-            let next: MenuItem[];
             if (payload.eventType === "DELETE") {
-              next = old.filter((i) => i.id !== (payload.old as { id: string }).id);
-            } else if (payload.eventType === "INSERT") {
-              const inserted = payload.new as unknown as MenuItem & { is_archived?: boolean };
-              console.log("[RT-DIAG] INSERT is_archived:", inserted.is_archived);
-              if (inserted.is_archived) { next = old; }
-              else { next = [...old, inserted]; }
-            } else if (payload.eventType === "UPDATE") {
-              const updated = payload.new as unknown as MenuItem & { is_archived?: boolean };
-              const existsInCache = old.some((i) => i.id === updated.id);
-              console.log("[RT-DIAG][RESTORE] ── UPDATE received ──");
-              console.log("[RT-DIAG][RESTORE] Item ID:", updated.id, "is_archived:", updated.is_archived, "is_available:", updated.is_available);
-              console.log("[RT-DIAG][RESTORE] Item exists in cache BEFORE update:", existsInCache);
-              if (updated.is_archived) {
-                next = old.filter((i) => i.id !== updated.id);
-              } else {
-                const exists = old.some((i) => i.id === updated.id);
-                if (exists) {
-                  next = old.map((i) => i.id === updated.id ? { ...i, ...updated } : i);
-                } else {
-                  next = [...old, updated];
-                }
-              }
-              console.log("[RT-DIAG][RESTORE] Item present in cache AFTER update:", next.some(i => i.id === updated.id));
-            } else {
-              next = old;
+              return old.filter((i) => i.id !== (payload.old as { id: string }).id);
             }
-            return next;
+            if (payload.eventType === "INSERT") {
+              const inserted = payload.new as unknown as MenuItem & { is_archived?: boolean };
+              return inserted.is_archived ? old : [...old, inserted];
+            }
+            if (payload.eventType === "UPDATE") {
+              const updated = payload.new as unknown as MenuItem & { is_archived?: boolean };
+              if (updated.is_archived) {
+                return old.filter((i) => i.id !== updated.id);
+              }
+              const exists = old.some((i) => i.id === updated.id);
+              return exists
+                ? old.map((i) => i.id === updated.id ? { ...i, ...updated } : i)
+                : [...old, updated];
+            }
+            return old;
           });
 
-          // PROOF: if restore, force a refetch so React Query re-renders from DB truth
-          if (isRestore) {
-            console.log("[RT-DIAG][RESTORE] Firing invalidateQueries as proof");
+          // Archive and restore both need a refetch to force a re-render.
+          // setQueryData alone does not reliably trigger React to re-render
+          // in all cases (race with staleTime / React batching).
+          if (isArchiveOrRestore) {
             qc.invalidateQueries({ queryKey: ["menu_items", cafeId] });
           }
         }
       )
-      .subscribe((status, err) => {
-        console.log("[RT-DIAG] Subscription status:", status, err ?? "");
-      });
-    return () => {
-      console.log("[RT-DIAG] Removing channel for cafeId:", cafeId);
-      supabase.removeChannel(channel);
-    };
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
   }, [cafeId, qc]);
 
-  // ── Render-side diagnostics ────────────────────────────────
   const activeCategoryId = selectedCategory ?? categories[0]?.id ?? null;
 
-  useEffect(() => {
-    console.log(
-      "[RT-DIAG] RENDER menuItems changed — cafeId:", cafeId,
-      "count:", menuItems.length,
-      "activeCategoryId:", activeCategoryId,
-      "knownCategoryIds:", categories.map(c => c.id)
-    );
-    menuItems.forEach(i => {
-      const matchesActive = i.category_id === activeCategoryId;
-      console.log(
-        `[RT-DIAG]   item id=${i.id} name="${i.name}" category_id=${i.category_id} is_available=${i.is_available} → visibleInCurrentTab=${matchesActive}`
-      );
-    });
-  }, [menuItems, cafeId, activeCategoryId, categories]);
-
   const visibleItems = useMemo(
-    () => {
-      const result = menuItems.filter((i) => i.category_id === activeCategoryId);
-      console.log(
-        "[RT-DIAG] visibleItems recomputed — activeCategoryId:", activeCategoryId,
-        "totalInCache:", menuItems.length,
-        "visibleCount:", result.length,
-        "hiddenCount:", menuItems.length - result.length,
-        "hiddenItemIds:", menuItems.filter(i => i.category_id !== activeCategoryId).map(i => `${i.id}(cat=${i.category_id})`)
-      );
-      return result;
-    },
+    () => menuItems.filter((i) => i.category_id === activeCategoryId),
     [menuItems, activeCategoryId]
   );
 
