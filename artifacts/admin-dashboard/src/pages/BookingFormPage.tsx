@@ -36,7 +36,7 @@ function todayStr() {
 }
 
 function formatDisplayDate(dateStr: string): string {
-  return new Date(dateStr + "T00:00:00").toLocaleDateString("en-AU", {
+  return new Date(dateStr + "T00:00:00").toLocaleDateString("en-IN", {
     weekday: "long",
     day: "numeric",
     month: "long",

@@ -15,6 +15,8 @@ import {
 } from "lucide-react";
 import { WebsiteSettings } from "@/types";
 import { SmoothScrollProvider } from "@/providers/SmoothScrollProvider";
+import { BookingModalProvider, useBookingModal } from "@/contexts/BookingModalContext";
+import { BookingModal } from "@/components/public/BookingModal";
 
 interface CafeLayoutProps {
   cafeName: string;
@@ -35,7 +37,7 @@ const NAV_LINKS = [
   { href: "/cafe/contact", label: "Contact" },
 ];
 
-export function CafeLayout({
+function CafeLayoutInner({
   cafeName,
   logoUrl,
   primaryColor = "#1a1a1a",
@@ -46,6 +48,7 @@ export function CafeLayout({
   const [location] = useLocation();
   const [mobileOpen, setMobileOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
+  const { openBooking } = useBookingModal();
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 40);
@@ -150,13 +153,13 @@ export function CafeLayout({
 
             {/* CTA + hamburger */}
             <div className="flex items-center gap-3 shrink-0">
-              <Link
-                href="/book"
+              <button
+                onClick={openBooking}
                 className="hidden sm:inline-flex items-center px-5 py-2 rounded-full text-[13px] font-semibold text-white transition-opacity hover:opacity-85 active:opacity-75"
                 style={{ background: primaryColor }}
               >
                 Book Table
-              </Link>
+              </button>
               <button
                 className="lg:hidden flex items-center justify-center w-10 h-10 rounded-lg text-gray-700 hover:bg-gray-100 active:bg-gray-200 transition-colors"
                 onClick={() => setMobileOpen(true)}
@@ -173,7 +176,6 @@ export function CafeLayout({
         <AnimatePresence>
           {mobileOpen && (
             <>
-              {/* Backdrop */}
               <motion.div
                 key="cafe-backdrop"
                 initial={{ opacity: 0 }}
@@ -185,7 +187,6 @@ export function CafeLayout({
                 aria-hidden="true"
               />
 
-              {/* Drawer panel */}
               <motion.div
                 key="cafe-drawer"
                 initial={{ x: "100%" }}
@@ -202,7 +203,6 @@ export function CafeLayout({
                 aria-modal="true"
                 aria-label="Navigation menu"
               >
-                {/* Drawer header */}
                 <div className="flex items-center justify-between px-6 h-[72px] border-b border-gray-100/80 shrink-0">
                   <Link
                     href="/cafe"
@@ -220,7 +220,6 @@ export function CafeLayout({
                   </button>
                 </div>
 
-                {/* Nav links */}
                 <nav
                   className="flex-1 px-6 py-6 overflow-y-auto"
                   aria-label="Mobile navigation"
@@ -265,7 +264,6 @@ export function CafeLayout({
                   })}
                 </nav>
 
-                {/* Book CTA */}
                 <motion.div
                   initial={{ opacity: 0, y: 12 }}
                   animate={{ opacity: 1, y: 0 }}
@@ -277,14 +275,13 @@ export function CafeLayout({
                   }}
                   className="p-6 border-t border-gray-100/80 shrink-0"
                 >
-                  <Link
-                    href="/book"
-                    onClick={() => setMobileOpen(false)}
+                  <button
+                    onClick={() => { setMobileOpen(false); openBooking(); }}
                     className="flex items-center justify-center w-full py-3.5 rounded-full text-[13px] font-semibold text-white transition-opacity hover:opacity-85 active:opacity-75"
                     style={{ background: primaryColor }}
                   >
                     Book a Table
-                  </Link>
+                  </button>
                 </motion.div>
               </motion.div>
             </>
@@ -300,7 +297,6 @@ export function CafeLayout({
         <footer style={{ background: primaryColor }} aria-label="Site footer">
           <div className="max-w-7xl mx-auto px-5 sm:px-8 pt-16 pb-10">
 
-            {/* Main 3-column grid */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-12 pb-12 border-b border-white/10">
 
               {/* Col 1 — Brand */}
@@ -327,7 +323,6 @@ export function CafeLayout({
                     {settings.tagline}
                   </p>
                 )}
-                {/* Social icons */}
                 <div className="flex items-center gap-2.5 mt-7">
                   {settings?.instagram_url && (
                     <a
@@ -360,17 +355,21 @@ export function CafeLayout({
                   Explore
                 </p>
                 <nav className="flex flex-col gap-3" aria-label="Footer navigation">
-                  {[...NAV_LINKS, { href: "/book", label: "Book a Table" }].map(
-                    (link) => (
-                      <Link
-                        key={link.href}
-                        href={link.href}
-                        className="text-sm text-white/55 hover:text-white transition-colors tracking-wide w-fit"
-                      >
-                        {link.label}
-                      </Link>
-                    )
-                  )}
+                  {NAV_LINKS.map((link) => (
+                    <Link
+                      key={link.href}
+                      href={link.href}
+                      className="text-sm text-white/55 hover:text-white transition-colors tracking-wide w-fit"
+                    >
+                      {link.label}
+                    </Link>
+                  ))}
+                  <button
+                    onClick={openBooking}
+                    className="text-sm text-white/55 hover:text-white transition-colors tracking-wide w-fit text-left"
+                  >
+                    Book a Table
+                  </button>
                 </nav>
               </div>
 
@@ -382,60 +381,35 @@ export function CafeLayout({
                 <div className="space-y-3.5">
                   {settings?.address && (
                     <div className="flex items-start gap-3">
-                      <MapPin
-                        className="w-3.5 h-3.5 text-white/35 mt-0.5 shrink-0"
-                        aria-hidden="true"
-                      />
-                      <span className="text-sm text-white/60 leading-relaxed">
-                        {settings.address}
-                      </span>
+                      <MapPin className="w-3.5 h-3.5 text-white/35 mt-0.5 shrink-0" aria-hidden="true" />
+                      <span className="text-sm text-white/60 leading-relaxed">{settings.address}</span>
                     </div>
                   )}
                   {settings?.phone && (
-                    <a
-                      href={`tel:${settings.phone}`}
-                      className="flex items-center gap-3 group"
-                    >
-                      <Phone
-                        className="w-3.5 h-3.5 text-white/35 shrink-0"
-                        aria-hidden="true"
-                      />
+                    <a href={`tel:${settings.phone}`} className="flex items-center gap-3 group">
+                      <Phone className="w-3.5 h-3.5 text-white/35 shrink-0" aria-hidden="true" />
                       <span className="text-sm text-white/60 group-hover:text-white transition-colors">
                         {settings.phone}
                       </span>
                     </a>
                   )}
                   {settings?.email && (
-                    <a
-                      href={`mailto:${settings.email}`}
-                      className="flex items-center gap-3 group"
-                    >
-                      <Mail
-                        className="w-3.5 h-3.5 text-white/35 shrink-0"
-                        aria-hidden="true"
-                      />
+                    <a href={`mailto:${settings.email}`} className="flex items-center gap-3 group">
+                      <Mail className="w-3.5 h-3.5 text-white/35 shrink-0" aria-hidden="true" />
                       <span className="text-sm text-white/60 group-hover:text-white transition-colors">
                         {settings.email}
                       </span>
                     </a>
                   )}
-                  {/* Today's hours */}
                   {Array.isArray(settings?.opening_hours) &&
                     settings!.opening_hours.length > 0 &&
                     (() => {
-                      const today = new Date().toLocaleDateString("en-US", {
-                        weekday: "long",
-                      });
-                      const todayEntry = settings!.opening_hours.find(
-                        (h) => h.day === today
-                      );
+                      const today = new Date().toLocaleDateString("en-US", { weekday: "long" });
+                      const todayEntry = settings!.opening_hours.find((h) => h.day === today);
                       if (!todayEntry) return null;
                       return (
                         <div className="flex items-center gap-3">
-                          <Clock
-                            className="w-3.5 h-3.5 text-white/35 shrink-0"
-                            aria-hidden="true"
-                          />
+                          <Clock className="w-3.5 h-3.5 text-white/35 shrink-0" aria-hidden="true" />
                           <span className="text-sm text-white/60">
                             Today:{" "}
                             {todayEntry.closed
@@ -449,7 +423,6 @@ export function CafeLayout({
               </div>
             </div>
 
-            {/* Bottom bar */}
             <div className="pt-8 flex flex-col sm:flex-row items-center justify-between gap-3">
               <p className="text-xs text-white/25">
                 © {new Date().getFullYear()} {displayName}. All rights reserved.
@@ -467,7 +440,18 @@ export function CafeLayout({
             </div>
           </div>
         </footer>
+
+        {/* ── BOOKING MODAL ────────────────────────────────────── */}
+        <BookingModal />
       </div>
     </SmoothScrollProvider>
+  );
+}
+
+export function CafeLayout(props: CafeLayoutProps) {
+  return (
+    <BookingModalProvider>
+      <CafeLayoutInner {...props} />
+    </BookingModalProvider>
   );
 }
