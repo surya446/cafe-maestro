@@ -482,11 +482,17 @@ function ActiveSession({
               return old.filter((i) => i.id !== (payload.old as { id: string }).id);
             }
             if (payload.eventType === "INSERT") {
-              return [...old, payload.new as MenuItem];
+              const inserted = payload.new as MenuItem;
+              if (inserted.is_archived) return old;
+              return [...old, inserted];
             }
             if (payload.eventType === "UPDATE") {
+              const updated = payload.new as MenuItem;
+              if (updated.is_archived) {
+                return old.filter((i) => i.id !== updated.id);
+              }
               return old.map((i) =>
-                i.id === (payload.new as MenuItem).id ? { ...i, ...(payload.new as MenuItem) } : i
+                i.id === updated.id ? { ...i, ...updated } : i
               );
             }
             return old;
@@ -508,7 +514,7 @@ function ActiveSession({
 
   const unavailableInCart = useMemo(() => {
     const unavailableIds = new Set(
-      menuItems.filter((m) => !m.is_available).map((m) => m.id)
+      menuItems.filter((m) => !m.is_available || m.is_archived).map((m) => m.id)
     );
     const result = new Set<string>();
     for (const [id] of cart) {
