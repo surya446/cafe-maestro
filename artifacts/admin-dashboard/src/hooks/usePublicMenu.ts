@@ -35,6 +35,7 @@ export function usePublicMenu(cafeId: string | null | undefined) {
           .from("menu_items")
           .select("*")
           .eq("cafe_id", cafeId)
+          .eq("is_archived", false)
           .order("position"),
       ]);
 

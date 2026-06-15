@@ -66,6 +66,7 @@ export interface MenuItem {
   price: number;
   image_url: string | null;
   is_available: boolean;
+  is_archived: boolean;
   prep_time_min: number | null;
   position: number;
   tags: string[];

@@ -5,6 +5,8 @@ import { useAuth } from "./useAuth";
 
 const CATEGORIES_KEY = (cafeId: string) => ["menu-categories", cafeId];
 const ITEMS_KEY = (cafeId: string) => ["menu-items", cafeId];
+const ARCHIVED_ITEMS_KEY = (cafeId: string) => ["menu-items-archived", cafeId];
+const ORDER_HISTORY_KEY = (cafeId: string) => ["menu-item-order-history", cafeId];
 
 export function useMenuCategories() {
   const { user } = useAuth();
@@ -36,11 +38,52 @@ export function useMenuItems() {
         .from("menu_items")
         .select("*, menu_categories(id, name)")
         .eq("cafe_id", user.cafeId)
+        .eq("is_archived", false)
         .order("position");
       if (error) throw error;
       return data ?? [];
     },
     enabled: !!user,
+  });
+}
+
+export function useArchivedMenuItems() {
+  const { user } = useAuth();
+
+  return useQuery({
+    queryKey: ARCHIVED_ITEMS_KEY(user?.cafeId ?? ""),
+    queryFn: async (): Promise<MenuItem[]> => {
+      if (!user) return [];
+      const { data, error } = await supabase
+        .from("menu_items")
+        .select("*, menu_categories(id, name)")
+        .eq("cafe_id", user.cafeId)
+        .eq("is_archived", true)
+        .order("updated_at", { ascending: false });
+      if (error) throw error;
+      return data ?? [];
+    },
+    enabled: !!user,
+  });
+}
+
+export function useMenuItemOrderHistory() {
+  const { user } = useAuth();
+
+  return useQuery({
+    queryKey: ORDER_HISTORY_KEY(user?.cafeId ?? ""),
+    queryFn: async (): Promise<string[]> => {
+      if (!user) return [];
+      const { data, error } = await supabase
+        .from("order_items")
+        .select("menu_item_id")
+        .eq("cafe_id", user.cafeId);
+      if (error) throw error;
+      const unique = Array.from(new Set((data ?? []).map((r: { menu_item_id: string }) => r.menu_item_id)));
+      return unique;
+    },
+    enabled: !!user,
+    staleTime: 30_000,
   });
 }
 
@@ -114,7 +157,7 @@ export function useCreateMenuItem() {
 
   return useMutation({
     mutationFn: async (
-      input: Omit<MenuItem, "id" | "cafe_id" | "created_at" | "updated_at" | "menu_categories">
+      input: Omit<MenuItem, "id" | "cafe_id" | "created_at" | "updated_at" | "is_archived" | "menu_categories">
     ) => {
       if (!user) throw new Error("Not authenticated");
       const { data, error } = await supabase
@@ -165,6 +208,46 @@ export function useDeleteMenuItem() {
     onError: () => {},
     onSuccess: () =>
       qc.invalidateQueries({ queryKey: ITEMS_KEY(user?.cafeId ?? "") }),
+  });
+}
+
+export function useArchiveMenuItem() {
+  const { user } = useAuth();
+  const qc = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase
+        .from("menu_items")
+        .update({ is_archived: true, is_available: false })
+        .eq("id", id);
+      if (error) throw error;
+    },
+    onError: () => {},
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ITEMS_KEY(user?.cafeId ?? "") });
+      qc.invalidateQueries({ queryKey: ARCHIVED_ITEMS_KEY(user?.cafeId ?? "") });
+    },
+  });
+}
+
+export function useRestoreMenuItem() {
+  const { user } = useAuth();
+  const qc = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase
+        .from("menu_items")
+        .update({ is_archived: false })
+        .eq("id", id);
+      if (error) throw error;
+    },
+    onError: () => {},
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ITEMS_KEY(user?.cafeId ?? "") });
+      qc.invalidateQueries({ queryKey: ARCHIVED_ITEMS_KEY(user?.cafeId ?? "") });
+    },
   });
 }
 

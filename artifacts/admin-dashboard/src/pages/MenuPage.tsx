@@ -3,6 +3,8 @@ import {
   Plus,
   Pencil,
   Trash2,
+  Archive,
+  ArchiveRestore,
   UtensilsCrossed,
   GripVertical,
   Eye,
@@ -34,7 +36,21 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { useMenuCategories, useMenuItems, useCreateCategory, useUpdateCategory, useDeleteCategory, useCreateMenuItem, useUpdateMenuItem, useDeleteMenuItem, useToggleItemAvailability } from "@/hooks/useMenu";
+import {
+  useMenuCategories,
+  useMenuItems,
+  useArchivedMenuItems,
+  useMenuItemOrderHistory,
+  useCreateCategory,
+  useUpdateCategory,
+  useDeleteCategory,
+  useCreateMenuItem,
+  useUpdateMenuItem,
+  useDeleteMenuItem,
+  useArchiveMenuItem,
+  useRestoreMenuItem,
+  useToggleItemAvailability,
+} from "@/hooks/useMenu";
 import { MenuCategory, MenuItem } from "@/types";
 import { formatCurrency } from "@/lib/utils";
 import { cn } from "@/lib/utils";
@@ -117,7 +133,7 @@ function ItemForm({
 }: {
   initial?: Partial<MenuItem>;
   categories: MenuCategory[];
-  onSubmit: (data: Omit<MenuItem, "id" | "cafe_id" | "created_at" | "updated_at" | "menu_categories">) => void;
+  onSubmit: (data: Omit<MenuItem, "id" | "cafe_id" | "created_at" | "updated_at" | "is_archived" | "menu_categories">) => void;
   onCancel: () => void;
   loading: boolean;
 }) {
@@ -246,23 +262,32 @@ function ItemForm({
 /* ─── Main page ──────────────────────────────────────────────────────────── */
 export function MenuPage() {
   const { toast } = useToast();
+
   const { data: categories = [], isLoading: catLoading } = useMenuCategories();
   const { data: items = [], isLoading: itemsLoading } = useMenuItems();
+  const { data: archivedItems = [], isLoading: archivedLoading } = useArchivedMenuItems();
+  const { data: orderHistoryIds = [] } = useMenuItemOrderHistory();
+  const orderHistory = new Set(orderHistoryIds);
+
   const createCat = useCreateCategory();
   const updateCat = useUpdateCategory();
   const deleteCat = useDeleteCategory();
   const createItem = useCreateMenuItem();
   const updateItem = useUpdateMenuItem();
   const deleteItem = useDeleteMenuItem();
+  const archiveItem = useArchiveMenuItem();
+  const restoreItem = useRestoreMenuItem();
   const toggleAvail = useToggleItemAvailability();
 
-  const [tab, setTab] = useState<"items" | "categories">("items");
+  const [tab, setTab] = useState<"items" | "categories" | "archived">("items");
   const [catDialog, setCatDialog] = useState(false);
   const [itemDialog, setItemDialog] = useState(false);
   const [editCat, setEditCat] = useState<MenuCategory | null>(null);
   const [editItem, setEditItem] = useState<MenuItem | null>(null);
   const [deleteCatId, setDeleteCatId] = useState<string | null>(null);
   const [deleteItemId, setDeleteItemId] = useState<string | null>(null);
+  const [archiveItemId, setArchiveItemId] = useState<string | null>(null);
+  const [restoreItemId, setRestoreItemId] = useState<string | null>(null);
   const [filterCat, setFilterCat] = useState<string>("all");
 
   const filteredItems =
@@ -277,34 +302,43 @@ export function MenuPage() {
       <div className="p-8 max-w-5xl mx-auto">
         <PageHeader
           title="Menu"
-          subtitle={`${items.length} items across ${categories.length} categories`}
+          subtitle={`${items.length} item${items.length !== 1 ? "s" : ""} across ${categories.length} categor${categories.length !== 1 ? "ies" : "y"}${archivedItems.length > 0 ? ` · ${archivedItems.length} archived` : ""}`}
           actions={
-            <Button
-              onClick={() => {
-                if (tab === "categories") {
-                  setEditCat(null);
-                  setCatDialog(true);
-                } else {
-                  setEditItem(null);
-                  setItemDialog(true);
-                }
-              }}
-            >
-              <Plus className="w-4 h-4 mr-1.5" />
-              {tab === "categories" ? "Add category" : "Add item"}
-            </Button>
+            tab !== "archived" ? (
+              <Button
+                onClick={() => {
+                  if (tab === "categories") {
+                    setEditCat(null);
+                    setCatDialog(true);
+                  } else {
+                    setEditItem(null);
+                    setItemDialog(true);
+                  }
+                }}
+              >
+                <Plus className="w-4 h-4 mr-1.5" />
+                {tab === "categories" ? "Add category" : "Add item"}
+              </Button>
+            ) : undefined
           }
         />
 
-        <Tabs value={tab} onValueChange={(v) => setTab(v as "items" | "categories")}>
+        <Tabs value={tab} onValueChange={(v) => setTab(v as "items" | "categories" | "archived")}>
           <TabsList className="mb-6">
             <TabsTrigger value="items">Menu Items</TabsTrigger>
             <TabsTrigger value="categories">Categories</TabsTrigger>
+            <TabsTrigger value="archived">
+              Archived
+              {archivedItems.length > 0 && (
+                <span className="ml-1.5 px-1.5 py-0.5 rounded-full text-xs bg-muted text-muted-foreground">
+                  {archivedItems.length}
+                </span>
+              )}
+            </TabsTrigger>
           </TabsList>
 
           {/* Items tab */}
           <TabsContent value="items">
-            {/* Category filter */}
             {categories.length > 0 && (
               <div className="flex gap-2 mb-4 flex-wrap">
                 <button
@@ -371,68 +405,83 @@ export function MenuPage() {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-border">
-                    {filteredItems.map((item) => (
-                      <tr key={item.id} className="hover:bg-muted/30 transition-colors">
-                        <td className="px-4 py-3">
-                          <div className="flex items-center gap-3">
-                            {item.image_url ? (
-                              <img
-                                src={item.image_url}
-                                alt={item.name}
-                                className="w-9 h-9 rounded-lg object-cover bg-muted shrink-0"
-                              />
-                            ) : (
-                              <div className="w-9 h-9 rounded-lg bg-muted flex items-center justify-center shrink-0">
-                                <UtensilsCrossed className="w-4 h-4 text-muted-foreground" />
-                              </div>
-                            )}
-                            <div>
-                              <p className="font-medium text-foreground">
-                                {item.name}
-                              </p>
-                              {item.description && (
-                                <p className="text-xs text-muted-foreground truncate max-w-xs">
-                                  {item.description}
+                    {filteredItems.map((item) => {
+                      const hasOrders = orderHistory.has(item.id);
+                      return (
+                        <tr key={item.id} className="hover:bg-muted/30 transition-colors">
+                          <td className="px-4 py-3">
+                            <div className="flex items-center gap-3">
+                              {item.image_url ? (
+                                <img
+                                  src={item.image_url}
+                                  alt={item.name}
+                                  className="w-9 h-9 rounded-lg object-cover bg-muted shrink-0"
+                                />
+                              ) : (
+                                <div className="w-9 h-9 rounded-lg bg-muted flex items-center justify-center shrink-0">
+                                  <UtensilsCrossed className="w-4 h-4 text-muted-foreground" />
+                                </div>
+                              )}
+                              <div>
+                                <p className="font-medium text-foreground">
+                                  {item.name}
                                 </p>
+                                {item.description && (
+                                  <p className="text-xs text-muted-foreground truncate max-w-xs">
+                                    {item.description}
+                                  </p>
+                                )}
+                              </div>
+                            </div>
+                          </td>
+                          <td className="px-4 py-3 text-muted-foreground">
+                            {item.menu_categories?.name ?? "—"}
+                          </td>
+                          <td className="px-4 py-3 text-right font-semibold text-foreground">
+                            {formatCurrency(item.price)}
+                          </td>
+                          <td className="px-4 py-3 text-center">
+                            <Switch
+                              checked={item.is_available}
+                              onCheckedChange={(v) =>
+                                toggleAvail.mutate({ id: item.id, is_available: v })
+                              }
+                            />
+                          </td>
+                          <td className="px-4 py-3">
+                            <div className="flex items-center justify-end gap-1">
+                              <button
+                                onClick={() => {
+                                  setEditItem(item);
+                                  setItemDialog(true);
+                                }}
+                                className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+                                title="Edit"
+                              >
+                                <Pencil className="w-3.5 h-3.5" />
+                              </button>
+                              {hasOrders ? (
+                                <button
+                                  onClick={() => setArchiveItemId(item.id)}
+                                  className="p-1.5 rounded-lg text-muted-foreground hover:text-amber-600 hover:bg-amber-50 transition-colors"
+                                  title="Archive (item has order history)"
+                                >
+                                  <Archive className="w-3.5 h-3.5" />
+                                </button>
+                              ) : (
+                                <button
+                                  onClick={() => setDeleteItemId(item.id)}
+                                  className="p-1.5 rounded-lg text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors"
+                                  title="Delete"
+                                >
+                                  <Trash2 className="w-3.5 h-3.5" />
+                                </button>
                               )}
                             </div>
-                          </div>
-                        </td>
-                        <td className="px-4 py-3 text-muted-foreground">
-                          {item.menu_categories?.name ?? "—"}
-                        </td>
-                        <td className="px-4 py-3 text-right font-semibold text-foreground">
-                          {formatCurrency(item.price)}
-                        </td>
-                        <td className="px-4 py-3 text-center">
-                          <Switch
-                            checked={item.is_available}
-                            onCheckedChange={(v) =>
-                              toggleAvail.mutate({ id: item.id, is_available: v })
-                            }
-                          />
-                        </td>
-                        <td className="px-4 py-3">
-                          <div className="flex items-center justify-end gap-1">
-                            <button
-                              onClick={() => {
-                                setEditItem(item);
-                                setItemDialog(true);
-                              }}
-                              className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
-                            >
-                              <Pencil className="w-3.5 h-3.5" />
-                            </button>
-                            <button
-                              onClick={() => setDeleteItemId(item.id)}
-                              className="p-1.5 rounded-lg text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors"
-                            >
-                              <Trash2 className="w-3.5 h-3.5" />
-                            </button>
-                          </div>
-                        </td>
-                      </tr>
-                    ))}
+                          </td>
+                        </tr>
+                      );
+                    })}
                   </tbody>
                 </table>
               </div>
@@ -503,6 +552,84 @@ export function MenuPage() {
                     </div>
                   );
                 })}
+              </div>
+            )}
+          </TabsContent>
+
+          {/* Archived tab */}
+          <TabsContent value="archived">
+            {archivedLoading ? (
+              <div className="space-y-2">
+                {Array.from({ length: 3 }).map((_, i) => (
+                  <div key={i} className="h-16 bg-muted rounded-xl animate-pulse" />
+                ))}
+              </div>
+            ) : archivedItems.length === 0 ? (
+              <EmptyState
+                icon={Archive}
+                title="No archived items"
+                description="Items with order history that you remove will appear here."
+              />
+            ) : (
+              <div className="bg-card border border-card-border rounded-xl overflow-hidden shadow-sm">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b border-border bg-muted/40">
+                      <th className="text-left px-4 py-3 text-xs font-medium text-muted-foreground uppercase tracking-wide">Item</th>
+                      <th className="text-left px-4 py-3 text-xs font-medium text-muted-foreground uppercase tracking-wide">Category</th>
+                      <th className="text-right px-4 py-3 text-xs font-medium text-muted-foreground uppercase tracking-wide">Price</th>
+                      <th className="px-4 py-3" />
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-border">
+                    {archivedItems.map((item) => (
+                      <tr key={item.id} className="hover:bg-muted/30 transition-colors opacity-70">
+                        <td className="px-4 py-3">
+                          <div className="flex items-center gap-3">
+                            {item.image_url ? (
+                              <img
+                                src={item.image_url}
+                                alt={item.name}
+                                className="w-9 h-9 rounded-lg object-cover bg-muted shrink-0 grayscale"
+                              />
+                            ) : (
+                              <div className="w-9 h-9 rounded-lg bg-muted flex items-center justify-center shrink-0">
+                                <UtensilsCrossed className="w-4 h-4 text-muted-foreground" />
+                              </div>
+                            )}
+                            <div>
+                              <p className="font-medium text-foreground line-through decoration-muted-foreground/50">
+                                {item.name}
+                              </p>
+                              {item.description && (
+                                <p className="text-xs text-muted-foreground truncate max-w-xs">
+                                  {item.description}
+                                </p>
+                              )}
+                            </div>
+                          </div>
+                        </td>
+                        <td className="px-4 py-3 text-muted-foreground">
+                          {item.menu_categories?.name ?? "—"}
+                        </td>
+                        <td className="px-4 py-3 text-right font-semibold text-foreground">
+                          {formatCurrency(item.price)}
+                        </td>
+                        <td className="px-4 py-3">
+                          <div className="flex items-center justify-end gap-1">
+                            <button
+                              onClick={() => setRestoreItemId(item.id)}
+                              className="p-1.5 rounded-lg text-muted-foreground hover:text-green-600 hover:bg-green-50 transition-colors"
+                              title="Restore to menu"
+                            >
+                              <ArchiveRestore className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
               </div>
             )}
           </TabsContent>
@@ -592,7 +719,7 @@ export function MenuPage() {
           open={!!deleteItemId}
           onOpenChange={(o) => !o && setDeleteItemId(null)}
           title="Delete menu item?"
-          description="This will permanently remove the item from your menu."
+          description="This will permanently remove the item from your menu. This cannot be undone."
           confirmLabel="Delete"
           loading={deleteItem.isPending}
           onConfirm={async () => {
@@ -608,10 +735,44 @@ export function MenuPage() {
                 (typeof raw.message === "string" &&
                   raw.message.toLowerCase().includes("order_items"));
               const msg = isLinkedToOrders
-                ? "This item has been ordered before and cannot be deleted. Toggle it unavailable instead to hide it from customers."
+                ? "This item has order history. Use the Archive action instead."
                 : (raw.message ?? "Failed to delete item.");
               toast({ title: "Could not delete item", description: msg, variant: "destructive" });
             }
+          }}
+        />
+
+        {/* Archive item confirm */}
+        <ConfirmDialog
+          open={!!archiveItemId}
+          onOpenChange={(o) => !o && setArchiveItemId(null)}
+          title="Archive menu item?"
+          description="The item will be hidden from customers and marked unavailable. It is preserved in order history and can be restored at any time."
+          confirmLabel="Archive"
+          variant="warning"
+          loading={archiveItem.isPending}
+          onConfirm={async () => {
+            if (!archiveItemId) return;
+            await archiveItem.mutateAsync(archiveItemId);
+            setArchiveItemId(null);
+            toast({ title: "Item archived", description: "The item is now hidden from customers." });
+          }}
+        />
+
+        {/* Restore item confirm */}
+        <ConfirmDialog
+          open={!!restoreItemId}
+          onOpenChange={(o) => !o && setRestoreItemId(null)}
+          title="Restore menu item?"
+          description="The item will become visible in your menu again. You can toggle its availability after restoring."
+          confirmLabel="Restore"
+          variant="warning"
+          loading={restoreItem.isPending}
+          onConfirm={async () => {
+            if (!restoreItemId) return;
+            await restoreItem.mutateAsync(restoreItemId);
+            setRestoreItemId(null);
+            toast({ title: "Item restored", description: "The item is back on your active menu." });
           }}
         />
       </div>
