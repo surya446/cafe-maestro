@@ -5,6 +5,7 @@ import { CafeLayout } from "@/components/layout/CafeLayout";
 import { usePublicCafe } from "@/hooks/usePublicBooking";
 import { usePublicWebsiteSettings } from "@/hooks/usePublicWebsiteSettings";
 import { usePublicMenu } from "@/hooks/usePublicMenu";
+import { useBookingModal } from "@/contexts/BookingModalContext";
 import { cn } from "@/lib/utils";
 
 function PriceBadge({ price, color }: { price: number; color: string }) {
@@ -19,6 +20,7 @@ export function CafeMenuPage() {
   const { data: cafe, isLoading: cafeLoading } = usePublicCafe();
   const { data: settings, isLoading: settingsLoading } = usePublicWebsiteSettings(cafe?.id);
   const { data: menu, isLoading: menuLoading } = usePublicMenu(cafe?.id);
+  const { openBooking } = useBookingModal();
 
   const sectionRefs = useRef<Record<string, HTMLElement | null>>({});
 
@@ -234,14 +236,13 @@ export function CafeMenuPage() {
             <p className="text-gray-500 text-sm mt-1 mb-5">
               Reserve your table and we'll have it ready for you.
             </p>
-            <Link href="/book">
-              <a
-                className="inline-flex items-center gap-2 px-6 py-3 rounded-full text-sm font-semibold text-white transition-opacity hover:opacity-90"
-                style={{ background: primaryColor }}
-              >
-                Book a Table
-              </a>
-            </Link>
+            <button
+              onClick={openBooking}
+              className="inline-flex items-center gap-2 px-6 py-3 rounded-full text-sm font-semibold text-white transition-opacity hover:opacity-90"
+              style={{ background: primaryColor }}
+            >
+              Book a Table
+            </button>
           </div>
         </div>
       )}
