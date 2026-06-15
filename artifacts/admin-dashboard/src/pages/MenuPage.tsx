@@ -602,8 +602,14 @@ export function MenuPage() {
               setDeleteItemId(null);
             } catch (err) {
               setDeleteItemId(null);
-              const msg =
-                err instanceof Error ? err.message : "Failed to delete item. It may be linked to existing orders.";
+              const raw = (err as { message?: string; code?: string }) ?? {};
+              const isLinkedToOrders =
+                raw.code === "23503" ||
+                (typeof raw.message === "string" &&
+                  raw.message.toLowerCase().includes("order_items"));
+              const msg = isLinkedToOrders
+                ? "This item has been ordered before and cannot be deleted. Toggle it unavailable instead to hide it from customers."
+                : (raw.message ?? "Failed to delete item.");
               toast({ title: "Could not delete item", description: msg, variant: "destructive" });
             }
           }}
