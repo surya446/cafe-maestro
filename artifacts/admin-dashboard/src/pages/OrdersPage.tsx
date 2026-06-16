@@ -24,6 +24,7 @@ import {
   RotateCcw,
   DollarSign,
   BellRing,
+  Plus,
 } from "lucide-react";
 import QRCode from "react-qr-code";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -36,7 +37,10 @@ import { useOrders, StaffOrder, OrderStatus } from "@/hooks/useOrders";
 import { useTableSessions, CafeTable } from "@/hooks/useTableSessions";
 import { useTableGroups, TableOverview, SessionInGroup } from "@/hooks/useTableGroups";
 import { useBillRequests, BillRequest } from "@/hooks/useBillRequests";
+import { useTableManagement } from "@/hooks/useTableManagement";
+import { TableFormDialog, TableFormState } from "@/pages/TablesPage";
 import { useAuth } from "@/hooks/useAuth";
+import { useToast } from "@/hooks/use-toast";
 import { formatCurrency } from "@/lib/utils";
 import { cn } from "@/lib/utils";
 
@@ -605,6 +609,45 @@ function TablesTab() {
     endingSessionId,
   } = useTableGroups();
 
+  const { createTable, isCreating, nextNumber } = useTableManagement();
+  const { user } = useAuth();
+  const { toast } = useToast();
+  const canManage = user?.role === "owner" || user?.role === "manager";
+  const [addOpen, setAddOpen] = useState(false);
+
+  const emptyForm: TableFormState = {
+    name: "",
+    number: String(nextNumber),
+    capacity: "4",
+    section: "",
+    displayOrder: String(nextNumber),
+  };
+
+  async function handleCreate(form: TableFormState) {
+    const num = parseInt(form.number) || nextNumber;
+    try {
+      await createTable({
+        name:         form.name,
+        number:       num,
+        capacity:     parseInt(form.capacity) || 4,
+        section:      form.section || undefined,
+        displayOrder: parseInt(form.displayOrder) || num,
+      });
+      setAddOpen(false);
+      toast({ title: "Table added", description: `${form.name} is ready with a QR code.` });
+    } catch (err: any) {
+      const msg = err?.message ?? "Failed to create table";
+      const isUnique = msg.includes("unique") || msg.includes("duplicate");
+      toast({
+        title: "Could not add table",
+        description: isUnique
+          ? `Table number ${num} is already taken. Choose a different number.`
+          : msg,
+        variant: "destructive",
+      });
+    }
+  }
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center py-16">
@@ -613,31 +656,61 @@ function TablesTab() {
     );
   }
 
-  if (tableOverview.length === 0) {
-    return (
-      <EmptyState
-        icon={TableProperties}
-        title="No active tables"
-        description="Tables appear here when guests scan a QR code and enter their name."
-      />
-    );
-  }
-
   return (
     <div className="space-y-4">
-      {tableOverview.map((table) => (
-        <TableCard
-          key={table.groupId}
-          table={table}
-          onEndSession={endSession}
-          isEndingSession={isEndingSession}
-          endingSessionId={endingSessionId}
-          onRequestBill={staffRequestBill}
-          isRequestingBill={isRequestingBill && requestingBillTableId === table.tableId}
-          onClearTable={clearTable}
-          isClearingTable={isClearingTable && clearingTableId === table.tableId}
+      {/* Header row with Add table button */}
+      {canManage && (
+        <div className="flex items-center justify-end">
+          <Button size="sm" onClick={() => setAddOpen(true)}>
+            <Plus className="h-4 w-4 mr-2" />
+            Add table
+          </Button>
+        </div>
+      )}
+
+      {tableOverview.length === 0 ? (
+        <EmptyState
+          icon={TableProperties}
+          title="No active tables"
+          description={
+            canManage
+              ? "Add a table to generate a QR code, then guests can scan to start a session."
+              : "Tables appear here when guests scan a QR code and enter their name."
+          }
+          action={
+            canManage ? (
+              <Button size="sm" onClick={() => setAddOpen(true)}>
+                <Plus className="h-4 w-4 mr-2" />
+                Add table
+              </Button>
+            ) : undefined
+          }
         />
-      ))}
+      ) : (
+        tableOverview.map((table) => (
+          <TableCard
+            key={table.groupId}
+            table={table}
+            onEndSession={endSession}
+            isEndingSession={isEndingSession}
+            endingSessionId={endingSessionId}
+            onRequestBill={staffRequestBill}
+            isRequestingBill={isRequestingBill && requestingBillTableId === table.tableId}
+            onClearTable={clearTable}
+            isClearingTable={isClearingTable && clearingTableId === table.tableId}
+          />
+        ))
+      )}
+
+      <TableFormDialog
+        open={addOpen}
+        onOpenChange={setAddOpen}
+        title="Add table"
+        initial={emptyForm}
+        onSubmit={handleCreate}
+        isSaving={isCreating}
+        autoNumber={nextNumber}
+      />
     </div>
   );
 }

@@ -61,7 +61,7 @@ function qrUrl(token: string | null): string | null {
 
 // ─── Add / Edit Dialog ────────────────────────────────────────────────────────
 
-interface TableFormState {
+export interface TableFormState {
   name: string;
   number: string;
   capacity: string;
@@ -69,7 +69,7 @@ interface TableFormState {
   displayOrder: string;
 }
 
-function TableFormDialog({
+export function TableFormDialog({
   open,
   onOpenChange,
   title,
