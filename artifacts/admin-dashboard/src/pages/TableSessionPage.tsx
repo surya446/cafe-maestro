@@ -156,7 +156,12 @@ function SkeletonCard() {
 }
 
 // ─── Terminal state screen ───────────────────────────────────────────────────────
-function QRSessionScreen({ icon, title, body }: { icon: React.ReactNode; title: string; body: string }) {
+function QRSessionScreen({
+  icon, title, body, onReset, resetLabel,
+}: {
+  icon: React.ReactNode; title: string; body: string;
+  onReset?: () => void; resetLabel?: string;
+}) {
   return (
     <div className="min-h-screen flex flex-col items-center justify-center px-8 text-center" style={{ background: C.bg }}>
       <motion.div
@@ -169,6 +174,16 @@ function QRSessionScreen({ icon, title, body }: { icon: React.ReactNode; title: 
         <h1 className="text-3xl font-light mb-3" style={{ color: C.text, ...SERIF }}>{title}</h1>
         <div className="w-6 h-px mx-auto mb-4" style={{ background: C.goldBorder }} />
         <p className="text-sm leading-relaxed max-w-xs" style={{ color: C.text2, ...SANS }}>{body}</p>
+        {onReset && (
+          <motion.button
+            whileTap={{ scale: 0.96 }}
+            onClick={onReset}
+            className="mt-8 px-6 py-3 rounded-full text-sm font-semibold"
+            style={{ background: C.goldDim, color: C.gold, border: `1px solid ${C.goldBorder}`, ...SANS }}
+          >
+            {resetLabel ?? "Start new session"}
+          </motion.button>
+        )}
       </motion.div>
     </div>
   );
@@ -1076,6 +1091,7 @@ export function TableSessionPage() {
   const {
     sessionState, sessionInfo, orders, billRequested,
     nameEntryError, isStartingSession, startSession,
+    resetToNameEntry,
     placeOrder, requestBill,
     isPlacingOrder, isRequestingBill, placeOrderError, requestBillError,
   } = useTableSession(token ?? "");
@@ -1123,6 +1139,8 @@ export function TableSessionPage() {
         icon={<Clock className="w-14 h-14" style={{ color: C.text }} />}
         title="Session expired"
         body="Your session has timed out. Scan the QR code on your table to start again."
+        onReset={resetToNameEntry}
+        resetLabel="Start new session"
       />
     );
   }
@@ -1133,6 +1151,8 @@ export function TableSessionPage() {
         icon={<CheckCircle2 className="w-14 h-14" style={{ color: C.text }} />}
         title="All done"
         body="Your session has ended. We hope you enjoyed your visit."
+        onReset={resetToNameEntry}
+        resetLabel="Start new session"
       />
     );
   }

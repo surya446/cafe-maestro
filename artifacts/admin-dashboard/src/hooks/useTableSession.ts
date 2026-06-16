@@ -53,35 +53,54 @@ export interface CartItem {
 
 // ─── localStorage helpers ──────────────────────────────────────────────────────
 //
-// localStorage is used so the session survives browser closure and reopening.
-// On page load the stored device token is validated against the server:
-//   • Valid + not expired  → session resumes silently (no name re-entry)
-//   • Expired / ended      → storage is cleared → name-entry screen shown
+// localStorage persists across browser closure so active sessions resume silently.
 //
-// The stored record is cleared immediately whenever a session ends, expires, or
-// is cleared by staff so that a fresh name-entry always follows on next visit.
+// TERMINATION STRATEGY
+// When a session ends or expires we do NOT clear the stored record. Instead we
+// write a `terminated` marker alongside the deviceToken so that on the next
+// page load we can:
+//   1. Confirm the terminal state with the server (backend is source of truth).
+//   2. Show the correct ended/expired screen instead of the name-entry screen.
+//
+// This prevents the regression where clearing storage on session end causes a
+// refresh to fall through to name-entry, allowing a customer to bypass a
+// staff-forced session termination by simply re-entering their name.
+//
+// KEY DESIGN
+// Storage key = `cafe_session_${qrToken}` (one record per QR code / URL).
+// This means:
+//   • Different QR tokens (different tables or regenerated codes) → separate keys.
+//   • Same QR token on a new day → same key; the terminated marker persists until
+//     the customer explicitly taps "Start new session" on the terminal screen.
+//
+// RESETTING
+// The only way to clear a terminated marker and reach name-entry is via
+// `resetToNameEntry()`, which is exposed from the hook and wired to a button on
+// the ended/expired screen. This gives customers a conscious exit path while
+// preventing accidental or malicious refresh-to-rejoin.
 
-interface StoredDevice {
+interface StoredSession {
   deviceToken: string;
   sessionId: string;
   customerName: string;
+  terminated?: "ended" | "expired"; // present when session was terminated
 }
 
 function storageKey(qrToken: string) {
   return `cafe_session_${qrToken}`;
 }
 
-function loadStored(qrToken: string): StoredDevice | null {
+function loadStored(qrToken: string): StoredSession | null {
   try {
     const raw = localStorage.getItem(storageKey(qrToken));
     if (!raw) return null;
-    const parsed = JSON.parse(raw) as Partial<StoredDevice>;
-    // Reject stale entries that are missing required fields.
+    const parsed = JSON.parse(raw) as Partial<StoredSession>;
+    // deviceToken is always required — without it we cannot validate with server.
     if (!parsed.deviceToken || !parsed.sessionId) {
       localStorage.removeItem(storageKey(qrToken));
       return null;
     }
-    return parsed as StoredDevice;
+    return parsed as StoredSession;
   } catch {
     return null;
   }
@@ -93,10 +112,28 @@ function saveStored(
   sessionId: string,
   customerName: string
 ) {
+  // Saves/updates a clean active-session record (no terminated marker).
   localStorage.setItem(
     storageKey(qrToken),
     JSON.stringify({ deviceToken, sessionId, customerName })
   );
+}
+
+// Writes a terminated marker without clearing the deviceToken.
+// The deviceToken is preserved so validate_device() can be called on next load.
+function markTerminated(qrToken: string, status: "ended" | "expired") {
+  try {
+    const raw = localStorage.getItem(storageKey(qrToken));
+    if (raw) {
+      const existing = JSON.parse(raw) as Partial<StoredSession>;
+      localStorage.setItem(
+        storageKey(qrToken),
+        JSON.stringify({ ...existing, terminated: status })
+      );
+    }
+    // If nothing is stored (shouldn't happen mid-session, but be safe), do nothing.
+    // There is no point writing a terminated marker with no deviceToken.
+  } catch { /* ignore */ }
 }
 
 function clearStored(qrToken: string) {
@@ -161,7 +198,7 @@ function mapRpcError(msg: string): string {
   if (msg.includes("CUSTOMER_NAME_REQUIRED"))
     return "Please enter your name to start ordering.";
   if (msg.includes("TABLE_NOT_FOUND"))
-    return "This QR code is no longer active. Please ask your waiter for a new one.";
+    return "This QR code is no longer active. Please ask your server for a new one.";
   if (msg.includes("DEVICE_INVALID"))
     return "Your session has ended. Please scan the QR code again.";
   if (msg.includes("SESSION_INVALID") || msg.includes("SESSION_MISMATCH"))
@@ -189,7 +226,12 @@ export function useTableSession(qrToken: string) {
   const deviceToken = sessionInfo?.deviceToken ?? null;
   const sessionId   = sessionInfo?.sessionId   ?? null;
 
-  // ─── Initialization: validate stored token or show name-entry screen ──────
+  // ─── Initialization ───────────────────────────────────────────────────────
+  //
+  // Priority order:
+  //   1. terminated marker in localStorage → validate with server → terminal screen
+  //   2. active stored session → validate with server → restore or show terminal screen
+  //   3. nothing stored → name-entry screen
 
   useEffect(() => {
     if (!qrToken) {
@@ -202,13 +244,55 @@ export function useTableSession(qrToken: string) {
     async function init() {
       const stored = loadStored(qrToken);
 
-      // Valid stored device token → silently validate against the server and resume.
       if (stored) {
+        // ── Branch A: previously terminated session ───────────────────────
+        // We have a terminated marker. Always call validate_device so the
+        // server — not localStorage — determines what screen to show.
+        if (stored.terminated) {
+          const result = await rpcValidateDevice(stored.deviceToken);
+          if (cancelled) return;
+
+          if (result === null) {
+            // Server has no record for this device (e.g. purged rows).
+            // The session is definitively gone; clear everything and allow
+            // the customer to start a fresh session.
+            clearStored(qrToken);
+            setSessionState("entering_name");
+            return;
+          }
+
+          if (result.is_valid) {
+            // Edge case: session was somehow reactivated after we marked it
+            // terminated (extremely rare). Restore the active session.
+            const info: SessionInfo = {
+              sessionId:    stored.sessionId,
+              deviceToken:  stored.deviceToken,
+              cafeId:       result.cafe_id,
+              cafeName:     result.cafe_name,
+              tableId:      result.table_id,
+              tableNumber:  result.table_number,
+              tableName:    result.table_name ?? null,
+              expiresAt:    result.expires_at,
+              customerName: result.customer_name,
+            };
+            saveStored(qrToken, stored.deviceToken, stored.sessionId, result.customer_name);
+            setSessionInfo(info);
+            setSessionState("active");
+            return;
+          }
+
+          // Server confirms the session is ended or expired.
+          // Keep the terminated marker in storage so further refreshes also
+          // land here and not on the name-entry screen.
+          setSessionState(result.session_status === "ended" ? "ended" : "expired");
+          return;
+        }
+
+        // ── Branch B: active stored session → validate ────────────────────
         const result = await rpcValidateDevice(stored.deviceToken);
         if (cancelled) return;
 
         if (result?.is_valid) {
-          // The server is the source of truth for customer_name.
           const info: SessionInfo = {
             sessionId:    stored.sessionId,
             deviceToken:  stored.deviceToken,
@@ -220,31 +304,20 @@ export function useTableSession(qrToken: string) {
             expiresAt:    result.expires_at,
             customerName: result.customer_name,
           };
-          // Keep localStorage in sync with the authoritative server value.
           saveStored(qrToken, stored.deviceToken, stored.sessionId, result.customer_name);
           setSessionInfo(info);
           setSessionState("active");
           return;
         }
 
-        // Session ended or expired on the server — clear storage immediately
-        // so the next visit (any tab/browser) starts fresh at name-entry.
-        clearStored(qrToken);
-
-        if (result?.session_status === "ended") {
-          setSessionState("ended");
-          return;
-        }
-
-        if (result?.session_status === "expired") {
-          setSessionState("expired");
-          return;
-        }
-
-        // Device record not found or unrecognised status → fall through to name-entry.
+        // Server says invalid: write terminated marker and show terminal screen.
+        const termStatus = result?.session_status === "ended" ? "ended" : "expired";
+        markTerminated(qrToken, termStatus);
+        setSessionState(termStatus);
+        return;
       }
 
-      // No stored device (or just cleared) → show name-entry screen.
+      // ── Branch C: nothing stored → name-entry ─────────────────────────
       setSessionState("entering_name");
     }
 
@@ -253,7 +326,7 @@ export function useTableSession(qrToken: string) {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [qrToken]);
 
-  // ─── Session validity polling (heartbeat + expiry check) ─────────────────
+  // ─── Session validity polling (heartbeat) ─────────────────────────────────
 
   useQuery({
     queryKey: ["validate_device", deviceToken],
@@ -262,15 +335,15 @@ export function useTableSession(qrToken: string) {
       const result = await rpcValidateDevice(deviceToken);
 
       if (!result) {
-        clearStored(qrToken);
+        markTerminated(qrToken, "expired");
         setSessionState("expired");
         return null;
       }
 
       if (!result.is_valid) {
-        // Always clear stored token on any invalid result — the next visit starts fresh.
-        clearStored(qrToken);
-        setSessionState(result.session_status === "ended" ? "ended" : "expired");
+        const termStatus = result.session_status === "ended" ? "ended" : "expired";
+        markTerminated(qrToken, termStatus);
+        setSessionState(termStatus);
       }
 
       return result;
@@ -299,9 +372,11 @@ export function useTableSession(qrToken: string) {
         (payload) => {
           const rec = payload.new as { status?: string };
           if (rec.status === "ended" || rec.status === "expired") {
-            // Always clear localStorage immediately so the next visit starts fresh.
-            clearStored(qrToken);
-            setSessionState(rec.status === "ended" ? "ended" : "expired");
+            const termStatus = rec.status === "ended" ? "ended" : "expired";
+            // Write terminated marker BEFORE updating state so a concurrent
+            // refresh (extremely unlikely but possible) also hits Branch A.
+            markTerminated(qrToken, termStatus);
+            setSessionState(termStatus);
           }
         }
       )
@@ -326,7 +401,7 @@ export function useTableSession(qrToken: string) {
     };
   }, [sessionId, sessionState, qrToken, deviceToken, qc]);
 
-  // ─── Table orders (all sessions on the same physical table) ──────────────
+  // ─── Table orders ─────────────────────────────────────────────────────────
 
   const { data: orders = [], isLoading: ordersLoading } = useQuery<GuestOrder[]>({
     queryKey: ["table_orders", deviceToken],
@@ -352,10 +427,7 @@ export function useTableSession(qrToken: string) {
     refetchIntervalInBackground: false,
   });
 
-  // ─── startSession: called from NameEntryScreen ────────────────────────────
-  // Does NOT change sessionState to "loading" — the form shows its own spinner.
-  // Source of truth for customerName is the server; we persist it to localStorage
-  // so it survives reloads, but validate_device() is always the final authority.
+  // ─── startSession ─────────────────────────────────────────────────────────
 
   const startSession = useCallback(
     async (customerName: string) => {
@@ -390,6 +462,21 @@ export function useTableSession(qrToken: string) {
     },
     [qrToken]
   );
+
+  // ─── resetToNameEntry ─────────────────────────────────────────────────────
+  //
+  // Exposed to the UI so ended/expired screens can offer a "Start new session"
+  // button. This is the only legitimate path back to name-entry after a
+  // session terminates — it requires a conscious user action, preventing
+  // accidental or malicious refresh-to-rejoin.
+
+  const resetToNameEntry = useCallback(() => {
+    clearStored(qrToken);
+    setSessionInfo(null);
+    setNameEntryError(null);
+    setBillRequested(false);
+    setSessionState("entering_name");
+  }, [qrToken]);
 
   // ─── Actions ──────────────────────────────────────────────────────────────
 
@@ -449,6 +536,7 @@ export function useTableSession(qrToken: string) {
     nameEntryError,
     isStartingSession,
     startSession,
+    resetToNameEntry,
     placeOrder,
     requestBill,
     isPlacingOrder:    placeOrderMutation.isPending,
