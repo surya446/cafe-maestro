@@ -1,5 +1,5 @@
 import { useState, useRef } from "react";
-import { Plus, Trash2, Pencil, Images, Upload, Link as LinkIcon } from "lucide-react";
+import { Plus, Trash2, Pencil, Images, Upload, Link as LinkIcon, AlertCircle } from "lucide-react";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { PageHeader } from "@/components/common/PageHeader";
 import { EmptyState } from "@/components/common/EmptyState";
@@ -21,6 +21,7 @@ import {
   useUpdateGalleryImage,
   useDeleteGalleryImage,
   useUploadGalleryImage,
+  GalleryStorageNotConfiguredError,
 } from "@/hooks/useGallery";
 import { GalleryImage } from "@/types";
 
@@ -82,38 +83,64 @@ function AddImageDialog({
   const [caption, setCaption] = useState("");
   const [file, setFile] = useState<File | null>(null);
   const [preview, setPreview] = useState<string | null>(null);
+  const [uploadError, setUploadError] = useState<string | null>(null);
   const uploadMutation = useUploadGalleryImage();
   const fileRef = useRef<HTMLInputElement>(null);
 
   function handleFile(f: File) {
     setFile(f);
     setPreview(URL.createObjectURL(f));
+    setUploadError(null);
+  }
+
+  function handleOpenChange(v: boolean) {
+    if (!v) {
+      setUploadError(null);
+    }
+    onOpenChange(v);
   }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (tab === "url") {
-      onSubmit({ url, storage_path: url, caption: caption.trim() || undefined });
-    } else if (file) {
-      const { publicUrl, path } = await uploadMutation.mutateAsync(file);
-      onSubmit({ url: publicUrl, storage_path: path, caption: caption.trim() || undefined });
+    setUploadError(null);
+    try {
+      if (tab === "url") {
+        await onSubmit({ url, storage_path: url, caption: caption.trim() || undefined });
+      } else if (file) {
+        const { publicUrl, path } = await uploadMutation.mutateAsync(file);
+        await onSubmit({ url: publicUrl, storage_path: path, caption: caption.trim() || undefined });
+      } else {
+        return;
+      }
+      setUrl("");
+      setCaption("");
+      setFile(null);
+      setPreview(null);
+    } catch (err: unknown) {
+      if (err instanceof GalleryStorageNotConfiguredError) {
+        setUploadError("Gallery storage is not configured. Please ask your administrator to run sql/create-storage-buckets.sql in the Supabase SQL Editor.");
+      } else {
+        setUploadError((err as Error)?.message ?? "Upload failed. Please try again.");
+      }
     }
-    setUrl("");
-    setCaption("");
-    setFile(null);
-    setPreview(null);
   }
 
   const isSubmitting = loading || uploadMutation.isPending;
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent>
         <DialogHeader>
           <DialogTitle>Add image</DialogTitle>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
-          <Tabs value={tab} onValueChange={(v) => setTab(v as "url" | "upload")}>
+          {uploadError && (
+            <div className="flex items-start gap-2.5 px-3 py-2.5 rounded-lg bg-destructive/10 border border-destructive/20 text-sm text-destructive">
+              <AlertCircle className="h-4 w-4 shrink-0 mt-0.5" />
+              <span>{uploadError}</span>
+            </div>
+          )}
+          <Tabs value={tab} onValueChange={(v) => { setTab(v as "url" | "upload"); setUploadError(null); }}>
             <TabsList className="w-full">
               <TabsTrigger value="url" className="flex-1 gap-2">
                 <LinkIcon className="w-4 h-4" /> URL
@@ -192,7 +219,7 @@ function AddImageDialog({
             <Button
               variant="outline"
               type="button"
-              onClick={() => onOpenChange(false)}
+              onClick={() => handleOpenChange(false)}
               disabled={isSubmitting}
             >
               Cancel

@@ -108,6 +108,13 @@ export function useDeleteGalleryImage() {
   });
 }
 
+export class GalleryStorageNotConfiguredError extends Error {
+  constructor() {
+    super("Gallery storage is not configured. Run sql/create-storage-buckets.sql in the Supabase SQL Editor.");
+    this.name = "GalleryStorageNotConfiguredError";
+  }
+}
+
 export function useUploadGalleryImage() {
   const { user } = useAuth();
 
@@ -119,7 +126,17 @@ export function useUploadGalleryImage() {
       const { error: uploadError } = await supabase.storage
         .from("gallery")
         .upload(path, file, { upsert: false });
-      if (uploadError) throw uploadError;
+      if (uploadError) {
+        const msg = uploadError.message?.toLowerCase() ?? "";
+        if (
+          msg.includes("bucket not found") ||
+          msg.includes("does not exist") ||
+          (uploadError as any).statusCode === "404"
+        ) {
+          throw new GalleryStorageNotConfiguredError();
+        }
+        throw uploadError;
+      }
 
       const { data } = supabase.storage.from("gallery").getPublicUrl(path);
       return { publicUrl: data.publicUrl, path };
