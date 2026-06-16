@@ -27,6 +27,7 @@ import { CafeReviewsPage } from "@/pages/CafeReviewsPage";
 import { CafeAboutPage } from "@/pages/CafeAboutPage";
 import { CafeContactPage } from "@/pages/CafeContactPage";
 import { ChangePasswordPage } from "@/pages/ChangePasswordPage";
+import { TablesPage } from "@/pages/TablesPage";
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth();
@@ -96,6 +97,11 @@ function Router() {
       <Route path="/bookings">
         <ProtectedRoute>
           <BookingsPage />
+        </ProtectedRoute>
+      </Route>
+      <Route path="/tables">
+        <ProtectedRoute>
+          <TablesPage />
         </ProtectedRoute>
       </Route>
       <Route path="/staff">

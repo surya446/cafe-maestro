@@ -16,6 +16,7 @@ import {
   ClipboardList,
   ChevronLeft,
   X,
+  TableProperties,
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 
@@ -29,6 +30,7 @@ interface NavItem {
 const NAV_ITEMS: NavItem[] = [
   { href: "/", label: "Dashboard", icon: LayoutDashboard },
   { href: "/orders", label: "Orders", icon: ClipboardList },
+  { href: "/tables", label: "Tables", icon: TableProperties },
   { href: "/menu", label: "Menu", icon: UtensilsCrossed },
   { href: "/gallery", label: "Gallery", icon: Images },
   { href: "/offers", label: "Offers", icon: Tag },
