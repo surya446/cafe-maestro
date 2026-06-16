@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect, useRef, useCallback } from "react";
-import { useParams } from "wouter";
+import { useParams, useLocation } from "wouter";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { motion, AnimatePresence } from "framer-motion";
 import {
@@ -11,6 +11,7 @@ import { supabase } from "@/lib/supabase";
 import {
   useTableSession, GuestOrder, CartItem, SessionInfo,
 } from "@/hooks/useTableSession";
+import { QRScannerModal } from "@/components/QRScannerModal";
 
 // ─── Design tokens ─────────────────────────────────────────────────────────────
 const C = {
@@ -157,10 +158,10 @@ function SkeletonCard() {
 
 // ─── Terminal state screen ───────────────────────────────────────────────────────
 function QRSessionScreen({
-  icon, title, body, onReset, resetLabel,
+  icon, title, body, onScan,
 }: {
   icon: React.ReactNode; title: string; body: string;
-  onReset?: () => void; resetLabel?: string;
+  onScan?: () => void;
 }) {
   return (
     <div className="min-h-screen flex flex-col items-center justify-center px-8 text-center" style={{ background: C.bg }}>
@@ -174,14 +175,15 @@ function QRSessionScreen({
         <h1 className="text-3xl font-light mb-3" style={{ color: C.text, ...SERIF }}>{title}</h1>
         <div className="w-6 h-px mx-auto mb-4" style={{ background: C.goldBorder }} />
         <p className="text-sm leading-relaxed max-w-xs" style={{ color: C.text2, ...SANS }}>{body}</p>
-        {onReset && (
+        {onScan && (
           <motion.button
             whileTap={{ scale: 0.96 }}
-            onClick={onReset}
-            className="mt-8 px-6 py-3 rounded-full text-sm font-semibold"
+            onClick={onScan}
+            className="mt-8 flex items-center gap-2 px-6 py-3 rounded-full text-sm font-semibold"
             style={{ background: C.goldDim, color: C.gold, border: `1px solid ${C.goldBorder}`, ...SANS }}
           >
-            {resetLabel ?? "Start new session"}
+            <QrCode className="w-4 h-4" />
+            Scan QR Again
           </motion.button>
         )}
       </motion.div>
@@ -1088,6 +1090,9 @@ function ActiveSession({
 export function TableSessionPage() {
   const { token } = useParams<{ token: string }>();
 
+  const [, navigate] = useLocation();
+  const [scannerOpen, setScannerOpen] = useState(false);
+
   const {
     sessionState, sessionInfo, orders, billRequested,
     nameEntryError, isStartingSession, startSession,
@@ -1095,6 +1100,11 @@ export function TableSessionPage() {
     placeOrder, requestBill,
     isPlacingOrder, isRequestingBill, placeOrderError, requestBillError,
   } = useTableSession(token ?? "");
+
+  const handleScanNavigate = (path: string) => {
+    resetToNameEntry();
+    navigate(path);
+  };
 
   // ── Minimum branded load time: show loader for at least MIN_MS regardless
   //    of how fast the session validates, for a deliberate premium feel.
@@ -1135,25 +1145,37 @@ export function TableSessionPage() {
 
   if (sessionState === "expired") {
     return (
-      <QRSessionScreen
-        icon={<Clock className="w-14 h-14" style={{ color: C.text }} />}
-        title="Session expired"
-        body="Your session has timed out. Scan the QR code on your table to start again."
-        onReset={resetToNameEntry}
-        resetLabel="Start new session"
-      />
+      <>
+        <QRSessionScreen
+          icon={<Clock className="w-14 h-14" style={{ color: C.text }} />}
+          title="Session expired"
+          body="Your session has timed out. To place a new order, scan a table QR code."
+          onScan={() => setScannerOpen(true)}
+        />
+        <QRScannerModal
+          isOpen={scannerOpen}
+          onClose={() => setScannerOpen(false)}
+          onNavigate={handleScanNavigate}
+        />
+      </>
     );
   }
 
   if (sessionState === "ended") {
     return (
-      <QRSessionScreen
-        icon={<CheckCircle2 className="w-14 h-14" style={{ color: C.text }} />}
-        title="All done"
-        body="Your session has ended. We hope you enjoyed your visit."
-        onReset={resetToNameEntry}
-        resetLabel="Start new session"
-      />
+      <>
+        <QRSessionScreen
+          icon={<CheckCircle2 className="w-14 h-14" style={{ color: C.text }} />}
+          title="Thank you for visiting."
+          body="To place a new order, scan a table QR code."
+          onScan={() => setScannerOpen(true)}
+        />
+        <QRScannerModal
+          isOpen={scannerOpen}
+          onClose={() => setScannerOpen(false)}
+          onNavigate={handleScanNavigate}
+        />
+      </>
     );
   }
 
