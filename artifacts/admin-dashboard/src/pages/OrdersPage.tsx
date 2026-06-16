@@ -24,6 +24,7 @@ import {
   RotateCcw,
   DollarSign,
   BellRing,
+  Plus,
 } from "lucide-react";
 import QRCode from "react-qr-code";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -32,11 +33,23 @@ import { Badge } from "@/components/ui/badge";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { PageHeader } from "@/components/common/PageHeader";
 import { EmptyState } from "@/components/common/EmptyState";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+  DialogDescription,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { useOrders, StaffOrder, OrderStatus } from "@/hooks/useOrders";
 import { useTableSessions, CafeTable } from "@/hooks/useTableSessions";
 import { useTableGroups, TableOverview, SessionInGroup } from "@/hooks/useTableGroups";
 import { useBillRequests, BillRequest } from "@/hooks/useBillRequests";
+import { useTableManagement } from "@/hooks/useTableManagement";
 import { useAuth } from "@/hooks/useAuth";
+import { useToast } from "@/hooks/use-toast";
 import { formatCurrency } from "@/lib/utils";
 import { cn } from "@/lib/utils";
 
@@ -590,6 +603,119 @@ function TableCard({
   );
 }
 
+function AddTableDialog({
+  open,
+  onOpenChange,
+  nextNumber,
+}: {
+  open: boolean;
+  onOpenChange: (v: boolean) => void;
+  nextNumber: number;
+}) {
+  const { createTable, isCreating } = useTableManagement();
+  const { toast } = useToast();
+  const [name, setName] = useState("");
+  const [number, setNumber] = useState(String(nextNumber));
+  const [capacity, setCapacity] = useState("4");
+  const [section, setSection] = useState("");
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    const num = parseInt(number) || nextNumber;
+    try {
+      await createTable({
+        name,
+        number: num,
+        capacity: parseInt(capacity) || 4,
+        section: section.trim() || undefined,
+        displayOrder: num,
+      });
+      onOpenChange(false);
+      setName("");
+      setNumber(String(nextNumber + 1));
+      setCapacity("4");
+      setSection("");
+      toast({ title: "Table added", description: `${name} is ready with a QR code.` });
+    } catch (err: any) {
+      const msg = err?.message ?? "Failed to create table";
+      toast({
+        title: "Could not add table",
+        description: msg.includes("unique") || msg.includes("duplicate")
+          ? `Table number ${num} is already taken.`
+          : msg,
+        variant: "destructive",
+      });
+    }
+  }
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle>Add table</DialogTitle>
+          <DialogDescription>Fill in the table details below.</DialogDescription>
+        </DialogHeader>
+        <form onSubmit={handleSubmit} className="space-y-4 py-2">
+          <div className="space-y-1.5">
+            <Label htmlFor="at-name">Table name <span className="text-destructive">*</span></Label>
+            <Input
+              id="at-name"
+              placeholder="e.g. Window Seat"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              required
+            />
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-1.5">
+              <Label htmlFor="at-number">Table number <span className="text-destructive">*</span></Label>
+              <Input
+                id="at-number"
+                type="number"
+                min={1}
+                value={number}
+                onChange={(e) => setNumber(e.target.value)}
+                required
+              />
+              <p className="text-xs text-muted-foreground">Next available: {nextNumber}</p>
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="at-capacity">Capacity <span className="text-destructive">*</span></Label>
+              <Input
+                id="at-capacity"
+                type="number"
+                min={1}
+                max={999}
+                value={capacity}
+                onChange={(e) => setCapacity(e.target.value)}
+                required
+              />
+            </div>
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="at-section">Section / Zone</Label>
+            <Input
+              id="at-section"
+              placeholder="e.g. Patio"
+              value={section}
+              onChange={(e) => setSection(e.target.value)}
+            />
+          </div>
+          <DialogFooter className="pt-2">
+            <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={isCreating}>
+              Cancel
+            </Button>
+            <Button type="submit" disabled={isCreating}>
+              {isCreating && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              Save table
+            </Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 function TablesTab() {
   const {
     tableOverview,
@@ -605,6 +731,11 @@ function TablesTab() {
     endingSessionId,
   } = useTableGroups();
 
+  const { nextNumber } = useTableManagement();
+  const { user } = useAuth();
+  const canManage = user?.role === "owner" || user?.role === "manager";
+  const [addOpen, setAddOpen] = useState(false);
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center py-16">
@@ -613,31 +744,58 @@ function TablesTab() {
     );
   }
 
-  if (tableOverview.length === 0) {
-    return (
-      <EmptyState
-        icon={TableProperties}
-        title="No active tables"
-        description="Tables appear here when guests scan a QR code and enter their name."
-      />
-    );
-  }
-
   return (
     <div className="space-y-4">
-      {tableOverview.map((table) => (
-        <TableCard
-          key={table.groupId}
-          table={table}
-          onEndSession={endSession}
-          isEndingSession={isEndingSession}
-          endingSessionId={endingSessionId}
-          onRequestBill={staffRequestBill}
-          isRequestingBill={isRequestingBill && requestingBillTableId === table.tableId}
-          onClearTable={clearTable}
-          isClearingTable={isClearingTable && clearingTableId === table.tableId}
+      {canManage && (
+        <div className="flex justify-end">
+          <Button size="sm" onClick={() => setAddOpen(true)}>
+            <Plus className="h-4 w-4 mr-2" />
+            Add table
+          </Button>
+        </div>
+      )}
+
+      {tableOverview.length === 0 ? (
+        <EmptyState
+          icon={TableProperties}
+          title="No active sessions"
+          description={
+            canManage
+              ? "Add a table to generate a QR code. Guests scan it to start a session."
+              : "Tables appear here when guests scan a QR code and enter their name."
+          }
+          action={
+            canManage ? (
+              <Button size="sm" onClick={() => setAddOpen(true)}>
+                <Plus className="h-4 w-4 mr-2" />
+                Add table
+              </Button>
+            ) : undefined
+          }
         />
-      ))}
+      ) : (
+        tableOverview.map((table) => (
+          <TableCard
+            key={table.groupId}
+            table={table}
+            onEndSession={endSession}
+            isEndingSession={isEndingSession}
+            endingSessionId={endingSessionId}
+            onRequestBill={staffRequestBill}
+            isRequestingBill={isRequestingBill && requestingBillTableId === table.tableId}
+            onClearTable={clearTable}
+            isClearingTable={isClearingTable && clearingTableId === table.tableId}
+          />
+        ))
+      )}
+
+      {canManage && (
+        <AddTableDialog
+          open={addOpen}
+          onOpenChange={setAddOpen}
+          nextNumber={nextNumber}
+        />
+      )}
     </div>
   );
 }
