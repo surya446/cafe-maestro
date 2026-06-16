@@ -148,7 +148,7 @@ export function useTableManagement() {
     if (!user?.cafeId) return;
 
     const ch = supabase
-      .channel("table-management-rt")
+      .channel(`table-management-rt-${user.cafeId}`)
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "cafe_tables", filter: `cafe_id=eq.${user.cafeId}` },

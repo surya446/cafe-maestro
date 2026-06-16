@@ -62,7 +62,7 @@ export function Sidebar({ collapsed, mobileOpen, onToggleCollapse, onCloseMobile
       <aside
         className={cn(
           "hidden md:flex flex-col sticky top-0 h-screen bg-sidebar text-sidebar-foreground border-r border-sidebar-border transition-all duration-300 ease-in-out shrink-0",
-          collapsed ? "w-16" : "w-64"
+          collapsed ? "w-16" : "w-56"
         )}
       >
         {/* Brand */}
@@ -99,10 +99,10 @@ export function Sidebar({ collapsed, mobileOpen, onToggleCollapse, onCloseMobile
                 href={item.href}
                 title={collapsed ? item.label : undefined}
                 className={cn(
-                  "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors group",
+                  "flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors group",
                   collapsed ? "justify-center" : "",
                   isActive
-                    ? "bg-sidebar-primary text-sidebar-primary-foreground"
+                    ? "bg-sidebar-primary/90 text-sidebar-primary-foreground"
                     : "text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-foreground"
                 )}
               >
@@ -166,10 +166,14 @@ export function Sidebar({ collapsed, mobileOpen, onToggleCollapse, onCloseMobile
         {/* Collapse toggle */}
         <button
           onClick={onToggleCollapse}
-          className="flex items-center justify-center h-8 border-t border-sidebar-border text-sidebar-foreground/40 hover:text-sidebar-foreground hover:bg-sidebar-accent transition-colors shrink-0"
+          className={cn(
+            "flex items-center gap-2 border-t border-sidebar-border text-sidebar-foreground/55 hover:text-sidebar-foreground hover:bg-sidebar-accent transition-colors shrink-0 h-9",
+            collapsed ? "justify-center" : "px-4"
+          )}
           title={collapsed ? "Expand sidebar" : "Collapse sidebar"}
         >
-          <ChevronLeft className={cn("w-4 h-4 transition-transform duration-300", collapsed && "rotate-180")} />
+          <ChevronLeft className={cn("w-3.5 h-3.5 transition-transform duration-300 shrink-0", collapsed && "rotate-180")} />
+          {!collapsed && <span className="text-xs">Collapse</span>}
         </button>
       </aside>
 

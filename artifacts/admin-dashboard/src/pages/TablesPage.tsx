@@ -482,16 +482,16 @@ function TableCard({
   return (
     <div
       className={cn(
-        "rounded-xl border bg-card px-4 py-3 shadow-sm transition-colors",
-        isArchived && "opacity-70",
-        table.status === "maintenance" && "border-orange-200 bg-orange-50/30"
+        "rounded-lg border bg-card px-3 py-2.5 shadow-sm transition-colors",
+        isArchived && "opacity-60",
+        table.status === "maintenance" && "border-orange-200 bg-orange-50/20"
       )}
     >
-      {/* ── Main row ─────────────────────────────────────────────────────── */}
-      <div className="flex items-start gap-3">
+      {/* ── Single row ───────────────────────────────────────────────────── */}
+      <div className="flex items-center gap-2.5">
         {/* Number badge */}
         <div className={cn(
-          "flex items-center justify-center w-9 h-9 rounded-lg text-sm font-bold shrink-0 mt-0.5",
+          "flex items-center justify-center w-8 h-8 rounded-md text-sm font-bold shrink-0",
           isArchived
             ? "bg-muted text-muted-foreground"
             : table.status === "busy"        ? "bg-blue-100 text-blue-700"
@@ -504,22 +504,22 @@ function TableCard({
 
         {/* Info */}
         <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2 flex-wrap">
-            <span className="font-medium text-sm">{tableLabel(table.number, table.name)}</span>
+          <div className="flex items-center gap-1.5 flex-wrap">
+            <span className="font-medium text-sm leading-tight">{tableLabel(table.number, table.name)}</span>
             <StatusBadge status={table.status} />
             {table.section && (
-              <Badge variant="secondary" className="text-xs">{table.section}</Badge>
+              <Badge variant="secondary" className="text-[11px] py-0 h-4">{table.section}</Badge>
             )}
           </div>
-          <div className="flex items-center gap-3 mt-1 flex-wrap">
+          <div className="flex items-center gap-2.5 mt-0.5">
             <span className="text-xs text-muted-foreground flex items-center gap-1">
               <Users className="h-3 w-3" />
-              {table.capacity} seats
+              {table.capacity}
             </span>
             {table.qrCodeToken ? (
               <span className="text-xs text-muted-foreground flex items-center gap-1">
                 <QrCode className="h-3 w-3" />
-                QR ready
+                QR
               </span>
             ) : (
               <span className="text-xs text-amber-600 flex items-center gap-1">
@@ -530,20 +530,42 @@ function TableCard({
           </div>
         </div>
 
+        {/* Maintenance toggle — inline, active tables only */}
+        {canManage && !isArchived && (
+          <div
+            className="flex items-center gap-1 shrink-0"
+            title={table.isUnderMaintenance ? "Under maintenance — click to clear" : "Mark as under maintenance"}
+          >
+            <Switch
+              id={`maint-${table.id}`}
+              checked={table.isUnderMaintenance}
+              onCheckedChange={() => onToggleMaintenance(table)}
+              disabled={isTogglingMaintenance}
+              aria-label={table.isUnderMaintenance ? "Under maintenance" : "Mark as under maintenance"}
+            />
+            {isTogglingMaintenance
+              ? <Loader2 className="h-3 w-3 animate-spin text-muted-foreground" />
+              : table.isUnderMaintenance
+              ? <Wrench className="h-3 w-3 text-orange-500" />
+              : null
+            }
+          </div>
+        )}
+
         {/* Action buttons */}
-        <div className="flex items-center gap-1 shrink-0">
-          <Button size="sm" variant="ghost" className="h-8 w-8 p-0" title="View QR code" onClick={() => onQR(table)}>
-            <QrCode className="h-4 w-4" />
+        <div className="flex items-center gap-0.5 shrink-0">
+          <Button size="sm" variant="ghost" className="h-7 w-7 p-0" title="View QR code" onClick={() => onQR(table)}>
+            <QrCode className="h-3.5 w-3.5" />
           </Button>
 
           {canManage && (
             <>
               {!isArchived && (
                 <Button
-                  size="sm" variant="ghost" className="h-8 w-8 p-0" title="Edit table"
+                  size="sm" variant="ghost" className="h-7 w-7 p-0" title="Edit table"
                   onClick={() => onEdit(table)}
                 >
-                  <Pencil className="h-4 w-4" />
+                  <Pencil className="h-3.5 w-3.5" />
                 </Button>
               )}
 
@@ -551,55 +573,35 @@ function TableCard({
                 <>
                   <Button
                     size="sm" variant="ghost"
-                    className="h-8 w-8 p-0 text-muted-foreground hover:text-primary"
+                    className="h-7 w-7 p-0 text-muted-foreground hover:text-primary"
                     title="Restore table" disabled={isRestoring}
                     onClick={() => onRestore(table)}
                   >
-                    {isRestoring ? <Loader2 className="h-4 w-4 animate-spin" /> : <RotateCcw className="h-4 w-4" />}
+                    {isRestoring ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <RotateCcw className="h-3.5 w-3.5" />}
                   </Button>
                   <Button
                     size="sm" variant="ghost"
-                    className="h-8 w-8 p-0 text-muted-foreground hover:text-destructive"
+                    className="h-7 w-7 p-0 text-muted-foreground hover:text-destructive"
                     title="Permanently delete" disabled={isCheckingDelete}
                     onClick={() => onPermanentDelete(table)}
                   >
-                    {isCheckingDelete ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
+                    {isCheckingDelete ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Trash2 className="h-3.5 w-3.5" />}
                   </Button>
                 </>
               ) : (
                 <Button
                   size="sm" variant="ghost"
-                  className="h-8 w-8 p-0 text-muted-foreground hover:text-destructive"
+                  className="h-7 w-7 p-0 text-muted-foreground hover:text-destructive"
                   title="Archive table" disabled={isArchiving}
                   onClick={() => onArchive(table)}
                 >
-                  {isArchiving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Archive className="h-4 w-4" />}
+                  {isArchiving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Archive className="h-3.5 w-3.5" />}
                 </Button>
               )}
             </>
           )}
         </div>
       </div>
-
-      {/* ── Maintenance toggle (active tables only, owners/managers) ──────── */}
-      {canManage && !isArchived && (
-        <div className="flex items-center gap-2 mt-3 pt-3 border-t border-border/40">
-          <Switch
-            id={`maint-${table.id}`}
-            checked={table.isUnderMaintenance}
-            onCheckedChange={() => onToggleMaintenance(table)}
-            disabled={isTogglingMaintenance}
-            className="scale-90"
-          />
-          <Label
-            htmlFor={`maint-${table.id}`}
-            className={cn("text-xs cursor-pointer select-none", table.isUnderMaintenance ? "text-orange-600 font-medium" : "text-muted-foreground")}
-          >
-            {table.isUnderMaintenance ? "Under maintenance — QR ordering blocked" : "Mark as under maintenance"}
-          </Label>
-          {isTogglingMaintenance && <Loader2 className="h-3 w-3 animate-spin text-muted-foreground" />}
-        </div>
-      )}
 
       {/* ── Today's bookings (expandable) ─────────────────────────────────── */}
       <BookingsPanel table={table} />
@@ -818,22 +820,22 @@ export function TablesPage() {
       />
 
       {/* ── Stat Cards ─────────────────────────────────────────────────────── */}
-      <div className="grid grid-cols-3 sm:grid-cols-6 gap-3 mb-6">
+      <div className="grid grid-cols-3 sm:grid-cols-6 gap-2 mb-4">
         {/* Total */}
         <div
           className={cn(
-            "text-left bg-card border border-card-border rounded-xl p-4 shadow-sm transition-all cursor-pointer hover:shadow-md",
+            "text-left bg-card border border-card-border rounded-lg p-3 shadow-sm transition-all cursor-pointer hover:shadow-md",
             activeFilter === null && "ring-2 ring-primary bg-primary/5"
           )}
           onClick={() => setActiveFilter(null)}
         >
-          <div className="flex items-start justify-between">
+          <div className="flex items-center justify-between">
             <div>
-              <p className="text-xs text-muted-foreground leading-none">Total</p>
-              <p className="text-2xl font-bold mt-1.5">{isLoading ? "—" : tables.length}</p>
+              <p className="text-[11px] text-muted-foreground leading-none mb-1">Total</p>
+              <p className="text-xl font-semibold">{isLoading ? "—" : tables.length}</p>
             </div>
-            <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-muted shrink-0">
-              <Layers className="w-4 h-4 text-muted-foreground" />
+            <div className="flex items-center justify-center w-7 h-7 rounded-md bg-muted shrink-0">
+              <Layers className="w-3.5 h-3.5 text-muted-foreground" />
             </div>
           </div>
         </div>
@@ -846,19 +848,19 @@ export function TablesPage() {
               key={s}
               onClick={() => toggleFilter(s)}
               className={cn(
-                "text-left bg-card border border-card-border rounded-xl p-4 shadow-sm transition-all hover:shadow-md focus:outline-none",
+                "text-left bg-card border border-card-border rounded-lg p-3 shadow-sm transition-all hover:shadow-md focus:outline-none",
                 activeFilter === s && cfg.cardActiveCls
               )}
             >
-              <div className="flex items-start justify-between">
+              <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-xs text-muted-foreground leading-none">{cfg.label}</p>
-                  <p className={cn("text-2xl font-bold mt-1.5", cfg.cardCls)}>
+                  <p className="text-[11px] text-muted-foreground leading-none mb-1">{cfg.label}</p>
+                  <p className={cn("text-xl font-semibold", cfg.cardCls)}>
                     {isLoading ? "—" : statusCounts[s]}
                   </p>
                 </div>
-                <div className="flex items-center justify-center w-8 h-8 rounded-lg shrink-0 bg-muted/60">
-                  <Icon className={cn("w-4 h-4", cfg.cardCls)} />
+                <div className="flex items-center justify-center w-7 h-7 rounded-md shrink-0 bg-muted/60">
+                  <Icon className={cn("w-3.5 h-3.5", cfg.cardCls)} />
                 </div>
               </div>
             </button>

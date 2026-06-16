@@ -127,7 +127,7 @@
 
   /* Muted */
   --muted:         38 25% 94%;
-  --muted-foreground: 25 20% 48%;
+  --muted-foreground: 25 22% 40%;
 
   /* Accent — terracotta */
   --accent:        18 68% 48%;
@@ -228,6 +228,16 @@
 @layer base {
   * { @apply border-border; }
   body { @apply font-sans antialiased bg-background text-foreground; }
+
+  /* Global thin scrollbar */
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: hsl(var(--border)) transparent;
+  }
+  *::-webkit-scrollbar { width: 5px; height: 5px; }
+  *::-webkit-scrollbar-track { background: transparent; }
+  *::-webkit-scrollbar-thumb { border-radius: 100px; background: hsl(var(--border)); }
+  *::-webkit-scrollbar-thumb:hover { background: hsl(var(--muted-foreground) / 0.4); }
 }
 
 @layer utilities {

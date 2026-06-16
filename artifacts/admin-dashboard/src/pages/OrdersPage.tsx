@@ -108,9 +108,9 @@ function OrderCard({
   }
 
   return (
-    <div className="rounded-xl border bg-card shadow-sm flex flex-col">
+    <div className="rounded-lg border bg-card shadow-sm flex flex-col">
       {/* Header */}
-      <div className="flex items-center justify-between px-4 py-3 border-b">
+      <div className="flex items-center justify-between px-3 py-2 border-b">
         <div className="min-w-0">
           <span className="font-semibold text-sm">{label}</span>
           {order.customerName && (
@@ -124,7 +124,7 @@ function OrderCard({
       </div>
 
       {/* Items */}
-      <div className="px-4 py-3 space-y-1 flex-1">
+      <div className="px-3 py-2 space-y-1 flex-1">
         {order.items.map((item) => (
           <div key={item.id} className="flex items-start gap-2 text-sm">
             <span className="shrink-0 font-medium text-primary w-5 text-right">{item.quantity}×</span>
@@ -134,7 +134,7 @@ function OrderCard({
                 <p className="text-xs text-muted-foreground italic truncate">{item.notes}</p>
               )}
             </div>
-            <span className="ml-auto shrink-0 text-muted-foreground">
+            <span className="ml-auto shrink-0 text-muted-foreground text-xs">
               {formatCurrency(item.unitPrice * item.quantity)}
             </span>
           </div>
@@ -142,20 +142,20 @@ function OrderCard({
       </div>
 
       {/* Total */}
-      <div className="flex items-center justify-between px-4 py-2 border-t bg-muted/30">
+      <div className="flex items-center justify-between px-3 py-1.5 border-t bg-muted/30">
         <span className="text-xs text-muted-foreground">Total</span>
         <span className="text-sm font-semibold">{formatCurrency(order.total)}</span>
       </div>
 
       {/* Staff note display */}
       {order.staffNote && (
-        <div className="px-4 py-2 bg-amber-50 border-t border-amber-100">
+        <div className="px-3 py-1.5 bg-amber-50 border-t border-amber-100">
           <p className="text-xs text-amber-800">{order.staffNote}</p>
         </div>
       )}
 
       {/* Actions */}
-      <div className="px-4 py-3 border-t space-y-2">
+      <div className="px-3 py-2.5 border-t space-y-2">
         {order.status === "pending_approval" && !rejecting && (
           <div className="flex gap-2">
             <Button
@@ -247,13 +247,13 @@ function KitchenColumn({
 }) {
   return (
     <div className="flex flex-col gap-3 min-w-0">
-      <div className={cn("flex items-center justify-between px-4 py-2.5 rounded-xl font-medium text-sm", color)}>
+      <div className={cn("flex items-center justify-between px-3 py-2 rounded-lg font-medium text-sm", color)}>
         <span>{title}</span>
         <span className="ml-2 bg-white/30 rounded-full px-2 py-0.5 text-xs font-bold">{orders.length}</span>
       </div>
-      <div className="space-y-3">
+      <div className="space-y-2">
         {orders.length === 0 ? (
-          <div className="rounded-xl border border-dashed bg-muted/30 px-4 py-8 text-center text-sm text-muted-foreground">
+          <div className="rounded-lg border border-dashed bg-muted/30 px-4 py-5 text-center text-sm text-muted-foreground">
             {emptyText}
           </div>
         ) : (
@@ -1012,9 +1012,9 @@ function QRTableCard({
   }
 
   return (
-    <div className="rounded-xl border bg-card shadow-sm flex flex-col">
+    <div className="rounded-lg border bg-card shadow-sm flex flex-col">
       {/* Header */}
-      <div className="px-4 py-3 border-b flex items-center justify-between">
+      <div className="px-3 py-2.5 border-b flex items-center justify-between">
         <span className="font-semibold text-sm">{label}</span>
         {!table.isActive && (
           <Badge variant="secondary" className="text-xs">Inactive</Badge>
@@ -1022,24 +1022,24 @@ function QRTableCard({
       </div>
 
       {/* QR display */}
-      <div className="flex flex-col items-center px-4 py-5 gap-3">
+      <div className="flex flex-col items-center px-3 py-3 gap-2">
         {guestUrl ? (
           <div
             ref={qrContainerRef}
-            className="bg-white p-3 rounded-xl border shadow-sm"
+            className="bg-white p-2.5 rounded-lg border shadow-sm"
           >
-            <QRCode value={guestUrl} size={160} />
+            <QRCode value={guestUrl} size={128} />
           </div>
         ) : (
-          <div className="w-[184px] h-[184px] rounded-xl border-2 border-dashed bg-muted flex flex-col items-center justify-center gap-2 text-muted-foreground">
-            <QrCode className="h-10 w-10 opacity-30" />
-            <span className="text-xs text-center px-3">No QR token — generate one</span>
+          <div className="w-[152px] h-[152px] rounded-lg border-2 border-dashed bg-muted flex flex-col items-center justify-center gap-2 text-muted-foreground">
+            <QrCode className="h-8 w-8 opacity-30" />
+            <span className="text-xs text-center px-3">No QR token</span>
           </div>
         )}
 
         {guestUrl && (
-          <div className="w-full bg-muted rounded-lg px-3 py-2">
-            <p className="text-xs text-muted-foreground font-mono break-all line-clamp-2">
+          <div className="w-full bg-muted rounded-md px-2.5 py-1.5">
+            <p className="text-[10px] text-muted-foreground font-mono break-all line-clamp-1">
               {guestUrl}
             </p>
           </div>
@@ -1047,7 +1047,7 @@ function QRTableCard({
       </div>
 
       {/* Actions */}
-      <div className="px-4 pb-4 grid grid-cols-2 gap-2">
+      <div className="px-3 pb-3 grid grid-cols-2 gap-1.5">
         <Button
           size="sm"
           variant="outline"
@@ -1143,7 +1143,7 @@ function QRTab() {
         </div>
       )}
 
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3">
         {activeTables.map((table) => (
           <QRTableCard
             key={table.id}
@@ -1182,10 +1182,11 @@ export function OrdersPage() {
     <AppLayout>
       <PageHeader
         title="Orders & Tables"
-        subtitle="Kitchen queue, live table status, and bill requests"
+        icon={ClipboardList}
+        description="Kitchen queue, live table status, and bill requests"
       />
 
-      <Tabs defaultValue="orders" className="mt-6">
+      <Tabs defaultValue="orders" className="mt-4">
         <TabsList className="mb-6 flex-wrap h-auto gap-1">
           <TabsTrigger value="orders" className="flex items-center gap-2">
             <ChefHat className="h-4 w-4" />

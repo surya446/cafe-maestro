@@ -32,7 +32,9 @@ export function AppLayout({ children }: AppLayoutProps) {
         </header>
 
         <main className="flex-1 min-w-0 overflow-auto">
-          {children}
+          <div className="px-4 py-4 md:px-6 md:py-5 max-w-screen-2xl mx-auto">
+            {children}
+          </div>
         </main>
       </div>
     </div>
