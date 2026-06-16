@@ -144,30 +144,38 @@ export function useTableManagement() {
   // ── Real-time subscriptions ──────────────────────────────────────────────────
   // Subscribes to cafe_tables, table_sessions, and bookings so all three
   // status-driving signals push updates immediately to the dashboard.
+  //
+  // Channel name includes a per-mount UUID so that React StrictMode's
+  // double-invoke (mount → cleanup → mount) never collides with the previous
+  // channel before Supabase finishes tearing it down.  All .on() listeners
+  // are registered before .subscribe() — the only correct ordering.
   useEffect(() => {
     if (!user?.cafeId) return;
 
+    const cafeId = user.cafeId;
+    const channelName = `table-management-rt-${cafeId}-${crypto.randomUUID()}`;
+
     const ch = supabase
-      .channel(`table-management-rt-${user.cafeId}`)
+      .channel(channelName)
       .on(
         "postgres_changes",
-        { event: "*", schema: "public", table: "cafe_tables", filter: `cafe_id=eq.${user.cafeId}` },
+        { event: "*", schema: "public", table: "cafe_tables", filter: `cafe_id=eq.${cafeId}` },
         () => { qc.invalidateQueries({ queryKey: TABLE_QUERY_KEY }); }
       )
       .on(
         "postgres_changes",
-        { event: "*", schema: "public", table: "table_sessions", filter: `cafe_id=eq.${user.cafeId}` },
+        { event: "*", schema: "public", table: "table_sessions", filter: `cafe_id=eq.${cafeId}` },
         () => { qc.invalidateQueries({ queryKey: TABLE_QUERY_KEY }); }
       )
       .on(
         "postgres_changes",
-        { event: "*", schema: "public", table: "bookings", filter: `cafe_id=eq.${user.cafeId}` },
+        { event: "*", schema: "public", table: "bookings", filter: `cafe_id=eq.${cafeId}` },
         () => { qc.invalidateQueries({ queryKey: TABLE_QUERY_KEY }); }
       )
       .subscribe();
 
     return () => { supabase.removeChannel(ch); };
-  }, [user?.cafeId, qc]);
+  }, [user?.cafeId]); // qc from useQueryClient() is stable — intentionally omitted
 
   // ── Create table ───────────────────────────────────────────────────────────
   const createMutation = useMutation({
