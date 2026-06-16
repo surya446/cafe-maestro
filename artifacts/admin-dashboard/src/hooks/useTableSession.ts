@@ -11,7 +11,8 @@ export type SessionState =
   | "active"
   | "expired"
   | "ended"
-  | "invalid";
+  | "invalid"
+  | "maintenance";
 
 export interface SessionInfo {
   sessionId: string;
@@ -197,6 +198,8 @@ async function rpcValidateDevice(deviceToken: string): Promise<ValidateResult | 
 function mapRpcError(msg: string): string {
   if (msg.includes("CUSTOMER_NAME_REQUIRED"))
     return "Please enter your name to start ordering.";
+  if (msg.includes("TABLE_UNDER_MAINTENANCE"))
+    return "This table is currently under maintenance. Please ask your server for assistance.";
   if (msg.includes("TABLE_NOT_FOUND"))
     return "This QR code is no longer active. Please ask your server for a new one.";
   if (msg.includes("DEVICE_INVALID"))
@@ -317,7 +320,22 @@ export function useTableSession(qrToken: string) {
         return;
       }
 
-      // ── Branch C: nothing stored → name-entry ─────────────────────────
+      // ── Branch C: nothing stored → check maintenance → name-entry ────
+      // Reads is_under_maintenance directly (anon SELECT allowed by migration 035).
+      const { data: tableRow } = await supabase
+        .from("cafe_tables")
+        .select("is_under_maintenance")
+        .eq("qr_code_token", qrToken)
+        .eq("is_active", true)
+        .maybeSingle();
+
+      if (cancelled) return;
+
+      if (tableRow?.is_under_maintenance) {
+        setSessionState("maintenance");
+        return;
+      }
+
       setSessionState("entering_name");
     }
 
@@ -455,6 +473,10 @@ export function useTableSession(qrToken: string) {
         setSessionState("active");
       } catch (err: unknown) {
         const msg = err instanceof Error ? err.message : "";
+        if (msg.includes("TABLE_UNDER_MAINTENANCE")) {
+          setSessionState("maintenance");
+          return;
+        }
         setNameEntryError(mapRpcError(msg));
       } finally {
         setIsStartingSession(false);

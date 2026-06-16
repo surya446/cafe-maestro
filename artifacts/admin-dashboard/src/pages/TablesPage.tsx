@@ -11,11 +11,17 @@ import {
   Download,
   RefreshCw,
   Users,
-  CheckCircle2,
   Layers,
   ChevronDown,
   ChevronRight,
   Printer,
+  Wrench,
+  Trash2,
+  CalendarClock,
+  CheckCircle2,
+  Circle,
+  Clock,
+  AlertTriangle,
 } from "lucide-react";
 import QRCode from "react-qr-code";
 import { AppLayout } from "@/components/layout/AppLayout";
@@ -25,6 +31,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
 import {
   Dialog,
   DialogContent,
@@ -43,9 +50,10 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { useTableManagement, ManagedTable } from "@/hooks/useTableManagement";
+import { useTableManagement, ManagedTable, TableStatus } from "@/hooks/useTableManagement";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
+import { supabase } from "@/lib/supabase";
 import { cn } from "@/lib/utils";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -57,6 +65,84 @@ function tableLabel(number: number, name: string) {
 function qrUrl(token: string | null): string | null {
   if (!token) return null;
   return `${window.location.origin}${import.meta.env.BASE_URL}table/${token}`;
+}
+
+function fmtTime(t: string) {
+  const [h, m] = t.split(":").map(Number);
+  const ampm = h >= 12 ? "PM" : "AM";
+  const hour = h % 12 || 12;
+  return `${hour}:${String(m).padStart(2, "0")} ${ampm}`;
+}
+
+// ─── Status config ─────────────────────────────────────────────────────────────
+
+const STATUS_CONFIG: Record<
+  TableStatus,
+  { label: string; icon: React.FC<{ className?: string }>; badgeCls: string; cardCls: string; cardActiveCls: string }
+> = {
+  free:        { label: "Free",        icon: Circle,        badgeCls: "bg-emerald-100 text-emerald-700 border-emerald-200", cardCls: "text-emerald-700",  cardActiveCls: "ring-2 ring-emerald-400 bg-emerald-50/50" },
+  busy:        { label: "Busy",        icon: Clock,         badgeCls: "bg-blue-100 text-blue-700 border-blue-200",         cardCls: "text-blue-700",     cardActiveCls: "ring-2 ring-blue-400 bg-blue-50/50" },
+  booked:      { label: "Booked",      icon: CalendarClock, badgeCls: "bg-amber-100 text-amber-700 border-amber-200",      cardCls: "text-amber-700",    cardActiveCls: "ring-2 ring-amber-400 bg-amber-50/50" },
+  maintenance: { label: "Maintenance", icon: Wrench,        badgeCls: "bg-orange-100 text-orange-700 border-orange-200",   cardCls: "text-orange-700",   cardActiveCls: "ring-2 ring-orange-400 bg-orange-50/50" },
+  archived:    { label: "Archived",    icon: Archive,       badgeCls: "bg-zinc-100 text-zinc-500 border-zinc-200",         cardCls: "text-zinc-500",     cardActiveCls: "ring-2 ring-zinc-400 bg-zinc-50/50" },
+};
+
+// ─── StatusBadge ──────────────────────────────────────────────────────────────
+
+function StatusBadge({ status }: { status: TableStatus }) {
+  const cfg = STATUS_CONFIG[status] ?? STATUS_CONFIG.free;
+  const Icon = cfg.icon;
+  return (
+    <span className={cn("inline-flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded-full border", cfg.badgeCls)}>
+      <Icon className="h-3 w-3" />
+      {cfg.label}
+    </span>
+  );
+}
+
+// ─── StatCard ─────────────────────────────────────────────────────────────────
+
+function StatCard({
+  label,
+  value,
+  status,
+  isTotal,
+  isActive,
+  onClick,
+  isLoading,
+}: {
+  label: string;
+  value: number;
+  status?: TableStatus;
+  isTotal?: boolean;
+  isActive: boolean;
+  onClick: () => void;
+  isLoading: boolean;
+}) {
+  const cfg = status ? STATUS_CONFIG[status] : null;
+  const Icon = cfg?.icon ?? Layers;
+
+  return (
+    <button
+      onClick={onClick}
+      className={cn(
+        "text-left bg-card border border-card-border rounded-xl p-4 shadow-sm transition-all hover:shadow-md focus:outline-none",
+        isActive && (cfg ? cfg.cardActiveCls : "ring-2 ring-primary bg-primary/5")
+      )}
+    >
+      <div className="flex items-start justify-between">
+        <div>
+          <p className="text-xs text-muted-foreground leading-none">{label}</p>
+          <p className={cn("text-2xl font-bold mt-1.5", isTotal ? "text-foreground" : (cfg?.cardCls ?? "text-foreground"))}>
+            {isLoading ? "—" : value}
+          </p>
+        </div>
+        <div className={cn("flex items-center justify-center w-8 h-8 rounded-lg shrink-0", isTotal ? "bg-muted text-muted-foreground" : (status ? `bg-${status === "free" ? "emerald" : status === "busy" ? "blue" : status === "booked" ? "amber" : status === "maintenance" ? "orange" : "zinc"}-100` : "bg-muted"))}>
+          <Icon className={cn("w-4 h-4", cfg?.cardCls ?? "text-muted-foreground")} />
+        </div>
+      </div>
+    </button>
+  );
 }
 
 // ─── Add / Edit Dialog ────────────────────────────────────────────────────────
@@ -102,13 +188,10 @@ function TableFormDialog({
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle>{title}</DialogTitle>
-          <DialogDescription>
-            Fill in the table details below.
-          </DialogDescription>
+          <DialogDescription>Fill in the table details below.</DialogDescription>
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-4 py-2">
-          {/* Name */}
           <div className="space-y-1.5">
             <Label htmlFor="t-name">Table name <span className="text-destructive">*</span></Label>
             <Input
@@ -120,12 +203,9 @@ function TableFormDialog({
             />
           </div>
 
-          {/* Number + Display Order row */}
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1.5">
-              <Label htmlFor="t-number">
-                Table number <span className="text-destructive">*</span>
-              </Label>
+              <Label htmlFor="t-number">Table number <span className="text-destructive">*</span></Label>
               <Input
                 id="t-number"
                 type="number"
@@ -136,9 +216,7 @@ function TableFormDialog({
                 required
               />
               {autoNumber !== undefined && (
-                <p className="text-xs text-muted-foreground">
-                  Next available: {autoNumber}
-                </p>
+                <p className="text-xs text-muted-foreground">Next available: {autoNumber}</p>
               )}
             </div>
 
@@ -151,18 +229,13 @@ function TableFormDialog({
                 value={form.displayOrder}
                 onChange={(e) => set("displayOrder", e.target.value)}
               />
-              <p className="text-xs text-muted-foreground">
-                Lower = appears first
-              </p>
+              <p className="text-xs text-muted-foreground">Lower = appears first</p>
             </div>
           </div>
 
-          {/* Capacity + Section row */}
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1.5">
-              <Label htmlFor="t-capacity">
-                Capacity <span className="text-destructive">*</span>
-              </Label>
+              <Label htmlFor="t-capacity">Capacity <span className="text-destructive">*</span></Label>
               <Input
                 id="t-capacity"
                 type="number"
@@ -187,12 +260,7 @@ function TableFormDialog({
           </div>
 
           <DialogFooter className="pt-2">
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => onOpenChange(false)}
-              disabled={isSaving}
-            >
+            <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={isSaving}>
               Cancel
             </Button>
             <Button type="submit" disabled={isSaving}>
@@ -229,7 +297,7 @@ function QRDialog({
 
   if (!table) return null;
 
-  const url = qrUrl(table.qrCodeToken);
+  const url   = qrUrl(table.qrCodeToken);
   const label = tableLabel(table.number, table.name);
 
   async function handleCopy() {
@@ -242,9 +310,7 @@ function QRDialog({
   function handleDownload() {
     const svg = qrRef.current?.querySelector("svg");
     if (!svg) return;
-    const blob = new Blob([new XMLSerializer().serializeToString(svg)], {
-      type: "image/svg+xml",
-    });
+    const blob = new Blob([new XMLSerializer().serializeToString(svg)], { type: "image/svg+xml" });
     const a = document.createElement("a");
     a.href = URL.createObjectURL(blob);
     a.download = `${label.replace(/\s+/g, "-").toLowerCase()}-qr.svg`;
@@ -258,28 +324,10 @@ function QRDialog({
     if (!svg) return;
     const win = window.open("", "_blank", "width=480,height=600");
     if (!win) return;
-    win.document.write(`
-      <!DOCTYPE html>
-      <html>
-        <head>
-          <title>QR — ${label}</title>
-          <style>
-            body { margin: 0; display: flex; flex-direction: column;
-                   align-items: center; justify-content: center;
-                   min-height: 100vh; font-family: sans-serif; gap: 16px; }
-            h2 { margin: 0; font-size: 22px; }
-            p { margin: 0; font-size: 13px; color: #666; }
-            @media print { body { padding: 20px; } }
-          </style>
-        </head>
-        <body>
-          <h2>${label}</h2>
-          ${new XMLSerializer().serializeToString(svg)}
-          <p>Scan to view menu &amp; order</p>
-          <script>window.onload = function() { window.print(); }<\/script>
-        </body>
-      </html>
-    `);
+    win.document.write(`<!DOCTYPE html><html><head><title>QR — ${label}</title>
+      <style>body{margin:0;display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;font-family:sans-serif;gap:16px}h2{margin:0;font-size:22px}p{margin:0;font-size:13px;color:#666}@media print{body{padding:20px}}</style>
+      </head><body><h2>${label}</h2>${new XMLSerializer().serializeToString(svg)}<p>Scan to view menu &amp; order</p>
+      <script>window.onload=function(){window.print()}<\/script></body></html>`);
     win.document.close();
   }
 
@@ -293,9 +341,7 @@ function QRDialog({
       <DialogContent className="sm:max-w-sm">
         <DialogHeader>
           <DialogTitle>{label} — QR Code</DialogTitle>
-          {table.section && (
-            <DialogDescription>{table.section}</DialogDescription>
-          )}
+          {table.section && <DialogDescription>{table.section}</DialogDescription>}
         </DialogHeader>
 
         <div className="flex flex-col items-center gap-4 py-2">
@@ -330,17 +376,10 @@ function QRDialog({
               Print
             </Button>
             {canManage && (
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={handleRegenerate}
-                disabled={isRegenerating}
-              >
-                {isRegenerating ? (
-                  <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" />
-                ) : (
-                  <RefreshCw className="h-3.5 w-3.5 mr-1.5" />
-                )}
+              <Button size="sm" variant="outline" onClick={handleRegenerate} disabled={isRegenerating}>
+                {isRegenerating
+                  ? <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" />
+                  : <RefreshCw className="h-3.5 w-3.5 mr-1.5" />}
                 Regenerate
               </Button>
             )}
@@ -351,17 +390,79 @@ function QRDialog({
   );
 }
 
-// ─── Table Row ────────────────────────────────────────────────────────────────
+// ─── Bookings Panel ───────────────────────────────────────────────────────────
 
-function TableRow({
+function BookingsPanel({ table }: { table: ManagedTable }) {
+  const [open, setOpen] = useState(false);
+  const count = table.todayBookings.length;
+
+  if (count === 0) return null;
+
+  const confirmedCount = table.todayBookings.filter(b => b.status === "confirmed").length;
+
+  return (
+    <div className="mt-2 border-t border-border/50 pt-2">
+      <button
+        onClick={() => setOpen((p) => !p)}
+        className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground hover:text-foreground transition-colors"
+      >
+        {open ? <ChevronDown className="h-3.5 w-3.5" /> : <ChevronRight className="h-3.5 w-3.5" />}
+        <CalendarClock className="h-3.5 w-3.5" />
+        Today: {confirmedCount} confirmed booking{confirmedCount !== 1 ? "s" : ""}
+        {count > confirmedCount && <span className="text-muted-foreground/60">({count - confirmedCount} pending)</span>}
+      </button>
+
+      {open && (
+        <div className="mt-2 space-y-1.5">
+          {table.todayBookings
+            .slice()
+            .sort((a, b) => a.bookingTime.localeCompare(b.bookingTime))
+            .map((b) => (
+              <div key={b.id} className="flex items-center justify-between px-3 py-2 bg-muted/50 rounded-lg">
+                <div>
+                  <span className="text-sm font-medium">{b.guestName}</span>
+                  <div className="flex items-center gap-2 mt-0.5 text-xs text-muted-foreground">
+                    <span>{fmtTime(b.bookingTime)}</span>
+                    <span>·</span>
+                    <span className="flex items-center gap-0.5">
+                      <Users className="h-3 w-3" />
+                      {b.partySize} guests
+                    </span>
+                  </div>
+                </div>
+                <Badge
+                  variant="outline"
+                  className={cn(
+                    "text-xs capitalize",
+                    b.status === "confirmed" && "border-emerald-200 bg-emerald-50 text-emerald-700",
+                    b.status === "pending"   && "border-amber-200 bg-amber-50 text-amber-700"
+                  )}
+                >
+                  {b.status}
+                </Badge>
+              </div>
+            ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─── Table Card ───────────────────────────────────────────────────────────────
+
+function TableCard({
   table,
   canManage,
   onEdit,
   onQR,
   onArchive,
   onRestore,
+  onToggleMaintenance,
+  onPermanentDelete,
   isArchiving,
   isRestoring,
+  isTogglingMaintenance,
+  isCheckingDelete,
 }: {
   table: ManagedTable;
   canManage: boolean;
@@ -369,118 +470,161 @@ function TableRow({
   onQR: (t: ManagedTable) => void;
   onArchive: (t: ManagedTable) => void;
   onRestore: (t: ManagedTable) => void;
+  onToggleMaintenance: (t: ManagedTable) => void;
+  onPermanentDelete: (t: ManagedTable) => void;
   isArchiving: boolean;
   isRestoring: boolean;
+  isTogglingMaintenance: boolean;
+  isCheckingDelete: boolean;
 }) {
-  const url = qrUrl(table.qrCodeToken);
-  const label = tableLabel(table.number, table.name);
+  const isArchived = !table.isActive;
 
   return (
     <div
       className={cn(
-        "flex items-center gap-3 px-4 py-3 rounded-xl border bg-card hover:bg-accent/30 transition-colors",
-        !table.isActive && "opacity-60"
+        "rounded-xl border bg-card px-4 py-3 shadow-sm transition-colors",
+        isArchived && "opacity-70",
+        table.status === "maintenance" && "border-orange-200 bg-orange-50/30"
       )}
     >
-      {/* Number badge */}
-      <div className="flex items-center justify-center w-9 h-9 rounded-lg bg-primary/10 text-primary text-sm font-bold shrink-0">
-        {table.number}
-      </div>
-
-      {/* Info */}
-      <div className="flex-1 min-w-0">
-        <div className="flex items-center gap-2 flex-wrap">
-          <span className="font-medium text-sm truncate">{label}</span>
-          {table.section && (
-            <Badge variant="secondary" className="text-xs">
-              {table.section}
-            </Badge>
-          )}
-          {!table.isActive && (
-            <Badge variant="outline" className="text-xs text-muted-foreground">
-              Archived
-            </Badge>
-          )}
+      {/* ── Main row ─────────────────────────────────────────────────────── */}
+      <div className="flex items-start gap-3">
+        {/* Number badge */}
+        <div className={cn(
+          "flex items-center justify-center w-9 h-9 rounded-lg text-sm font-bold shrink-0 mt-0.5",
+          isArchived
+            ? "bg-muted text-muted-foreground"
+            : table.status === "busy"        ? "bg-blue-100 text-blue-700"
+            : table.status === "booked"      ? "bg-amber-100 text-amber-700"
+            : table.status === "maintenance" ? "bg-orange-100 text-orange-700"
+            : "bg-primary/10 text-primary"
+        )}>
+          {table.number}
         </div>
-        <div className="flex items-center gap-3 mt-0.5">
-          <span className="text-xs text-muted-foreground flex items-center gap-1">
-            <Users className="h-3 w-3" />
-            {table.capacity} seats
-          </span>
-          {url ? (
-            <span className="text-xs text-muted-foreground flex items-center gap-1">
-              <QrCode className="h-3 w-3" />
-              QR ready
-            </span>
-          ) : (
-            <span className="text-xs text-amber-600 flex items-center gap-1">
-              <QrCode className="h-3 w-3" />
-              No QR
-            </span>
-          )}
-        </div>
-      </div>
 
-      {/* Actions */}
-      <div className="flex items-center gap-1.5 shrink-0">
-        <Button
-          size="sm"
-          variant="ghost"
-          className="h-8 w-8 p-0"
-          title="View QR code"
-          onClick={() => onQR(table)}
-        >
-          <QrCode className="h-4 w-4" />
-        </Button>
-
-        {canManage && (
-          <>
-            <Button
-              size="sm"
-              variant="ghost"
-              className="h-8 w-8 p-0"
-              title="Edit table"
-              onClick={() => onEdit(table)}
-            >
-              <Pencil className="h-4 w-4" />
-            </Button>
-
-            {table.isActive ? (
-              <Button
-                size="sm"
-                variant="ghost"
-                className="h-8 w-8 p-0 text-muted-foreground hover:text-destructive"
-                title="Archive table"
-                disabled={isArchiving}
-                onClick={() => onArchive(table)}
-              >
-                {isArchiving ? (
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                ) : (
-                  <Archive className="h-4 w-4" />
-                )}
-              </Button>
-            ) : (
-              <Button
-                size="sm"
-                variant="ghost"
-                className="h-8 w-8 p-0 text-muted-foreground hover:text-primary"
-                title="Restore table"
-                disabled={isRestoring}
-                onClick={() => onRestore(table)}
-              >
-                {isRestoring ? (
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                ) : (
-                  <RotateCcw className="h-4 w-4" />
-                )}
-              </Button>
+        {/* Info */}
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2 flex-wrap">
+            <span className="font-medium text-sm">{tableLabel(table.number, table.name)}</span>
+            <StatusBadge status={table.status} />
+            {table.section && (
+              <Badge variant="secondary" className="text-xs">{table.section}</Badge>
             )}
-          </>
-        )}
+          </div>
+          <div className="flex items-center gap-3 mt-1 flex-wrap">
+            <span className="text-xs text-muted-foreground flex items-center gap-1">
+              <Users className="h-3 w-3" />
+              {table.capacity} seats
+            </span>
+            {table.qrCodeToken ? (
+              <span className="text-xs text-muted-foreground flex items-center gap-1">
+                <QrCode className="h-3 w-3" />
+                QR ready
+              </span>
+            ) : (
+              <span className="text-xs text-amber-600 flex items-center gap-1">
+                <QrCode className="h-3 w-3" />
+                No QR
+              </span>
+            )}
+          </div>
+        </div>
+
+        {/* Action buttons */}
+        <div className="flex items-center gap-1 shrink-0">
+          <Button size="sm" variant="ghost" className="h-8 w-8 p-0" title="View QR code" onClick={() => onQR(table)}>
+            <QrCode className="h-4 w-4" />
+          </Button>
+
+          {canManage && (
+            <>
+              {!isArchived && (
+                <Button
+                  size="sm" variant="ghost" className="h-8 w-8 p-0" title="Edit table"
+                  onClick={() => onEdit(table)}
+                >
+                  <Pencil className="h-4 w-4" />
+                </Button>
+              )}
+
+              {isArchived ? (
+                <>
+                  <Button
+                    size="sm" variant="ghost"
+                    className="h-8 w-8 p-0 text-muted-foreground hover:text-primary"
+                    title="Restore table" disabled={isRestoring}
+                    onClick={() => onRestore(table)}
+                  >
+                    {isRestoring ? <Loader2 className="h-4 w-4 animate-spin" /> : <RotateCcw className="h-4 w-4" />}
+                  </Button>
+                  <Button
+                    size="sm" variant="ghost"
+                    className="h-8 w-8 p-0 text-muted-foreground hover:text-destructive"
+                    title="Permanently delete" disabled={isCheckingDelete}
+                    onClick={() => onPermanentDelete(table)}
+                  >
+                    {isCheckingDelete ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
+                  </Button>
+                </>
+              ) : (
+                <Button
+                  size="sm" variant="ghost"
+                  className="h-8 w-8 p-0 text-muted-foreground hover:text-destructive"
+                  title="Archive table" disabled={isArchiving}
+                  onClick={() => onArchive(table)}
+                >
+                  {isArchiving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Archive className="h-4 w-4" />}
+                </Button>
+              )}
+            </>
+          )}
+        </div>
       </div>
+
+      {/* ── Maintenance toggle (active tables only, owners/managers) ──────── */}
+      {canManage && !isArchived && (
+        <div className="flex items-center gap-2 mt-3 pt-3 border-t border-border/40">
+          <Switch
+            id={`maint-${table.id}`}
+            checked={table.isUnderMaintenance}
+            onCheckedChange={() => onToggleMaintenance(table)}
+            disabled={isTogglingMaintenance}
+            className="scale-90"
+          />
+          <Label
+            htmlFor={`maint-${table.id}`}
+            className={cn("text-xs cursor-pointer select-none", table.isUnderMaintenance ? "text-orange-600 font-medium" : "text-muted-foreground")}
+          >
+            {table.isUnderMaintenance ? "Under maintenance — QR ordering blocked" : "Mark as under maintenance"}
+          </Label>
+          {isTogglingMaintenance && <Loader2 className="h-3 w-3 animate-spin text-muted-foreground" />}
+        </div>
+      )}
+
+      {/* ── Today's bookings (expandable) ─────────────────────────────────── */}
+      <BookingsPanel table={table} />
     </div>
   );
+}
+
+// ─── Delete check helpers ─────────────────────────────────────────────────────
+
+type DeleteFlow =
+  | null
+  | { phase: "confirm";  table: ManagedTable }
+  | { phase: "blocked";  table: ManagedTable; refs: { orders: number; sessions: number; bookings: number } };
+
+async function checkTableRefs(tableId: string) {
+  const [ordersRes, sessionsRes, bookingsRes] = await Promise.all([
+    supabase.from("orders")        .select("id", { count: "exact", head: true }).eq("table_id", tableId),
+    supabase.from("table_sessions").select("id", { count: "exact", head: true }).eq("table_id", tableId),
+    supabase.from("bookings")      .select("id", { count: "exact", head: true }).eq("table_id", tableId),
+  ]);
+  return {
+    orders:   ordersRes.count   ?? 0,
+    sessions: sessionsRes.count ?? 0,
+    bookings: bookingsRes.count ?? 0,
+  };
 }
 
 // ─── Page ─────────────────────────────────────────────────────────────────────
@@ -493,35 +637,57 @@ export function TablesPage() {
   const {
     activeTables,
     archivedTables,
+    tables,
     isLoading,
     nextNumber,
-    createTable,
-    isCreating,
-    updateTable,
-    isUpdating,
-    updatingTableId,
-    archiveTable,
-    isArchiving,
-    archivingTableId,
-    restoreTable,
-    isRestoring,
-    restoringTableId,
-    regenerateQr,
-    isRegeneratingQr,
-    regeneratingTableId,
+    createTable,         isCreating,
+    updateTable,         isUpdating,       updatingTableId,
+    toggleMaintenance,   isTogglingMaintenance, togglingMaintenanceId,
+    archiveTable,        isArchiving,      archivingTableId,
+    restoreTable,        isRestoring,      restoringTableId,
+    permanentDelete,     isDeletingPermanent,
+    regenerateQr,        isRegeneratingQr, regeneratingTableId,
   } = useTableManagement();
 
-  // ── Dialog state ─────────────────────────────────────────────────────────
-  const [addOpen, setAddOpen] = useState(false);
-  const [editTarget, setEditTarget] = useState<ManagedTable | null>(null);
-  const [qrTarget, setQrTarget] = useState<ManagedTable | null>(null);
-  const [archiveTarget, setArchiveTarget] = useState<ManagedTable | null>(null);
-  const [showArchived, setShowArchived] = useState(false);
+  // ── Filter state ──────────────────────────────────────────────────────────
+  const [activeFilter, setActiveFilter] = useState<TableStatus | null>(null);
 
-  // ── Add ──────────────────────────────────────────────────────────────────
-  function openAdd() {
-    setAddOpen(true);
+  function toggleFilter(s: TableStatus) {
+    setActiveFilter((p) => (p === s ? null : s));
   }
+
+  // ── Derived counts ────────────────────────────────────────────────────────
+  const statusCounts = {
+    free:        activeTables.filter((t) => t.status === "free").length,
+    busy:        activeTables.filter((t) => t.status === "busy").length,
+    booked:      activeTables.filter((t) => t.status === "booked").length,
+    maintenance: activeTables.filter((t) => t.status === "maintenance").length,
+    archived:    archivedTables.length,
+  };
+
+  // ── Filtered display lists ─────────────────────────────────────────────────
+  const displayedActive = activeFilter === null || activeFilter === "archived"
+    ? (activeFilter === "archived" ? [] : activeTables)
+    : activeTables.filter((t) => t.status === activeFilter);
+
+  const displayedArchived = activeFilter === null
+    ? archivedTables
+    : activeFilter === "archived"
+    ? archivedTables
+    : [];
+
+  const showArchivedAsMain = activeFilter === "archived";
+
+  // ── Dialog state ─────────────────────────────────────────────────────────
+  const [addOpen,        setAddOpen]        = useState(false);
+  const [editTarget,     setEditTarget]     = useState<ManagedTable | null>(null);
+  const [qrTarget,       setQrTarget]       = useState<ManagedTable | null>(null);
+  const [archiveTarget,  setArchiveTarget]  = useState<ManagedTable | null>(null);
+  const [showArchived,   setShowArchived]   = useState(false);
+  const [deleteFlow,     setDeleteFlow]     = useState<DeleteFlow>(null);
+  const [checkingDeleteId, setCheckingDeleteId] = useState<string | null>(null);
+
+  // ── Handlers ─────────────────────────────────────────────────────────────
 
   async function handleCreate(form: TableFormState) {
     const num = parseInt(form.number) || nextNumber;
@@ -537,18 +703,16 @@ export function TablesPage() {
       toast({ title: "Table added", description: `${form.name} is ready with a QR code.` });
     } catch (err: any) {
       const msg = err?.message ?? "Failed to create table";
-      const isUnique = msg.includes("unique") || msg.includes("duplicate");
       toast({
         title: "Could not add table",
-        description: isUnique
-          ? `Table number ${num} is already taken. Choose a different number.`
+        description: (msg.includes("unique") || msg.includes("duplicate"))
+          ? `Table number ${num} is already taken.`
           : msg,
         variant: "destructive",
       });
     }
   }
 
-  // ── Edit ─────────────────────────────────────────────────────────────────
   async function handleEdit(form: TableFormState) {
     if (!editTarget) return;
     try {
@@ -565,12 +729,10 @@ export function TablesPage() {
       setEditTarget(null);
       toast({ title: "Table updated" });
     } catch (err: any) {
-      const msg = err?.message ?? "Failed to update table";
-      toast({ title: "Could not update table", description: msg, variant: "destructive" });
+      toast({ title: "Could not update table", description: err?.message, variant: "destructive" });
     }
   }
 
-  // ── Archive ───────────────────────────────────────────────────────────────
   async function confirmArchive() {
     if (!archiveTarget) return;
     try {
@@ -582,13 +744,59 @@ export function TablesPage() {
     }
   }
 
-  // ── Restore ───────────────────────────────────────────────────────────────
   async function handleRestore(table: ManagedTable) {
     try {
       await restoreTable(table.id);
       toast({ title: "Table restored", description: `${tableLabel(table.number, table.name)} is active again.` });
     } catch (err: any) {
       toast({ title: "Restore failed", description: err?.message, variant: "destructive" });
+    }
+  }
+
+  async function handleToggleMaintenance(table: ManagedTable) {
+    const next = !table.isUnderMaintenance;
+    try {
+      await toggleMaintenance({ tableId: table.id, maintenance: next });
+      toast({
+        title: next ? "Table under maintenance" : "Maintenance ended",
+        description: next
+          ? `${tableLabel(table.number, table.name)} is now blocked from new sessions.`
+          : `${tableLabel(table.number, table.name)} is available again.`,
+      });
+    } catch (err: any) {
+      toast({ title: "Could not update maintenance status", description: err?.message, variant: "destructive" });
+    }
+  }
+
+  async function handleStartDeleteCheck(table: ManagedTable) {
+    setCheckingDeleteId(table.id);
+    try {
+      const refs = await checkTableRefs(table.id);
+      if (refs.orders > 0 || refs.sessions > 0 || refs.bookings > 0) {
+        setDeleteFlow({ phase: "blocked", table, refs });
+      } else {
+        setDeleteFlow({ phase: "confirm", table });
+      }
+    } catch {
+      toast({ title: "Could not check references", variant: "destructive" });
+    } finally {
+      setCheckingDeleteId(null);
+    }
+  }
+
+  async function handleConfirmDelete() {
+    if (!deleteFlow || deleteFlow.phase !== "confirm") return;
+    const table = deleteFlow.table;
+    try {
+      await permanentDelete(table.id);
+      setDeleteFlow(null);
+      toast({ title: "Table permanently deleted", description: `${tableLabel(table.number, table.name)} has been removed.` });
+    } catch (err: any) {
+      if (err.message === "HAS_REFERENCES") {
+        setDeleteFlow({ phase: "blocked", table, refs: { orders: err.orders, sessions: err.sessions, bookings: err.bookings } });
+      } else {
+        toast({ title: "Delete failed", description: err?.message, variant: "destructive" });
+      }
     }
   }
 
@@ -601,7 +809,7 @@ export function TablesPage() {
         description="Manage your café tables, sections, and QR codes."
         action={
           canManage ? (
-            <Button onClick={openAdd}>
+            <Button onClick={() => setAddOpen(true)}>
               <Plus className="h-4 w-4 mr-2" />
               Add table
             </Button>
@@ -609,59 +817,122 @@ export function TablesPage() {
         }
       />
 
-      {/* Stats */}
-      <div className="grid grid-cols-3 gap-3 mb-6">
-        {[
-          {
-            label: "Total tables",
-            value: activeTables.length + archivedTables.length,
-            icon: Layers,
-          },
-          {
-            label: "Active",
-            value: activeTables.length,
-            icon: CheckCircle2,
-            accent: true,
-          },
-          {
-            label: "Archived",
-            value: archivedTables.length,
-            icon: Archive,
-          },
-        ].map((s) => (
-          <div key={s.label} className="bg-card border border-card-border rounded-xl p-4 shadow-sm">
-            <div className="flex items-start justify-between">
-              <div>
-                <p className="text-xs text-muted-foreground">{s.label}</p>
-                <p className={cn("text-2xl font-bold mt-0.5", s.accent ? "text-primary" : "text-foreground")}>
-                  {isLoading ? "—" : s.value}
-                </p>
-              </div>
-              <div className={cn("flex items-center justify-center w-8 h-8 rounded-lg", s.accent ? "bg-primary/10 text-primary" : "bg-muted text-muted-foreground")}>
-                <s.icon className="w-4 h-4" />
-              </div>
+      {/* ── Stat Cards ─────────────────────────────────────────────────────── */}
+      <div className="grid grid-cols-3 sm:grid-cols-6 gap-3 mb-6">
+        {/* Total */}
+        <div
+          className={cn(
+            "text-left bg-card border border-card-border rounded-xl p-4 shadow-sm transition-all cursor-pointer hover:shadow-md",
+            activeFilter === null && "ring-2 ring-primary bg-primary/5"
+          )}
+          onClick={() => setActiveFilter(null)}
+        >
+          <div className="flex items-start justify-between">
+            <div>
+              <p className="text-xs text-muted-foreground leading-none">Total</p>
+              <p className="text-2xl font-bold mt-1.5">{isLoading ? "—" : tables.length}</p>
+            </div>
+            <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-muted shrink-0">
+              <Layers className="w-4 h-4 text-muted-foreground" />
             </div>
           </div>
-        ))}
+        </div>
+
+        {(["free", "busy", "booked", "maintenance", "archived"] as TableStatus[]).map((s) => {
+          const cfg = STATUS_CONFIG[s];
+          const Icon = cfg.icon;
+          return (
+            <button
+              key={s}
+              onClick={() => toggleFilter(s)}
+              className={cn(
+                "text-left bg-card border border-card-border rounded-xl p-4 shadow-sm transition-all hover:shadow-md focus:outline-none",
+                activeFilter === s && cfg.cardActiveCls
+              )}
+            >
+              <div className="flex items-start justify-between">
+                <div>
+                  <p className="text-xs text-muted-foreground leading-none">{cfg.label}</p>
+                  <p className={cn("text-2xl font-bold mt-1.5", cfg.cardCls)}>
+                    {isLoading ? "—" : statusCounts[s]}
+                  </p>
+                </div>
+                <div className="flex items-center justify-center w-8 h-8 rounded-lg shrink-0 bg-muted/60">
+                  <Icon className={cn("w-4 h-4", cfg.cardCls)} />
+                </div>
+              </div>
+            </button>
+          );
+        })}
       </div>
 
-      {/* Active tables */}
+      {/* ── Active filter pill ─────────────────────────────────────────────── */}
+      {activeFilter !== null && (
+        <div className="flex items-center gap-2 mb-4">
+          <span className="text-sm text-muted-foreground">Showing:</span>
+          <button
+            onClick={() => setActiveFilter(null)}
+            className={cn("inline-flex items-center gap-1.5 text-xs font-medium px-2.5 py-1 rounded-full border cursor-pointer hover:opacity-80", STATUS_CONFIG[activeFilter].badgeCls)}
+          >
+            {STATUS_CONFIG[activeFilter].label}
+            <span className="text-xs opacity-60">✕</span>
+          </button>
+        </div>
+      )}
+
+      {/* ── Main table list ────────────────────────────────────────────────── */}
       {isLoading ? (
         <div className="flex items-center justify-center py-16">
           <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
         </div>
-      ) : activeTables.length === 0 ? (
+      ) : showArchivedAsMain ? (
+        /* Archived filter selected — show archived tables as main content */
+        archivedTables.length === 0 ? (
+          <EmptyState
+            icon={Archive}
+            title="No archived tables"
+            description="Tables you archive will appear here. They can be restored or permanently deleted."
+          />
+        ) : (
+          <div className="space-y-2">
+            {archivedTables.map((t) => (
+              <TableCard
+                key={t.id}
+                table={t}
+                canManage={canManage}
+                onEdit={setEditTarget}
+                onQR={setQrTarget}
+                onArchive={setArchiveTarget}
+                onRestore={handleRestore}
+                onToggleMaintenance={handleToggleMaintenance}
+                onPermanentDelete={handleStartDeleteCheck}
+                isArchiving={false}
+                isRestoring={isRestoring && restoringTableId === t.id}
+                isTogglingMaintenance={false}
+                isCheckingDelete={checkingDeleteId === t.id}
+              />
+            ))}
+          </div>
+        )
+      ) : displayedActive.length === 0 && activeFilter !== null ? (
+        <EmptyState
+          icon={STATUS_CONFIG[activeFilter].icon}
+          title={`No ${STATUS_CONFIG[activeFilter].label.toLowerCase()} tables`}
+          description={`There are currently no tables with status "${STATUS_CONFIG[activeFilter].label.toLowerCase()}".`}
+          action={
+            <Button variant="outline" size="sm" onClick={() => setActiveFilter(null)}>
+              Show all tables
+            </Button>
+          }
+        />
+      ) : activeTables.length === 0 && activeFilter === null ? (
         <EmptyState
           icon={TableProperties}
           title="No tables yet"
-          description={
-            canManage
-              ? "Add your first table to generate a QR code for customers."
-              : "No tables have been set up yet."
-          }
+          description={canManage ? "Add your first table to generate a QR code for customers." : "No tables have been set up yet."}
           action={
             canManage ? (
-              <Button onClick={openAdd}>
+              <Button onClick={() => setAddOpen(true)}>
                 <Plus className="h-4 w-4 mr-2" />
                 Add table
               </Button>
@@ -670,8 +941,8 @@ export function TablesPage() {
         />
       ) : (
         <div className="space-y-2">
-          {activeTables.map((t) => (
-            <TableRow
+          {displayedActive.map((t) => (
+            <TableCard
               key={t.id}
               table={t}
               canManage={canManage}
@@ -679,32 +950,32 @@ export function TablesPage() {
               onQR={setQrTarget}
               onArchive={setArchiveTarget}
               onRestore={handleRestore}
+              onToggleMaintenance={handleToggleMaintenance}
+              onPermanentDelete={handleStartDeleteCheck}
               isArchiving={isArchiving && archivingTableId === t.id}
-              isRestoring={isRestoring && restoringTableId === t.id}
+              isRestoring={false}
+              isTogglingMaintenance={isTogglingMaintenance && togglingMaintenanceId === t.id}
+              isCheckingDelete={checkingDeleteId === t.id}
             />
           ))}
         </div>
       )}
 
-      {/* Archived section */}
-      {archivedTables.length > 0 && (
+      {/* ── Archived section (collapsible, shown when filter is null) ────── */}
+      {!showArchivedAsMain && displayedArchived.length > 0 && (
         <div className="mt-6">
           <button
             onClick={() => setShowArchived((p) => !p)}
             className="flex items-center gap-2 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors mb-3"
           >
-            {showArchived ? (
-              <ChevronDown className="h-4 w-4" />
-            ) : (
-              <ChevronRight className="h-4 w-4" />
-            )}
-            Archived tables ({archivedTables.length})
+            {showArchived ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+            Archived tables ({displayedArchived.length})
           </button>
 
           {showArchived && (
             <div className="space-y-2">
-              {archivedTables.map((t) => (
-                <TableRow
+              {displayedArchived.map((t) => (
+                <TableCard
                   key={t.id}
                   table={t}
                   canManage={canManage}
@@ -712,8 +983,12 @@ export function TablesPage() {
                   onQR={setQrTarget}
                   onArchive={setArchiveTarget}
                   onRestore={handleRestore}
-                  isArchiving={isArchiving && archivingTableId === t.id}
+                  onToggleMaintenance={handleToggleMaintenance}
+                  onPermanentDelete={handleStartDeleteCheck}
+                  isArchiving={false}
                   isRestoring={isRestoring && restoringTableId === t.id}
+                  isTogglingMaintenance={false}
+                  isCheckingDelete={checkingDeleteId === t.id}
                 />
               ))}
             </div>
@@ -721,7 +996,7 @@ export function TablesPage() {
         </div>
       )}
 
-      {/* ── Dialogs ───────────────────────────────────────────────────────── */}
+      {/* ── Dialogs ────────────────────────────────────────────────────────── */}
 
       {/* Add */}
       <TableFormDialog
@@ -729,13 +1004,7 @@ export function TablesPage() {
         onOpenChange={setAddOpen}
         title="Add table"
         autoNumber={nextNumber}
-        initial={{
-          name: "",
-          number: String(nextNumber),
-          capacity: "4",
-          section: "",
-          displayOrder: String(nextNumber),
-        }}
+        initial={{ name: "", number: String(nextNumber), capacity: "4", section: "", displayOrder: String(nextNumber) }}
         onSubmit={handleCreate}
         isSaving={isCreating}
       />
@@ -769,19 +1038,15 @@ export function TablesPage() {
       />
 
       {/* Archive confirm */}
-      <AlertDialog
-        open={!!archiveTarget}
-        onOpenChange={(v) => { if (!v) setArchiveTarget(null); }}
-      >
+      <AlertDialog open={!!archiveTarget} onOpenChange={(v) => { if (!v) setArchiveTarget(null); }}>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Archive this table?</AlertDialogTitle>
             <AlertDialogDescription>
               {archiveTarget && (
                 <>
-                  <strong>{tableLabel(archiveTarget.number, archiveTarget.name)}</strong> will
-                  be hidden from customers. Existing sessions and QR codes will stop working.
-                  You can restore it at any time.
+                  <strong>{tableLabel(archiveTarget.number, archiveTarget.name)}</strong> will be hidden from customers.
+                  Existing sessions and QR codes will stop working. You can restore it at any time.
                 </>
               )}
             </AlertDialogDescription>
@@ -797,7 +1062,107 @@ export function TablesPage() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Permanent delete — confirmation */}
+      <AlertDialog
+        open={deleteFlow?.phase === "confirm"}
+        onOpenChange={(v) => { if (!v) setDeleteFlow(null); }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2">
+              <Trash2 className="h-5 w-5 text-destructive" />
+              Permanently delete table?
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              {deleteFlow?.phase === "confirm" && (
+                <>
+                  <strong>{tableLabel(deleteFlow.table.number, deleteFlow.table.name)}</strong> has no historical
+                  records and will be permanently removed. This action cannot be undone.
+                </>
+              )}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isDeletingPermanent}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleConfirmDelete}
+              disabled={isDeletingPermanent}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {isDeletingPermanent && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+              Delete permanently
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Permanent delete — blocked by references */}
+      <Dialog
+        open={deleteFlow?.phase === "blocked"}
+        onOpenChange={(v) => { if (!v) setDeleteFlow(null); }}
+      >
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <AlertTriangle className="h-5 w-5 text-amber-500" />
+              Cannot delete — historical records exist
+            </DialogTitle>
+            <DialogDescription>
+              {deleteFlow?.phase === "blocked" && (
+                <>
+                  <strong>{tableLabel(deleteFlow.table.number, deleteFlow.table.name)}</strong> has historical
+                  data that must be preserved.
+                </>
+              )}
+            </DialogDescription>
+          </DialogHeader>
+
+          {deleteFlow?.phase === "blocked" && (
+            <div className="space-y-2 py-2">
+              {deleteFlow.refs.orders > 0 && (
+                <div className="flex items-center justify-between px-3 py-2 bg-muted rounded-lg text-sm">
+                  <span>Orders</span>
+                  <Badge variant="secondary">{deleteFlow.refs.orders}</Badge>
+                </div>
+              )}
+              {deleteFlow.refs.sessions > 0 && (
+                <div className="flex items-center justify-between px-3 py-2 bg-muted rounded-lg text-sm">
+                  <span>Sessions</span>
+                  <Badge variant="secondary">{deleteFlow.refs.sessions}</Badge>
+                </div>
+              )}
+              {deleteFlow.refs.bookings > 0 && (
+                <div className="flex items-center justify-between px-3 py-2 bg-muted rounded-lg text-sm">
+                  <span>Bookings</span>
+                  <Badge variant="secondary">{deleteFlow.refs.bookings}</Badge>
+                </div>
+              )}
+              <p className="text-xs text-muted-foreground pt-1">
+                Archived tables with historical records are kept for reporting and audit purposes.
+                You can restore this table if you need to reuse it.
+              </p>
+            </div>
+          )}
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDeleteFlow(null)}>Got it</Button>
+            {deleteFlow?.phase === "blocked" && (
+              <Button
+                variant="secondary"
+                onClick={() => {
+                  const t = deleteFlow.table;
+                  setDeleteFlow(null);
+                  handleRestore(t);
+                }}
+              >
+                <RotateCcw className="h-4 w-4 mr-2" />
+                Restore instead
+              </Button>
+            )}
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </AppLayout>
   );
 }
-

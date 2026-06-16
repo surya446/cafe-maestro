@@ -5,7 +5,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import {
   Coffee, QrCode, Clock, AlertCircle, XCircle, CheckCircle2,
   ChefHat, Bell, ShoppingCart, Minus, Plus, X, Loader2,
-  UtensilsCrossed, Receipt, User, Sparkles,
+  UtensilsCrossed, Receipt, User, Sparkles, Wrench,
 } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import {
@@ -1130,6 +1130,16 @@ export function TableSessionPage() {
       <motion.div key="name-entry" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.4 }}>
         <QRNameEntry cafeName="Welcome" tableLabel={tableLabel} onStart={startSession} error={nameEntryError} isSubmitting={isStartingSession} />
       </motion.div>
+    );
+  }
+
+  if (sessionState === "maintenance") {
+    return (
+      <QRSessionScreen
+        icon={<Wrench className="w-14 h-14" style={{ color: C.text }} />}
+        title="Table under maintenance"
+        body="This table is temporarily unavailable. Please ask your server for assistance or try another table."
+      />
     );
   }
 

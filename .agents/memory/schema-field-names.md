@@ -15,6 +15,7 @@ Key field names that differ from intuitive guesses:
 | `cafe_tables` | `number` | `table_number` | Table number |
 | `cafe_tables` | `name` | `label` | Optional display name |
 | `cafe_tables` | `qr_code_token` | `qr_token` | QR identifier |
+| `cafe_tables` | `is_under_maintenance` | — | Added migration 035; DEFAULT false; blocks sessions |
 | `table_sessions` | `expires_at` | `expired_at` | Session expiry |
 | `table_sessions` | `started_at` | `created_at` | Session start time |
 | `bill_requests` | `"pending"\|"acknowledged"` | `"completed"` | No "completed" status |

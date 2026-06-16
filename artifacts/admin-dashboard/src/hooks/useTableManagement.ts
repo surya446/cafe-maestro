@@ -1,8 +1,19 @@
+import { useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/hooks/useAuth";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
+
+export type TableStatus = "free" | "busy" | "booked" | "maintenance" | "archived";
+
+export interface TodayBooking {
+  id: string;
+  guestName: string;
+  partySize: number;
+  bookingTime: string;
+  status: string;
+}
 
 export interface ManagedTable {
   id: string;
@@ -14,6 +25,9 @@ export interface ManagedTable {
   displayOrder: number;
   qrCodeToken: string | null;
   isActive: boolean;
+  isUnderMaintenance: boolean;
+  status: TableStatus;
+  todayBookings: TodayBooking[];
   createdAt: string;
   updatedAt: string;
 }
@@ -34,7 +48,25 @@ export interface UpdateTableInput {
   number?: number;
 }
 
-const TABLE_QUERY_KEY = ["managed_tables"];
+// ─── Status derivation ────────────────────────────────────────────────────────
+//
+// Priority: archived > maintenance > busy > booked > free
+// Only one state is active at a time.
+
+function deriveStatus(
+  t: { is_active: boolean; is_under_maintenance?: boolean; id: string },
+  activeSessionTableIds: Set<string>,
+  bookingsByTable: Map<string, TodayBooking[]>
+): TableStatus {
+  if (!t.is_active) return "archived";
+  if (t.is_under_maintenance) return "maintenance";
+  if (activeSessionTableIds.has(t.id)) return "busy";
+  const bookings = bookingsByTable.get(t.id) ?? [];
+  if (bookings.some((b) => b.status === "confirmed")) return "booked";
+  return "free";
+}
+
+const TABLE_QUERY_KEY = ["managed_tables", "v2"];
 
 // ─── Hook ─────────────────────────────────────────────────────────────────────
 
@@ -42,47 +74,107 @@ export function useTableManagement() {
   const qc = useQueryClient();
   const { user } = useAuth();
 
-  // ── All tables (active + archived) ─────────────────────────────────────────
+  // ── Combined data fetch: tables + active sessions + today's bookings ────────
   const { data: tables = [], isLoading } = useQuery<ManagedTable[]>({
     queryKey: TABLE_QUERY_KEY,
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("cafe_tables")
-        .select("*")
-        .order("number", { ascending: true });
+      const today = new Date().toISOString().split("T")[0];
 
-      if (error) throw error;
+      const [tablesRes, sessionsRes, bookingsRes] = await Promise.all([
+        supabase
+          .from("cafe_tables")
+          .select("*")
+          .order("number", { ascending: true }),
+        supabase
+          .from("table_sessions")
+          .select("table_id")
+          .eq("status", "active"),
+        supabase
+          .from("bookings")
+          .select("id, table_id, name, party_size, booking_time, status")
+          .eq("booking_date", today)
+          .in("status", ["confirmed", "pending"])
+          .not("table_id", "is", null),
+      ]);
 
-      return (data ?? []).map((t: any) => ({
-        id:           t.id,
-        cafeId:       t.cafe_id,
-        number:       t.number,
-        name:         t.name ?? "",
-        capacity:     t.capacity ?? 2,
-        section:      t.section ?? null,
-        displayOrder: t.display_order ?? t.number,
-        qrCodeToken:  t.qr_code_token ?? null,
-        isActive:     t.is_active,
-        createdAt:    t.created_at,
-        updatedAt:    t.updated_at,
+      if (tablesRes.error) throw tablesRes.error;
+
+      const activeTableIds = new Set<string>(
+        (sessionsRes.data ?? []).map((s: any) => s.table_id as string)
+      );
+
+      const bookingsByTable = new Map<string, TodayBooking[]>();
+      for (const b of bookingsRes.data ?? []) {
+        if (!b.table_id) continue;
+        if (!bookingsByTable.has(b.table_id)) bookingsByTable.set(b.table_id, []);
+        bookingsByTable.get(b.table_id)!.push({
+          id:          b.id,
+          guestName:   b.name,
+          partySize:   b.party_size,
+          bookingTime: b.booking_time,
+          status:      b.status,
+        });
+      }
+
+      return (tablesRes.data ?? []).map((t: any): ManagedTable => ({
+        id:                 t.id,
+        cafeId:             t.cafe_id,
+        number:             t.number,
+        name:               t.name ?? "",
+        capacity:           t.capacity ?? 2,
+        section:            t.section ?? null,
+        displayOrder:       t.display_order ?? t.number,
+        qrCodeToken:        t.qr_code_token ?? null,
+        isActive:           t.is_active,
+        isUnderMaintenance: t.is_under_maintenance ?? false,
+        status:             deriveStatus(t, activeTableIds, bookingsByTable),
+        todayBookings:      bookingsByTable.get(t.id) ?? [],
+        createdAt:          t.created_at,
+        updatedAt:          t.updated_at,
       }));
     },
-    staleTime: 30_000,
+    staleTime: 20_000,
   });
 
   function invalidate() {
-    qc.invalidateQueries({ queryKey: TABLE_QUERY_KEY });
+    qc.invalidateQueries({ queryKey: ["managed_tables"] });
     qc.invalidateQueries({ queryKey: ["staff_tables"] });
   }
 
-  // ── Create table ─────────────────────────────────────────────────────────────
+  // ── Real-time subscriptions ──────────────────────────────────────────────────
+  // Subscribes to cafe_tables, table_sessions, and bookings so all three
+  // status-driving signals push updates immediately to the dashboard.
+  useEffect(() => {
+    if (!user?.cafeId) return;
+
+    const ch = supabase
+      .channel("table-management-rt")
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "cafe_tables", filter: `cafe_id=eq.${user.cafeId}` },
+        () => { qc.invalidateQueries({ queryKey: TABLE_QUERY_KEY }); }
+      )
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "table_sessions", filter: `cafe_id=eq.${user.cafeId}` },
+        () => { qc.invalidateQueries({ queryKey: TABLE_QUERY_KEY }); }
+      )
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "bookings", filter: `cafe_id=eq.${user.cafeId}` },
+        () => { qc.invalidateQueries({ queryKey: TABLE_QUERY_KEY }); }
+      )
+      .subscribe();
+
+    return () => { supabase.removeChannel(ch); };
+  }, [user?.cafeId, qc]);
+
+  // ── Create table ───────────────────────────────────────────────────────────
   const createMutation = useMutation({
     mutationFn: async (input: CreateTableInput) => {
       if (!user?.cafeId) throw new Error("Not authenticated");
       const token = crypto.randomUUID();
 
-      // Try inserting with optional columns first; fall back if columns
-      // don't exist yet (migration 034 not yet applied).
       let result = await supabase
         .from("cafe_tables")
         .insert({
@@ -100,9 +192,7 @@ export function useTableManagement() {
 
       if (result.error) {
         const msg = result.error.message ?? "";
-        const isColumnMissing =
-          msg.includes("display_order") || msg.includes("section");
-        if (isColumnMissing) {
+        if (msg.includes("display_order") || msg.includes("section")) {
           result = await supabase
             .from("cafe_tables")
             .insert({
@@ -124,54 +214,66 @@ export function useTableManagement() {
     onSuccess: invalidate,
   });
 
-  // ── Update table ─────────────────────────────────────────────────────────────
+  // ── Update table ───────────────────────────────────────────────────────────
   const updateMutation = useMutation({
-    mutationFn: async ({
-      id,
-      input,
-    }: {
-      id: string;
-      input: UpdateTableInput;
-    }) => {
+    mutationFn: async ({ id, input }: { id: string; input: UpdateTableInput }) => {
       const patch: Record<string, unknown> = {};
-      if (input.name      !== undefined) patch.name     = input.name?.trim();
-      if (input.capacity  !== undefined) patch.capacity = input.capacity;
-      if (input.number    !== undefined) patch.number   = input.number;
+      if (input.name     !== undefined) patch.name     = input.name?.trim();
+      if (input.capacity !== undefined) patch.capacity = input.capacity;
+      if (input.number   !== undefined) patch.number   = input.number;
 
-      const patchWithOptional = { ...patch };
-      if (input.section      !== undefined) patchWithOptional.section       = input.section?.trim() || null;
-      if (input.displayOrder !== undefined) patchWithOptional.display_order = input.displayOrder;
+      const patchFull = { ...patch };
+      if (input.section      !== undefined) patchFull.section       = input.section?.trim() || null;
+      if (input.displayOrder !== undefined) patchFull.display_order = input.displayOrder;
 
-      let { error } = await supabase
-        .from("cafe_tables")
-        .update(patchWithOptional)
-        .eq("id", id);
-
-      // Retry without optional columns if migration 034 not yet applied
+      let { error } = await supabase.from("cafe_tables").update(patchFull).eq("id", id);
       if (error) {
         const msg = error.message ?? "";
         if (msg.includes("display_order") || msg.includes("section")) {
-          const fallback = await supabase
-            .from("cafe_tables")
-            .update(patch)
-            .eq("id", id);
+          const fallback = await supabase.from("cafe_tables").update(patch).eq("id", id);
           error = fallback.error;
         }
       }
-
       if (error) throw error;
     },
     onSuccess: invalidate,
   });
 
-  // ── Archive (soft-delete) ──────────────────────────────────────────────────
+  // ── Toggle maintenance ─────────────────────────────────────────────────────
+  const toggleMaintenanceMutation = useMutation({
+    mutationFn: async ({ tableId, maintenance }: { tableId: string; maintenance: boolean }) => {
+      const { error } = await supabase
+        .from("cafe_tables")
+        .update({ is_under_maintenance: maintenance })
+        .eq("id", tableId);
+      if (error) {
+        if ((error.message ?? "").includes("is_under_maintenance")) {
+          throw new Error("Database migration 035 is required. Please apply it in Supabase.");
+        }
+        throw error;
+      }
+    },
+    onSuccess: invalidate,
+  });
+
+  // ── Archive (soft-delete) — also clears maintenance flag ───────────────────
   const archiveMutation = useMutation({
     mutationFn: async (tableId: string) => {
       const { error } = await supabase
         .from("cafe_tables")
-        .update({ is_active: false })
+        .update({ is_active: false, is_under_maintenance: false })
         .eq("id", tableId);
-      if (error) throw error;
+      if (error) {
+        if ((error.message ?? "").includes("is_under_maintenance")) {
+          const fallback = await supabase
+            .from("cafe_tables")
+            .update({ is_active: false })
+            .eq("id", tableId);
+          if (fallback.error) throw fallback.error;
+          return;
+        }
+        throw error;
+      }
     },
     onSuccess: invalidate,
   });
@@ -183,6 +285,32 @@ export function useTableManagement() {
         .from("cafe_tables")
         .update({ is_active: true })
         .eq("id", tableId);
+      if (error) throw error;
+    },
+    onSuccess: invalidate,
+  });
+
+  // ── Permanent delete ───────────────────────────────────────────────────────
+  // Only allowed when no historical records reference this table.
+  // Throws an error with { orders, sessions, bookings } counts if blocked.
+  const permanentDeleteMutation = useMutation({
+    mutationFn: async (tableId: string) => {
+      const [ordersRes, sessionsRes, bookingsRes] = await Promise.all([
+        supabase.from("orders")        .select("id", { count: "exact", head: true }).eq("table_id", tableId),
+        supabase.from("table_sessions").select("id", { count: "exact", head: true }).eq("table_id", tableId),
+        supabase.from("bookings")      .select("id", { count: "exact", head: true }).eq("table_id", tableId),
+      ]);
+
+      const oc = ordersRes.count   ?? 0;
+      const sc = sessionsRes.count ?? 0;
+      const bc = bookingsRes.count ?? 0;
+
+      if (oc > 0 || sc > 0 || bc > 0) {
+        const err = Object.assign(new Error("HAS_REFERENCES"), { orders: oc, sessions: sc, bookings: bc });
+        throw err;
+      }
+
+      const { error } = await supabase.from("cafe_tables").delete().eq("id", tableId);
       if (error) throw error;
     },
     onSuccess: invalidate,
@@ -202,14 +330,9 @@ export function useTableManagement() {
     onSuccess: invalidate,
   });
 
-  // ── Derive active / archived splits ──────────────────────────────────────
-  const activeTables   = tables.filter((t) => t.isActive);
+  const activeTables   = tables.filter((t) =>  t.isActive);
   const archivedTables = tables.filter((t) => !t.isActive);
-
-  const nextNumber: number =
-    tables.length > 0
-      ? Math.max(...tables.map((t) => t.number)) + 1
-      : 1;
+  const nextNumber     = tables.length > 0 ? Math.max(...tables.map((t) => t.number)) + 1 : 1;
 
   return {
     tables,
@@ -218,23 +341,31 @@ export function useTableManagement() {
     isLoading,
     nextNumber,
 
-    createTable:        createMutation.mutateAsync,
-    isCreating:         createMutation.isPending,
+    createTable:          createMutation.mutateAsync,
+    isCreating:           createMutation.isPending,
 
-    updateTable:        updateMutation.mutateAsync,
-    isUpdating:         updateMutation.isPending,
-    updatingTableId:    (updateMutation.variables as { id: string } | undefined)?.id,
+    updateTable:          updateMutation.mutateAsync,
+    isUpdating:           updateMutation.isPending,
+    updatingTableId:      (updateMutation.variables as { id: string } | undefined)?.id,
 
-    archiveTable:       archiveMutation.mutateAsync,
-    isArchiving:        archiveMutation.isPending,
-    archivingTableId:   archiveMutation.variables as string | undefined,
+    toggleMaintenance:      toggleMaintenanceMutation.mutateAsync,
+    isTogglingMaintenance:  toggleMaintenanceMutation.isPending,
+    togglingMaintenanceId:  (toggleMaintenanceMutation.variables as { tableId: string } | undefined)?.tableId,
 
-    restoreTable:       restoreMutation.mutateAsync,
-    isRestoring:        restoreMutation.isPending,
-    restoringTableId:   restoreMutation.variables as string | undefined,
+    archiveTable:         archiveMutation.mutateAsync,
+    isArchiving:          archiveMutation.isPending,
+    archivingTableId:     archiveMutation.variables as string | undefined,
 
-    regenerateQr:       regenerateQrMutation.mutateAsync,
-    isRegeneratingQr:   regenerateQrMutation.isPending,
-    regeneratingTableId: regenerateQrMutation.variables as string | undefined,
+    restoreTable:         restoreMutation.mutateAsync,
+    isRestoring:          restoreMutation.isPending,
+    restoringTableId:     restoreMutation.variables as string | undefined,
+
+    permanentDelete:        permanentDeleteMutation.mutateAsync,
+    isDeletingPermanent:    permanentDeleteMutation.isPending,
+    deletingPermanentId:    permanentDeleteMutation.variables as string | undefined,
+
+    regenerateQr:         regenerateQrMutation.mutateAsync,
+    isRegeneratingQr:     regenerateQrMutation.isPending,
+    regeneratingTableId:  regenerateQrMutation.variables as string | undefined,
   };
 }
