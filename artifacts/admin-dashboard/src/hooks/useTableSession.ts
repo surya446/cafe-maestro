@@ -51,13 +51,15 @@ export interface CartItem {
   notes: string;
 }
 
-// ─── sessionStorage helpers ────────────────────────────────────────────────────
+// ─── localStorage helpers ──────────────────────────────────────────────────────
 //
-// sessionStorage is intentionally used instead of localStorage so that:
-//   • Same-tab refresh  → data persists  → session continues without re-entering name
-//   • New tab / window  → storage is empty → fresh name-entry screen (new session)
+// localStorage is used so the session survives browser closure and reopening.
+// On page load the stored device token is validated against the server:
+//   • Valid + not expired  → session resumes silently (no name re-entry)
+//   • Expired / ended      → storage is cleared → name-entry screen shown
 //
-// This is the correct behaviour for a per-device QR ordering flow.
+// The stored record is cleared immediately whenever a session ends, expires, or
+// is cleared by staff so that a fresh name-entry always follows on next visit.
 
 interface StoredDevice {
   deviceToken: string;
@@ -65,25 +67,24 @@ interface StoredDevice {
   customerName: string;
 }
 
-interface EndedMarker {
-  ended: true;
-}
-
 function storageKey(qrToken: string) {
   return `cafe_session_${qrToken}`;
 }
 
-function loadStored(qrToken: string): StoredDevice | EndedMarker | null {
+function loadStored(qrToken: string): StoredDevice | null {
   try {
-    const raw = sessionStorage.getItem(storageKey(qrToken));
-    return raw ? (JSON.parse(raw) as StoredDevice | EndedMarker) : null;
+    const raw = localStorage.getItem(storageKey(qrToken));
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as Partial<StoredDevice>;
+    // Reject stale entries that are missing required fields.
+    if (!parsed.deviceToken || !parsed.sessionId) {
+      localStorage.removeItem(storageKey(qrToken));
+      return null;
+    }
+    return parsed as StoredDevice;
   } catch {
     return null;
   }
-}
-
-function isStoredDevice(s: StoredDevice | EndedMarker): s is StoredDevice {
-  return "deviceToken" in s;
 }
 
 function saveStored(
@@ -92,20 +93,14 @@ function saveStored(
   sessionId: string,
   customerName: string
 ) {
-  sessionStorage.setItem(
+  localStorage.setItem(
     storageKey(qrToken),
     JSON.stringify({ deviceToken, sessionId, customerName })
   );
 }
 
 function clearStored(qrToken: string) {
-  sessionStorage.removeItem(storageKey(qrToken));
-}
-
-// Writes an ended marker so same-tab reloads stay on the ended screen.
-// A new tab will have empty sessionStorage and show the name-entry screen instead.
-function markEnded(qrToken: string) {
-  sessionStorage.setItem(storageKey(qrToken), JSON.stringify({ ended: true }));
+  localStorage.removeItem(storageKey(qrToken));
 }
 
 // ─── RPC types ─────────────────────────────────────────────────────────────────
@@ -207,20 +202,13 @@ export function useTableSession(qrToken: string) {
     async function init() {
       const stored = loadStored(qrToken);
 
-      // Ended marker present → same-tab reload after session was ended.
-      // New tabs always have empty sessionStorage, so they never reach this branch.
-      if (stored && !isStoredDevice(stored)) {
-        setSessionState("ended");
-        return;
-      }
-
-      // Valid stored device → try to resume without re-asking the name.
-      if (stored && isStoredDevice(stored)) {
+      // Valid stored device token → silently validate against the server and resume.
+      if (stored) {
         const result = await rpcValidateDevice(stored.deviceToken);
         if (cancelled) return;
 
         if (result?.is_valid) {
-          // Source of truth for customer_name is validate_device(), not localStorage.
+          // The server is the source of truth for customer_name.
           const info: SessionInfo = {
             sessionId:    stored.sessionId,
             deviceToken:  stored.deviceToken,
@@ -239,20 +227,21 @@ export function useTableSession(qrToken: string) {
           return;
         }
 
+        // Session ended or expired on the server — clear storage immediately
+        // so the next visit (any tab/browser) starts fresh at name-entry.
+        clearStored(qrToken);
+
         if (result?.session_status === "ended") {
-          markEnded(qrToken);
           setSessionState("ended");
           return;
         }
 
         if (result?.session_status === "expired") {
-          clearStored(qrToken);
           setSessionState("expired");
           return;
         }
 
-        // Device record missing or unknown → clear and fall to name entry.
-        clearStored(qrToken);
+        // Device record not found or unrecognised status → fall through to name-entry.
       }
 
       // No stored device (or just cleared) → show name-entry screen.
@@ -279,11 +268,8 @@ export function useTableSession(qrToken: string) {
       }
 
       if (!result.is_valid) {
-        if (result.session_status === "ended") {
-          markEnded(qrToken);
-        } else {
-          clearStored(qrToken);
-        }
+        // Always clear stored token on any invalid result — the next visit starts fresh.
+        clearStored(qrToken);
         setSessionState(result.session_status === "ended" ? "ended" : "expired");
       }
 
@@ -312,12 +298,10 @@ export function useTableSession(qrToken: string) {
         },
         (payload) => {
           const rec = payload.new as { status?: string };
-          if (rec.status === "ended") {
-            markEnded(qrToken);
-            setSessionState("ended");
-          } else if (rec.status === "expired") {
+          if (rec.status === "ended" || rec.status === "expired") {
+            // Always clear localStorage immediately so the next visit starts fresh.
             clearStored(qrToken);
-            setSessionState("expired");
+            setSessionState(rec.status === "ended" ? "ended" : "expired");
           }
         }
       )
