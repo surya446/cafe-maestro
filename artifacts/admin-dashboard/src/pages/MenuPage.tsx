@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
+import * as DialogPrimitive from "@radix-ui/react-dialog";
 import {
   Plus,
   Pencil,
@@ -10,6 +11,10 @@ import {
   Eye,
   EyeOff,
   AlertCircle,
+  Upload,
+  ChevronDown,
+  ArrowLeft,
+  X,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { AppLayout } from "@/components/layout/AppLayout";
@@ -145,6 +150,25 @@ function ItemForm({
   const [isAvailable, setIsAvailable] = useState(initial?.is_available ?? true);
   const [tags, setTags] = useState((initial?.tags ?? []).join(", "));
   const [allergens, setAllergens] = useState((initial?.allergens ?? []).join(", "));
+  const [localPreview, setLocalPreview] = useState<string | null>(null);
+  const [showUrlField, setShowUrlField] = useState(!!initial?.image_url);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const imagePreview = localPreview ?? (imageUrl || null);
+
+  function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const url = URL.createObjectURL(file);
+    setLocalPreview(url);
+    setShowUrlField(true);
+  }
+
+  function clearImage() {
+    setLocalPreview(null);
+    setImageUrl("");
+    if (fileInputRef.current) fileInputRef.current.value = "";
+  }
 
   function handle(e: React.FormEvent) {
     e.preventDefault();
@@ -164,97 +188,225 @@ function ItemForm({
   }
 
   return (
-    <form onSubmit={handle} className="space-y-4 max-h-[70vh] overflow-y-auto pr-1">
-      <div className="grid grid-cols-2 gap-4">
-        <div className="space-y-1.5 col-span-2">
-          <Label>Item name *</Label>
-          <Input
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            placeholder="e.g. Flat White"
-            required
+    <form onSubmit={handle} className="flex flex-col h-full min-h-0">
+      {/* ── Scrollable body ─────────────────────────────────── */}
+      <div className="flex-1 overflow-y-auto overscroll-contain px-6 py-5 space-y-6 scroll-pb-6">
+
+        {/* Section: Basic Information */}
+        <div className="space-y-4">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+            Basic Information
+          </p>
+
+          <div className="space-y-1.5">
+            <Label htmlFor="item-name">Item Name *</Label>
+            <Input
+              id="item-name"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="e.g. Flat White"
+              required
+              className="h-[52px]"
+            />
+          </div>
+
+          <div className="space-y-1.5">
+            <Label htmlFor="item-category">Category *</Label>
+            <Select value={categoryId} onValueChange={setCategoryId} required>
+              <SelectTrigger id="item-category" className="h-[52px]">
+                <SelectValue placeholder="Select category" />
+              </SelectTrigger>
+              <SelectContent>
+                {categories.map((c) => (
+                  <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="space-y-1.5">
+            <Label htmlFor="item-price">Price (₹) *</Label>
+            <div className="relative">
+              <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-muted-foreground font-medium text-sm pointer-events-none">
+                ₹
+              </span>
+              <Input
+                id="item-price"
+                type="number"
+                min="0"
+                step="0.01"
+                value={price}
+                onChange={(e) => setPrice(e.target.value)}
+                placeholder="99"
+                required
+                className="h-[52px] pl-8"
+              />
+            </div>
+          </div>
+
+          <div className="space-y-1.5">
+            <Label htmlFor="item-desc">Description</Label>
+            <Textarea
+              id="item-desc"
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              placeholder="Short description of the item"
+              className="min-h-[120px] resize-none"
+            />
+          </div>
+        </div>
+
+        <div className="border-t border-border" />
+
+        {/* Section: Media */}
+        <div className="space-y-4">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+            Media
+          </p>
+
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/*"
+            className="sr-only"
+            onChange={handleFileChange}
           />
+
+          {imagePreview ? (
+            <div className="relative rounded-xl overflow-hidden border border-border bg-muted aspect-video">
+              <img
+                src={imagePreview}
+                alt="Preview"
+                className="w-full h-full object-cover"
+              />
+              <button
+                type="button"
+                onClick={clearImage}
+                className="absolute top-2 right-2 w-8 h-8 rounded-full bg-black/60 text-white flex items-center justify-center hover:bg-black/80 transition-colors"
+                aria-label="Remove image"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+          ) : (
+            <button
+              type="button"
+              onClick={() => fileInputRef.current?.click()}
+              className="w-full border-2 border-dashed border-border hover:border-primary/40 rounded-xl p-8 flex flex-col items-center gap-3 text-muted-foreground hover:text-foreground transition-colors"
+            >
+              <Upload className="w-7 h-7" />
+              <div className="text-center">
+                <p className="text-sm font-medium">Upload image</p>
+                <p className="text-xs mt-1 text-muted-foreground/70">
+                  Tap to choose from gallery or camera
+                </p>
+              </div>
+            </button>
+          )}
+
+          <button
+            type="button"
+            onClick={() => setShowUrlField((v) => !v)}
+            className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors"
+          >
+            <ChevronDown
+              className={cn(
+                "w-3.5 h-3.5 transition-transform duration-150",
+                showUrlField && "rotate-180"
+              )}
+            />
+            {showUrlField ? "Hide" : "Use"} image URL instead
+          </button>
+
+          {showUrlField && (
+            <div className="space-y-1.5">
+              <Label htmlFor="item-image-url">Image URL</Label>
+              <Input
+                id="item-image-url"
+                value={imageUrl}
+                onChange={(e) => {
+                  setImageUrl(e.target.value);
+                  if (e.target.value) setLocalPreview(null);
+                }}
+                placeholder="https://example.com/image.jpg"
+                className="h-[52px]"
+              />
+            </div>
+          )}
         </div>
-        <div className="space-y-1.5">
-          <Label>Price (AUD) *</Label>
-          <Input
-            type="number"
-            min="0"
-            step="0.01"
-            value={price}
-            onChange={(e) => setPrice(e.target.value)}
-            placeholder="4.50"
-            required
-          />
+
+        <div className="border-t border-border" />
+
+        {/* Section: Additional Details */}
+        <div className="space-y-4">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+            Additional Details
+          </p>
+
+          <div className="space-y-1.5">
+            <Label htmlFor="item-tags">Tags</Label>
+            <Input
+              id="item-tags"
+              value={tags}
+              onChange={(e) => setTags(e.target.value)}
+              placeholder="vegan, gluten-free, house special"
+              className="h-[52px]"
+            />
+            <p className="text-xs text-muted-foreground">Separate with commas</p>
+          </div>
+
+          <div className="space-y-1.5">
+            <Label htmlFor="item-allergens">Allergens</Label>
+            <Input
+              id="item-allergens"
+              value={allergens}
+              onChange={(e) => setAllergens(e.target.value)}
+              placeholder="dairy, gluten, nuts"
+              className="h-[52px]"
+            />
+            <p className="text-xs text-muted-foreground">Separate with commas</p>
+          </div>
+
+          <div className="flex items-center justify-between p-4 rounded-xl bg-muted/50 border border-border/60">
+            <div>
+              <p className="text-sm font-medium">Available</p>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                Visible to customers on the menu
+              </p>
+            </div>
+            <Switch
+              id="item-available"
+              checked={isAvailable}
+              onCheckedChange={setIsAvailable}
+            />
+          </div>
         </div>
-        <div className="space-y-1.5">
-          <Label>Category *</Label>
-          <Select value={categoryId} onValueChange={setCategoryId} required>
-            <SelectTrigger>
-              <SelectValue placeholder="Select…" />
-            </SelectTrigger>
-            <SelectContent>
-              {categories.map((c) => (
-                <SelectItem key={c.id} value={c.id}>
-                  {c.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
+
+        <div className="h-2" />
       </div>
-      <div className="space-y-1.5">
-        <Label>Description</Label>
-        <Textarea
-          value={description}
-          onChange={(e) => setDescription(e.target.value)}
-          placeholder="Short description of the item"
-          rows={2}
-        />
-      </div>
-      <div className="space-y-1.5">
-        <Label>Image URL</Label>
-        <Input
-          value={imageUrl}
-          onChange={(e) => setImageUrl(e.target.value)}
-          placeholder="https://…"
-        />
-      </div>
-      <div className="space-y-1.5">
-        <Label>Tags (comma-separated)</Label>
-        <Input
-          value={tags}
-          onChange={(e) => setTags(e.target.value)}
-          placeholder="vegan, gluten-free, house special"
-        />
-      </div>
-      <div className="space-y-1.5">
-        <Label>Allergens (comma-separated)</Label>
-        <Input
-          value={allergens}
-          onChange={(e) => setAllergens(e.target.value)}
-          placeholder="dairy, gluten, nuts"
-        />
-      </div>
-      <div className="flex items-center gap-2">
-        <Switch
-          id="available"
-          checked={isAvailable}
-          onCheckedChange={setIsAvailable}
-        />
-        <Label htmlFor="available" className="cursor-pointer">Available</Label>
-      </div>
-      <DialogFooter>
-        <Button variant="outline" onClick={onCancel} type="button" disabled={loading}>
+
+      {/* ── Sticky footer ────────────────────────────────────── */}
+      <div
+        className="shrink-0 border-t border-border bg-background px-6 py-4 flex gap-3"
+        style={{ paddingBottom: "calc(1rem + env(safe-area-inset-bottom, 0px))" }}
+      >
+        <Button
+          variant="outline"
+          type="button"
+          onClick={onCancel}
+          disabled={loading}
+          className="flex-1 h-12"
+        >
           Cancel
         </Button>
         <Button
           type="submit"
           disabled={loading || !name.trim() || !price || !categoryId}
+          className="flex-1 h-12"
         >
-          {loading ? "Saving…" : initial?.name ? "Update" : "Create"}
+          {loading ? "Saving…" : initial?.name ? "Update Item" : "Create Item"}
         </Button>
-      </DialogFooter>
+      </div>
     </form>
   );
 }
@@ -404,6 +556,99 @@ function ArchivedItemCard({
         Restore to Menu
       </Button>
     </div>
+  );
+}
+
+/* ─── Responsive hook ───────────────────────────────────────────────────── */
+function useIsMobile() {
+  const [isMobile, setIsMobile] = useState(() =>
+    typeof window !== "undefined" ? window.innerWidth < 768 : false
+  );
+  useEffect(() => {
+    const mq = window.matchMedia("(max-width: 767px)");
+    setIsMobile(mq.matches);
+    const handler = (e: MediaQueryListEvent) => setIsMobile(e.matches);
+    mq.addEventListener("change", handler);
+    return () => mq.removeEventListener("change", handler);
+  }, []);
+  return isMobile;
+}
+
+/* ─── Responsive item dialog ─────────────────────────────────────────────── */
+function ResponsiveItemDialog({
+  open,
+  onOpenChange,
+  title,
+  children,
+}: {
+  open: boolean;
+  onOpenChange: (o: boolean) => void;
+  title: string;
+  children: React.ReactNode;
+}) {
+  const isMobile = useIsMobile();
+
+  if (isMobile) {
+    return (
+      <DialogPrimitive.Root open={open} onOpenChange={onOpenChange}>
+        <DialogPrimitive.Portal>
+          {/* Overlay */}
+          <DialogPrimitive.Overlay
+            className={cn(
+              "fixed inset-0 z-50 bg-black/60",
+              "data-[state=open]:animate-in data-[state=closed]:animate-out",
+              "data-[state=open]:fade-in-0 data-[state=closed]:fade-out-0",
+              "duration-200"
+            )}
+          />
+          {/* Full-screen bottom sheet */}
+          <DialogPrimitive.Content
+            className={cn(
+              "fixed inset-0 z-50 flex flex-col bg-background",
+              "data-[state=open]:animate-in data-[state=closed]:animate-out",
+              "data-[state=open]:slide-in-from-bottom data-[state=closed]:slide-out-to-bottom",
+              "duration-200 ease-out"
+            )}
+            style={{ paddingTop: "env(safe-area-inset-top, 0px)" }}
+          >
+            {/* Sticky header */}
+            <div className="shrink-0 flex items-center justify-between px-4 h-14 border-b border-border bg-background">
+              <button
+                type="button"
+                onClick={() => onOpenChange(false)}
+                className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors p-2 -ml-2 rounded-lg min-w-[44px] min-h-[44px]"
+              >
+                <ArrowLeft className="w-4 h-4" />
+                <span>Back</span>
+              </button>
+              <h2 className="text-sm font-semibold text-foreground">{title}</h2>
+              <DialogPrimitive.Close className="p-2 -mr-2 rounded-lg text-muted-foreground hover:text-foreground transition-colors min-w-[44px] min-h-[44px] flex items-center justify-center">
+                <X className="w-4 h-4" />
+                <span className="sr-only">Close</span>
+              </DialogPrimitive.Close>
+            </div>
+            {/* Content fills remaining height */}
+            <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
+              {children}
+            </div>
+          </DialogPrimitive.Content>
+        </DialogPrimitive.Portal>
+      </DialogPrimitive.Root>
+    );
+  }
+
+  /* Tablet + desktop — centered dialog */
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="p-0 flex flex-col max-w-[700px] max-h-[90vh] overflow-hidden">
+        <DialogHeader className="shrink-0 px-6 py-4 border-b border-border">
+          <DialogTitle>{title}</DialogTitle>
+        </DialogHeader>
+        <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
+          {children}
+        </div>
+      </DialogContent>
+    </Dialog>
   );
 }
 
@@ -839,42 +1084,39 @@ export function MenuPage() {
         </Dialog>
 
         {/* Item dialog */}
-        <Dialog open={itemDialog} onOpenChange={setItemDialog}>
-          <DialogContent className="max-w-lg">
-            <DialogHeader>
-              <DialogTitle>
-                {editItem ? "Edit item" : "New menu item"}
-              </DialogTitle>
-            </DialogHeader>
-            {categories.length === 0 ? (
-              <div className="flex items-start gap-3 p-4 bg-amber-50 border border-amber-200 rounded-lg">
-                <AlertCircle className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
-                <div>
-                  <p className="text-sm font-medium text-amber-800">No categories yet</p>
-                  <p className="text-xs text-amber-700 mt-0.5">
-                    Create a category first before adding menu items.
-                  </p>
-                </div>
+        <ResponsiveItemDialog
+          open={itemDialog}
+          onOpenChange={setItemDialog}
+          title={editItem ? "Edit Item" : "New Menu Item"}
+        >
+          {categories.length === 0 ? (
+            <div className="flex items-start gap-3 m-6 p-4 bg-amber-50 border border-amber-200 rounded-xl">
+              <AlertCircle className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
+              <div>
+                <p className="text-sm font-medium text-amber-800">No categories yet</p>
+                <p className="text-xs text-amber-700 mt-0.5">
+                  Create a category first before adding menu items.
+                </p>
               </div>
-            ) : (
-              <ItemForm
-                initial={editItem ?? undefined}
-                categories={categories}
-                onSubmit={async (data) => {
-                  if (editItem) {
-                    await updateItem.mutateAsync({ id: editItem.id, ...data });
-                  } else {
-                    await createItem.mutateAsync(data);
-                  }
-                  setItemDialog(false);
-                  setEditItem(null);
-                }}
-                onCancel={() => { setItemDialog(false); setEditItem(null); }}
-                loading={createItem.isPending || updateItem.isPending}
-              />
-            )}
-          </DialogContent>
-        </Dialog>
+            </div>
+          ) : (
+            <ItemForm
+              initial={editItem ?? undefined}
+              categories={categories}
+              onSubmit={async (data) => {
+                if (editItem) {
+                  await updateItem.mutateAsync({ id: editItem.id, ...data });
+                } else {
+                  await createItem.mutateAsync(data);
+                }
+                setItemDialog(false);
+                setEditItem(null);
+              }}
+              onCancel={() => { setItemDialog(false); setEditItem(null); }}
+              loading={createItem.isPending || updateItem.isPending}
+            />
+          )}
+        </ResponsiveItemDialog>
 
         {/* Delete category confirm */}
         <ConfirmDialog
