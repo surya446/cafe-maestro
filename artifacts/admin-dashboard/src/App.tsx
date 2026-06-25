@@ -4,6 +4,7 @@ import { queryClient } from "@/lib/queryClient";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { useAuth } from "@/hooks/useAuth";
+import { ScrollToTop } from "@/components/common/ScrollToTop";
 
 import { LoginPage } from "@/pages/LoginPage";
 import { AuthConfirmPage } from "@/pages/AuthConfirmPage";
@@ -56,7 +57,9 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
 
 function Router() {
   return (
-    <Switch>
+    <>
+      <ScrollToTop />
+      <Switch>
       <Route path="/login" component={LoginPage} />
       <Route path="/auth/confirm" component={AuthConfirmPage} />
       <Route path="/change-password" component={ChangePasswordPage} />
@@ -128,6 +131,7 @@ function Router() {
         <Redirect to="/" />
       </Route>
     </Switch>
+    </>
   );
 }
 
