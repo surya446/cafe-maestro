@@ -148,7 +148,7 @@ export function CafeMenuPage() {
                       )}
                       <div className="flex-1 min-w-0">
                         <div className="flex items-start justify-between gap-2">
-                          <div>
+                          <div className="flex-1 min-w-0">
                             <h3 className="font-semibold text-white text-sm leading-snug">{item.name}</h3>
                             {item.description && (
                               <p className="text-xs text-white/32 mt-1 leading-relaxed line-clamp-2">{item.description}</p>
@@ -157,18 +157,13 @@ export function CafeMenuPage() {
                           <PriceBadge price={item.price} />
                         </div>
                         {item.tags && item.tags.length > 0 && (
-                          <div className="flex flex-wrap gap-1.5 mt-2">
+                          <div className="flex flex-wrap gap-1.5 mt-2.5">
                             {item.tags.map((tag: string) => (
                               <span key={tag} className="text-[10px] font-medium px-2 py-0.5 rounded-full text-white/35 border border-white/[0.07]">
                                 {tag}
                               </span>
                             ))}
                           </div>
-                        )}
-                        {!item.available && (
-                          <span className="mt-2 inline-block text-[10px] font-semibold uppercase tracking-wider text-white/18 bg-white/[0.04] px-2 py-0.5 rounded-full">
-                            Unavailable
-                          </span>
                         )}
                       </div>
                     </motion.div>
