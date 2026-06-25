@@ -163,20 +163,6 @@ export function Sidebar({ collapsed, mobileOpen, onToggleCollapse, onCloseMobile
           </button>
         </div>
 
-        {/* Collapse toggle */}
-        <button
-          onClick={onToggleCollapse}
-          className={cn(
-            "flex items-center gap-2.5 border-t border-sidebar-border hover:bg-sidebar-accent/70 transition-colors shrink-0 h-10",
-            collapsed ? "justify-center px-0" : "px-4"
-          )}
-          title={collapsed ? "Expand sidebar" : "Collapse sidebar"}
-        >
-          <div className="flex items-center justify-center w-5 h-5 rounded bg-sidebar-foreground/10 shrink-0">
-            <ChevronLeft className={cn("w-3 h-3 text-sidebar-foreground/70 transition-transform duration-300", collapsed && "rotate-180")} />
-          </div>
-          {!collapsed && <span className="text-xs text-sidebar-foreground/60 font-medium">Collapse</span>}
-        </button>
       </aside>
 
       {/* ── Mobile: overlay + slide-in drawer ── */}
