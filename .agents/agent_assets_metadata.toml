@@ -1,5 +1,4 @@
 uploads = []
-outputs = []
 
 [[generated]]
 id = "Q-Sj1LVTrtP4S2d37V0Se"
@@ -18,3 +17,9 @@ id = "Uo-bnnvQDKDfMHehKBJDv"
 uri = "file://artifacts/admin-dashboard/src/assets/hero-mobile.png"
 type = "image"
 title = "cafe hero mobile"
+
+[[outputs]]
+id = "7cPpuJVm5waVX3vd68tIO"
+uri = "file://LOCAL_SETUP.md"
+type = "text"
+title = "Cafe Maestro — Local Setup Guide"
