@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import {
   TableProperties,
   Plus,
@@ -651,6 +651,26 @@ export function TablesPage() {
 
   const showArchivedAsMain = activeFilter === "archived";
 
+  // ── Stats grid: measure container width to drive column count ────────────
+  const statsGridRef = useRef<HTMLDivElement>(null);
+  const [statsWidth, setStatsWidth] = useState(9999);
+
+  useEffect(() => {
+    const el = statsGridRef.current;
+    if (!el) return;
+    const ro = new ResizeObserver(([entry]) => {
+      setStatsWidth(entry.contentRect.width);
+    });
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
+
+  // <380px → 2 cols (mobile), <640px → 3×2 rows (narrow/sidebar expanded), ≥640px → 6×1 row
+  const statsGridCols =
+    statsWidth < 380 ? "grid-cols-2" :
+    statsWidth < 640 ? "grid-cols-3" :
+    "grid-cols-6";
+
   // ── Dialog state ─────────────────────────────────────────────────────────
   const [addOpen,        setAddOpen]        = useState(false);
   const [editTarget,     setEditTarget]     = useState<ManagedTable | null>(null);
@@ -791,7 +811,7 @@ export function TablesPage() {
       />
 
       {/* ── Stat Cards ─────────────────────────────────────────────────────── */}
-      <div className="grid grid-cols-3 sm:grid-cols-6 gap-2 mb-6">
+      <div ref={statsGridRef} className={`grid ${statsGridCols} gap-2 mb-6 transition-[grid-template-columns] duration-300`}>
         <button
           onClick={() => setActiveFilter(null)}
           className={cn(
