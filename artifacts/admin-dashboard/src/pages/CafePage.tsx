@@ -258,17 +258,6 @@ export function CafePage() {
 
           {/* Content — editorial bottom-left */}
           <div className="relative z-10 px-5 sm:px-12 lg:px-20 pb-12 sm:pb-20 max-w-4xl">
-            {settings?.tagline && (
-              <motion.p
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={{ delay: 0.2, duration: 0.8 }}
-                className="text-[11px] font-semibold uppercase tracking-[0.3em] mb-5"
-                style={{ color: GOLD }}
-              >
-                {settings.tagline}
-              </motion.p>
-            )}
             <h1 className="font-serif text-4xl sm:text-5xl lg:text-7xl xl:text-8xl font-light text-white leading-[1.03] tracking-tight overflow-hidden">
               <HeroWordSplit text={settings?.hero_title ?? displayName} />
             </h1>
