@@ -259,6 +259,154 @@ function ItemForm({
   );
 }
 
+/* ─── Mobile item card (< 768 px) ───────────────────────────────────────── */
+function MenuItemCard({
+  item,
+  hasOrders,
+  onEdit,
+  onArchive,
+  onDelete,
+  onToggle,
+}: {
+  item: MenuItem;
+  hasOrders: boolean;
+  onEdit: () => void;
+  onArchive: () => void;
+  onDelete: () => void;
+  onToggle: (v: boolean) => void;
+}) {
+  return (
+    <div className="bg-card border border-card-border rounded-xl shadow-sm p-4 space-y-3">
+      {/* Image + name / description */}
+      <div className="flex gap-3">
+        {item.image_url ? (
+          <img
+            src={item.image_url}
+            alt={item.name}
+            className="w-14 h-14 rounded-lg object-cover shrink-0"
+          />
+        ) : (
+          <div className="w-14 h-14 rounded-lg bg-muted flex items-center justify-center shrink-0">
+            <UtensilsCrossed className="w-5 h-5 text-muted-foreground" />
+          </div>
+        )}
+        <div className="flex-1 min-w-0">
+          <p className="font-medium text-foreground leading-snug">{item.name}</p>
+          {item.description && (
+            <p className="text-xs text-muted-foreground mt-0.5 line-clamp-2 leading-relaxed">
+              {item.description}
+            </p>
+          )}
+        </div>
+      </div>
+
+      {/* Category + price */}
+      <div className="flex items-center gap-2 flex-wrap">
+        <span className="text-xs px-2.5 py-0.5 rounded-full bg-muted text-muted-foreground font-medium">
+          {item.menu_categories?.name ?? "—"}
+        </span>
+        <span className="font-semibold text-sm text-foreground">
+          {formatCurrency(item.price)}
+        </span>
+      </div>
+
+      {/* Availability toggle */}
+      <div className="flex items-center justify-between px-3 py-2.5 rounded-lg bg-muted/40">
+        <span className="text-sm text-muted-foreground">Available</span>
+        <Switch checked={item.is_available} onCheckedChange={onToggle} />
+      </div>
+
+      {/* Action buttons */}
+      <div className="flex items-center gap-2 pt-1 border-t border-border">
+        <Button
+          variant="outline"
+          size="sm"
+          className="flex-1 h-11"
+          onClick={onEdit}
+        >
+          <Pencil className="w-3.5 h-3.5 mr-1.5" />
+          Edit
+        </Button>
+        {hasOrders ? (
+          <Button
+            variant="outline"
+            size="sm"
+            className="flex-1 h-11 text-amber-600 hover:text-amber-700 hover:bg-amber-50 hover:border-amber-200"
+            onClick={onArchive}
+          >
+            <Archive className="w-3.5 h-3.5 mr-1.5" />
+            Archive
+          </Button>
+        ) : (
+          <Button
+            variant="outline"
+            size="sm"
+            className="flex-1 h-11 text-destructive hover:text-destructive hover:bg-destructive/10 hover:border-destructive/20"
+            onClick={onDelete}
+          >
+            <Trash2 className="w-3.5 h-3.5 mr-1.5" />
+            Delete
+          </Button>
+        )}
+      </div>
+    </div>
+  );
+}
+
+/* ─── Mobile archived card (< 768 px) ───────────────────────────────────── */
+function ArchivedItemCard({
+  item,
+  onRestore,
+}: {
+  item: MenuItem;
+  onRestore: () => void;
+}) {
+  return (
+    <div className="bg-card border border-card-border rounded-xl shadow-sm p-4 space-y-3 opacity-70">
+      <div className="flex gap-3">
+        {item.image_url ? (
+          <img
+            src={item.image_url}
+            alt={item.name}
+            className="w-14 h-14 rounded-lg object-cover shrink-0 grayscale"
+          />
+        ) : (
+          <div className="w-14 h-14 rounded-lg bg-muted flex items-center justify-center shrink-0">
+            <UtensilsCrossed className="w-5 h-5 text-muted-foreground" />
+          </div>
+        )}
+        <div className="flex-1 min-w-0">
+          <p className="font-medium text-foreground line-through decoration-muted-foreground/50 leading-snug">
+            {item.name}
+          </p>
+          {item.description && (
+            <p className="text-xs text-muted-foreground mt-0.5 line-clamp-2 leading-relaxed">
+              {item.description}
+            </p>
+          )}
+        </div>
+      </div>
+      <div className="flex items-center gap-2 flex-wrap">
+        <span className="text-xs px-2.5 py-0.5 rounded-full bg-muted text-muted-foreground font-medium">
+          {item.menu_categories?.name ?? "—"}
+        </span>
+        <span className="font-semibold text-sm text-foreground">
+          {formatCurrency(item.price)}
+        </span>
+      </div>
+      <Button
+        variant="outline"
+        size="sm"
+        className="w-full h-11 text-green-600 hover:text-green-700 hover:bg-green-50 hover:border-green-200"
+        onClick={onRestore}
+      >
+        <ArchiveRestore className="w-3.5 h-3.5 mr-1.5" />
+        Restore to Menu
+      </Button>
+    </div>
+  );
+}
+
 /* ─── Main page ──────────────────────────────────────────────────────────── */
 export function MenuPage() {
   const { toast } = useToast();
@@ -299,7 +447,7 @@ export function MenuPage() {
 
   return (
     <AppLayout>
-      <div className="p-8 max-w-5xl mx-auto">
+      <div className="p-4 sm:p-6 lg:p-8 max-w-5xl mx-auto">
         <PageHeader
           title="Menu"
           subtitle={`${items.length} item${items.length !== 1 ? "s" : ""} across ${categories.length} categor${categories.length !== 1 ? "ies" : "y"}${archivedItems.length > 0 ? ` · ${archivedItems.length} archived` : ""}`}
@@ -393,98 +541,114 @@ export function MenuPage() {
                 }
               />
             ) : (
-              <div className="bg-card border border-card-border rounded-xl overflow-hidden shadow-sm">
-                <table className="w-full text-sm">
-                  <thead>
-                    <tr className="border-b border-border bg-muted/40">
-                      <th className="text-left px-4 py-3 text-xs font-medium text-muted-foreground uppercase tracking-wide">Item</th>
-                      <th className="text-left px-4 py-3 text-xs font-medium text-muted-foreground uppercase tracking-wide">Category</th>
-                      <th className="text-right px-4 py-3 text-xs font-medium text-muted-foreground uppercase tracking-wide">Price</th>
-                      <th className="text-center px-4 py-3 text-xs font-medium text-muted-foreground uppercase tracking-wide">Available</th>
-                      <th className="px-4 py-3" />
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-border">
-                    {filteredItems.map((item) => {
-                      const hasOrders = orderHistory.has(item.id);
-                      return (
-                        <tr key={item.id} className="hover:bg-muted/30 transition-colors">
-                          <td className="px-4 py-3">
-                            <div className="flex items-center gap-3">
-                              {item.image_url ? (
-                                <img
-                                  src={item.image_url}
-                                  alt={item.name}
-                                  className="w-9 h-9 rounded-lg object-cover bg-muted shrink-0"
-                                />
-                              ) : (
-                                <div className="w-9 h-9 rounded-lg bg-muted flex items-center justify-center shrink-0">
-                                  <UtensilsCrossed className="w-4 h-4 text-muted-foreground" />
+              <>
+                {/* ── Mobile cards (< 768 px) ───────────────────────── */}
+                <div className="md:hidden space-y-3">
+                  {filteredItems.map((item) => {
+                    const hasOrders = orderHistory.has(item.id);
+                    return (
+                      <MenuItemCard
+                        key={item.id}
+                        item={item}
+                        hasOrders={hasOrders}
+                        onEdit={() => { setEditItem(item); setItemDialog(true); }}
+                        onArchive={() => setArchiveItemId(item.id)}
+                        onDelete={() => setDeleteItemId(item.id)}
+                        onToggle={(v) => toggleAvail.mutate({ id: item.id, is_available: v })}
+                      />
+                    );
+                  })}
+                </div>
+
+                {/* ── Tablet + desktop table (≥ 768 px) ────────────── */}
+                <div className="hidden md:block bg-card border border-card-border rounded-xl overflow-hidden shadow-sm">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="border-b border-border bg-muted/40">
+                        <th className="text-left px-3 lg:px-4 py-2.5 lg:py-3 text-xs font-medium text-muted-foreground uppercase tracking-wide">Item</th>
+                        <th className="text-left px-3 lg:px-4 py-2.5 lg:py-3 text-xs font-medium text-muted-foreground uppercase tracking-wide">Category</th>
+                        <th className="text-right px-3 lg:px-4 py-2.5 lg:py-3 text-xs font-medium text-muted-foreground uppercase tracking-wide">Price</th>
+                        <th className="text-center px-3 lg:px-4 py-2.5 lg:py-3 text-xs font-medium text-muted-foreground uppercase tracking-wide">Available</th>
+                        <th className="px-3 lg:px-4 py-2.5 lg:py-3" />
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-border">
+                      {filteredItems.map((item) => {
+                        const hasOrders = orderHistory.has(item.id);
+                        return (
+                          <tr key={item.id} className="hover:bg-muted/30 transition-colors">
+                            <td className="px-3 lg:px-4 py-2.5 lg:py-3">
+                              <div className="flex items-center gap-2 lg:gap-3">
+                                {item.image_url ? (
+                                  <img
+                                    src={item.image_url}
+                                    alt={item.name}
+                                    className="w-8 h-8 lg:w-9 lg:h-9 rounded-lg object-cover bg-muted shrink-0"
+                                  />
+                                ) : (
+                                  <div className="w-8 h-8 lg:w-9 lg:h-9 rounded-lg bg-muted flex items-center justify-center shrink-0">
+                                    <UtensilsCrossed className="w-4 h-4 text-muted-foreground" />
+                                  </div>
+                                )}
+                                <div>
+                                  <p className="font-medium text-foreground">{item.name}</p>
+                                  {item.description && (
+                                    <p className="text-xs text-muted-foreground truncate max-w-[160px] lg:max-w-xs">
+                                      {item.description}
+                                    </p>
+                                  )}
                                 </div>
-                              )}
-                              <div>
-                                <p className="font-medium text-foreground">
-                                  {item.name}
-                                </p>
-                                {item.description && (
-                                  <p className="text-xs text-muted-foreground truncate max-w-xs">
-                                    {item.description}
-                                  </p>
+                              </div>
+                            </td>
+                            <td className="px-3 lg:px-4 py-2.5 lg:py-3 text-muted-foreground text-xs lg:text-sm">
+                              {item.menu_categories?.name ?? "—"}
+                            </td>
+                            <td className="px-3 lg:px-4 py-2.5 lg:py-3 text-right font-semibold text-foreground">
+                              {formatCurrency(item.price)}
+                            </td>
+                            <td className="px-3 lg:px-4 py-2.5 lg:py-3 text-center">
+                              <Switch
+                                checked={item.is_available}
+                                onCheckedChange={(v) =>
+                                  toggleAvail.mutate({ id: item.id, is_available: v })
+                                }
+                              />
+                            </td>
+                            <td className="px-3 lg:px-4 py-2.5 lg:py-3">
+                              <div className="flex items-center justify-end gap-1">
+                                <button
+                                  onClick={() => { setEditItem(item); setItemDialog(true); }}
+                                  className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+                                  title="Edit"
+                                >
+                                  <Pencil className="w-3.5 h-3.5" />
+                                </button>
+                                {hasOrders ? (
+                                  <button
+                                    onClick={() => setArchiveItemId(item.id)}
+                                    className="p-1.5 rounded-lg text-muted-foreground hover:text-amber-600 hover:bg-amber-50 transition-colors"
+                                    title="Archive (item has order history)"
+                                  >
+                                    <Archive className="w-3.5 h-3.5" />
+                                  </button>
+                                ) : (
+                                  <button
+                                    onClick={() => setDeleteItemId(item.id)}
+                                    className="p-1.5 rounded-lg text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors"
+                                    title="Delete"
+                                  >
+                                    <Trash2 className="w-3.5 h-3.5" />
+                                  </button>
                                 )}
                               </div>
-                            </div>
-                          </td>
-                          <td className="px-4 py-3 text-muted-foreground">
-                            {item.menu_categories?.name ?? "—"}
-                          </td>
-                          <td className="px-4 py-3 text-right font-semibold text-foreground">
-                            {formatCurrency(item.price)}
-                          </td>
-                          <td className="px-4 py-3 text-center">
-                            <Switch
-                              checked={item.is_available}
-                              onCheckedChange={(v) =>
-                                toggleAvail.mutate({ id: item.id, is_available: v })
-                              }
-                            />
-                          </td>
-                          <td className="px-4 py-3">
-                            <div className="flex items-center justify-end gap-1">
-                              <button
-                                onClick={() => {
-                                  setEditItem(item);
-                                  setItemDialog(true);
-                                }}
-                                className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
-                                title="Edit"
-                              >
-                                <Pencil className="w-3.5 h-3.5" />
-                              </button>
-                              {hasOrders ? (
-                                <button
-                                  onClick={() => setArchiveItemId(item.id)}
-                                  className="p-1.5 rounded-lg text-muted-foreground hover:text-amber-600 hover:bg-amber-50 transition-colors"
-                                  title="Archive (item has order history)"
-                                >
-                                  <Archive className="w-3.5 h-3.5" />
-                                </button>
-                              ) : (
-                                <button
-                                  onClick={() => setDeleteItemId(item.id)}
-                                  className="p-1.5 rounded-lg text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors"
-                                  title="Delete"
-                                >
-                                  <Trash2 className="w-3.5 h-3.5" />
-                                </button>
-                              )}
-                            </div>
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              </div>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              </>
             )}
           </TabsContent>
 
@@ -571,66 +735,80 @@ export function MenuPage() {
                 description="Items with order history that you remove will appear here."
               />
             ) : (
-              <div className="bg-card border border-card-border rounded-xl overflow-hidden shadow-sm">
-                <table className="w-full text-sm">
-                  <thead>
-                    <tr className="border-b border-border bg-muted/40">
-                      <th className="text-left px-4 py-3 text-xs font-medium text-muted-foreground uppercase tracking-wide">Item</th>
-                      <th className="text-left px-4 py-3 text-xs font-medium text-muted-foreground uppercase tracking-wide">Category</th>
-                      <th className="text-right px-4 py-3 text-xs font-medium text-muted-foreground uppercase tracking-wide">Price</th>
-                      <th className="px-4 py-3" />
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-border">
-                    {archivedItems.map((item) => (
-                      <tr key={item.id} className="hover:bg-muted/30 transition-colors opacity-70">
-                        <td className="px-4 py-3">
-                          <div className="flex items-center gap-3">
-                            {item.image_url ? (
-                              <img
-                                src={item.image_url}
-                                alt={item.name}
-                                className="w-9 h-9 rounded-lg object-cover bg-muted shrink-0 grayscale"
-                              />
-                            ) : (
-                              <div className="w-9 h-9 rounded-lg bg-muted flex items-center justify-center shrink-0">
-                                <UtensilsCrossed className="w-4 h-4 text-muted-foreground" />
-                              </div>
-                            )}
-                            <div>
-                              <p className="font-medium text-foreground line-through decoration-muted-foreground/50">
-                                {item.name}
-                              </p>
-                              {item.description && (
-                                <p className="text-xs text-muted-foreground truncate max-w-xs">
-                                  {item.description}
-                                </p>
-                              )}
-                            </div>
-                          </div>
-                        </td>
-                        <td className="px-4 py-3 text-muted-foreground">
-                          {item.menu_categories?.name ?? "—"}
-                        </td>
-                        <td className="px-4 py-3 text-right font-semibold text-foreground">
-                          {formatCurrency(item.price)}
-                        </td>
-                        <td className="px-4 py-3">
-                          <div className="flex items-center justify-end gap-1">
-                            <button
-                              onClick={() => setRestoreItemId(item.id)}
-                              className="p-1.5 rounded-lg text-muted-foreground hover:text-green-600 hover:bg-green-50 transition-colors"
-                              title="Restore to menu"
-                            >
-                              <ArchiveRestore className="w-3.5 h-3.5" />
-                            </button>
-                          </div>
-                        </td>
+              <>
+                {/* ── Mobile cards (< 768 px) ───────────────────────── */}
+                <div className="md:hidden space-y-3">
+                  {archivedItems.map((item) => (
+                    <ArchivedItemCard
+                      key={item.id}
+                      item={item}
+                      onRestore={() => setRestoreItemId(item.id)}
+                    />
+                  ))}
+                </div>
+
+                {/* ── Tablet + desktop table (≥ 768 px) ────────────── */}
+                <div className="hidden md:block bg-card border border-card-border rounded-xl overflow-hidden shadow-sm">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="border-b border-border bg-muted/40">
+                        <th className="text-left px-3 lg:px-4 py-2.5 lg:py-3 text-xs font-medium text-muted-foreground uppercase tracking-wide">Item</th>
+                        <th className="text-left px-3 lg:px-4 py-2.5 lg:py-3 text-xs font-medium text-muted-foreground uppercase tracking-wide">Category</th>
+                        <th className="text-right px-3 lg:px-4 py-2.5 lg:py-3 text-xs font-medium text-muted-foreground uppercase tracking-wide">Price</th>
+                        <th className="px-3 lg:px-4 py-2.5 lg:py-3" />
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+                    </thead>
+                    <tbody className="divide-y divide-border">
+                      {archivedItems.map((item) => (
+                        <tr key={item.id} className="hover:bg-muted/30 transition-colors opacity-70">
+                          <td className="px-3 lg:px-4 py-2.5 lg:py-3">
+                            <div className="flex items-center gap-2 lg:gap-3">
+                              {item.image_url ? (
+                                <img
+                                  src={item.image_url}
+                                  alt={item.name}
+                                  className="w-8 h-8 lg:w-9 lg:h-9 rounded-lg object-cover bg-muted shrink-0 grayscale"
+                                />
+                              ) : (
+                                <div className="w-8 h-8 lg:w-9 lg:h-9 rounded-lg bg-muted flex items-center justify-center shrink-0">
+                                  <UtensilsCrossed className="w-4 h-4 text-muted-foreground" />
+                                </div>
+                              )}
+                              <div>
+                                <p className="font-medium text-foreground line-through decoration-muted-foreground/50">
+                                  {item.name}
+                                </p>
+                                {item.description && (
+                                  <p className="text-xs text-muted-foreground truncate max-w-[160px] lg:max-w-xs">
+                                    {item.description}
+                                  </p>
+                                )}
+                              </div>
+                            </div>
+                          </td>
+                          <td className="px-3 lg:px-4 py-2.5 lg:py-3 text-muted-foreground text-xs lg:text-sm">
+                            {item.menu_categories?.name ?? "—"}
+                          </td>
+                          <td className="px-3 lg:px-4 py-2.5 lg:py-3 text-right font-semibold text-foreground">
+                            {formatCurrency(item.price)}
+                          </td>
+                          <td className="px-3 lg:px-4 py-2.5 lg:py-3">
+                            <div className="flex items-center justify-end gap-1">
+                              <button
+                                onClick={() => setRestoreItemId(item.id)}
+                                className="p-1.5 rounded-lg text-muted-foreground hover:text-green-600 hover:bg-green-50 transition-colors"
+                                title="Restore to menu"
+                              >
+                                <ArchiveRestore className="w-3.5 h-3.5" />
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </>
             )}
           </TabsContent>
         </Tabs>
