@@ -1,5 +1,8 @@
 import { useRef } from "react";
 import { Link } from "wouter";
+import heroBgDesktop from "@/assets/hero-desktop.png";
+import heroBgTablet  from "@/assets/hero-tablet.png";
+import heroBgMobile  from "@/assets/hero-mobile.png";
 import { MapPin, Phone, Mail, ExternalLink, ArrowRight, Coffee, Star } from "lucide-react";
 import { motion } from "framer-motion";
 import { CafeLayout } from "@/components/layout/CafeLayout";
@@ -215,26 +218,39 @@ export function CafePage() {
             </>
           ) : (
             <>
-              {/* Fallback: use a curated hero image so it never looks empty */}
-              <motion.img
-                src={CURATED[0].url}
-                alt="Café atmosphere"
-                className="absolute inset-0 w-full h-full object-cover"
+              {/* Responsive hero: desktop / tablet / mobile crops */}
+              <motion.div
+                className="absolute inset-0 w-full h-full"
                 initial={{ scale: 1.06, opacity: 0 }}
-                animate={{ scale: 1, opacity: 0.55 }}
+                animate={{ scale: 1, opacity: 1 }}
                 transition={{ duration: 1.8, ease: [0.16, 1, 0.3, 1] }}
-              />
+              >
+                <picture className="contents">
+                  <source media="(max-width: 639px)"  srcSet={heroBgMobile} />
+                  <source media="(max-width: 1023px)" srcSet={heroBgTablet} />
+                  <img
+                    src={heroBgDesktop}
+                    alt="Café atmosphere"
+                    className="absolute inset-0 w-full h-full object-cover object-center"
+                    fetchPriority="high"
+                    decoding="async"
+                  />
+                </picture>
+              </motion.div>
+              {/* Horizontal fade — left calm for text, opens up on right */}
               <div
                 className="absolute inset-0"
                 style={{
-                  background: `linear-gradient(135deg, rgba(5,5,5,0.92) 0%, rgba(5,5,5,0.60) 50%, rgba(5,5,5,0.80) 100%)`,
+                  background:
+                    "linear-gradient(90deg, rgba(8,8,8,0.72) 0%, rgba(8,8,8,0.50) 35%, rgba(8,8,8,0.18) 70%, rgba(8,8,8,0.08) 100%)",
                 }}
               />
-              {/* warm accent glow */}
+              {/* Bottom-up vignette for text readability */}
               <div
-                className="absolute inset-0 pointer-events-none"
+                className="absolute inset-0"
                 style={{
-                  background: `radial-gradient(ellipse at 15% 60%, ${primaryColor}28 0%, transparent 55%)`,
+                  background:
+                    "linear-gradient(to top, rgba(5,5,5,0.75) 0%, rgba(5,5,5,0.20) 35%, transparent 60%)",
                 }}
               />
             </>

@@ -1,0 +1,100 @@
+Do NOT redesign the hero section, navigation, typography, buttons, spacing, or layout.
+
+Only redesign the HERO BACKGROUND IMAGE.
+
+The current background looks like a generic stock café and doesn't match the premium aesthetic of Cup & Cozy.
+
+The background should feel like a real boutique café with warmth, comfort and elegance, while keeping the UI highly readable.
+
+Requirements:
+
+• Use the existing hero layout exactly as it is.
+• Replace ONLY the background.
+• The background must work perfectly on Desktop, Tablet and Mobile.
+• Mobile should have a separately cropped version so the important focal point is never cut off.
+• Tablet should have its own optimized crop.
+• Desktop should be cinematic and wide.
+
+Visual Style:
+
+* Modern boutique café
+* Warm ambient lighting
+* Soft golden hour tones
+* Dark charcoal + espresso brown color palette
+* Natural wood textures
+* Indoor plants
+* Warm pendant lights
+* Coffee machine subtly visible
+* Latte art on a table
+* Minimal décor
+* Premium Scandinavian/Japanese café aesthetic
+* Cozy but luxurious
+* Instagram-worthy
+* Soft depth of field
+* Cinematic composition
+* Minimal visual clutter
+* Plenty of negative space for text
+* Clean, elegant and timeless
+
+Composition:
+
+Desktop:
+
+* Wide cinematic composition.
+* Leave approximately the left 35–40% visually calm for hero text.
+* Main focal elements should stay on the right.
+* No objects behind the heading.
+* Background should naturally fade darker toward the left.
+
+Tablet:
+
+* Maintain the same visual identity.
+* Slightly tighter crop.
+* Preserve text-safe area.
+
+Mobile:
+
+* Portrait composition.
+* Hero text should remain fully readable.
+* Coffee cup or table in the foreground.
+* Warm café interior in the background.
+* Keep visual focus near the lower-right or center-right.
+* No busy objects behind the text.
+
+Overlay:
+
+Apply a subtle premium overlay instead of making the image excessively dark.
+
+background:
+linear-gradient(
+90deg,
+rgba(8,8,8,0.72) 0%,
+rgba(8,8,8,0.50) 35%,
+rgba(8,8,8,0.18) 70%,
+rgba(8,8,8,0.08) 100%
+)
+
+Image Quality:
+
+* Ultra realistic
+* Professional architectural photography
+* High dynamic range
+* Crisp but soft
+* 8K quality
+* No fake AI look
+* No oversaturated colors
+* No excessive blur
+* No cartoon style
+
+Performance:
+
+* Export responsive versions.
+* Desktop: 1920×1080
+* Tablet: 1200×1600
+* Mobile: 1080×1920
+* Use AVIF/WebP.
+* Keep file sizes optimized for fast loading.
+
+Important:
+
+The result should look like a premium café website such as Blue Tokai, Starbucks Reserve or % Arabica—not a generic café template. The first impression should immediately communicate warmth, elegance and comfort while preserving excellent readability of the existing hero content.

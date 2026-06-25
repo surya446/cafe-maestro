@@ -1,0 +1,20 @@
+uploads = []
+outputs = []
+
+[[generated]]
+id = "Q-Sj1LVTrtP4S2d37V0Se"
+uri = "file://artifacts/admin-dashboard/src/assets/hero-desktop.png"
+type = "image"
+title = "cafe hero desktop"
+
+[[generated]]
+id = "B7RZdhQ2QaDzMmWzC9Gkj"
+uri = "file://artifacts/admin-dashboard/src/assets/hero-tablet.png"
+type = "image"
+title = "cafe hero tablet"
+
+[[generated]]
+id = "Uo-bnnvQDKDfMHehKBJDv"
+uri = "file://artifacts/admin-dashboard/src/assets/hero-mobile.png"
+type = "image"
+title = "cafe hero mobile"
