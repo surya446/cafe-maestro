@@ -3,7 +3,7 @@ import { Link } from "wouter";
 import heroBgDesktop from "@/assets/hero-desktop.png";
 import heroBgTablet  from "@/assets/hero-tablet.png";
 import heroBgMobile  from "@/assets/hero-mobile.png";
-import { MapPin, Phone, Mail, ExternalLink, ArrowRight, Coffee, Star } from "lucide-react";
+import { MapPin, Phone, Mail, ExternalLink, ArrowRight, Coffee, Star, Clock } from "lucide-react";
 import { motion } from "framer-motion";
 import { CafeLayout } from "@/components/layout/CafeLayout";
 import { usePublicCafe } from "@/hooks/usePublicBooking";
@@ -150,6 +150,21 @@ export function CafePage() {
       ? reviews.reduce((s, r) => s + r.rating, 0) / reviews.length
       : null;
 
+  /* ── Directions ──────────────────────────────────────────────────────── */
+  const directionsUrl = settings?.google_maps_url
+    ?? (settings?.address ? `https://maps.google.com/?q=${encodeURIComponent(settings.address)}` : null);
+
+  /* ── Hero info strip values ───────────────────────────────────────────── */
+  const locationCity = settings?.address
+    ? settings.address.split(",")[0].trim()
+    : null;
+  const ratingLabel = avgRating !== null ? `${avgRating.toFixed(1)} Rating` : null;
+  const todayName = new Date().toLocaleDateString("en-US", { weekday: "long" });
+  const todayEntry = hasHours
+    ? settings!.opening_hours.find((h) => h.day === todayName)
+    : null;
+  const openLabel = todayEntry ? (todayEntry.closed ? "Closed Today" : "Open Today") : null;
+
   const marqueeItems = ["Specialty Coffee", "Reserve Your Table", "Crafted with Care", "Est. 2024", "Artisan Roasts", "Fine Dining Experience"];
 
   if (isLoading) {
@@ -275,18 +290,62 @@ export function CafePage() {
               initial={{ opacity: 0, y: 14 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 1.1, duration: 0.7 }}
-              className="mt-7 sm:mt-9 flex flex-wrap items-center gap-3"
+              className="mt-7 sm:mt-9 flex flex-col sm:flex-row sm:flex-wrap sm:items-center gap-3"
             >
               <Link
                 href="/cafe/menu"
-                className="inline-flex items-center gap-2 px-6 sm:px-7 py-3 sm:py-3.5 rounded-full text-sm font-semibold text-[#050505] transition-all hover:opacity-90 active:scale-95"
+                className="inline-flex items-center justify-center gap-2 px-6 sm:px-7 py-3 sm:py-3.5 rounded-full text-sm font-semibold text-[#050505] transition-all hover:opacity-90 active:scale-95"
                 style={{ background: GOLD }}
               >
                 View Menu <ArrowRight className="w-3.5 h-3.5" />
               </Link>
-              <BookingCTAButton className="inline-flex items-center gap-2 px-6 sm:px-7 py-3 sm:py-3.5 rounded-full text-sm font-semibold text-white border border-white/20 hover:bg-white/[0.08] transition-colors">
+              <BookingCTAButton className="inline-flex items-center justify-center gap-2 px-6 sm:px-7 py-3 sm:py-3.5 rounded-full text-sm font-semibold text-white border border-white/20 hover:bg-white/[0.08] transition-colors">
                 Book a Table
               </BookingCTAButton>
+              {directionsUrl ? (
+                <a
+                  href={directionsUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center justify-center gap-2 px-6 sm:px-7 py-3 sm:py-3.5 rounded-full text-sm font-semibold text-white/65 border border-white/[0.14] hover:bg-white/[0.07] hover:text-white/90 transition-colors active:scale-95"
+                >
+                  <MapPin className="w-3.5 h-3.5 shrink-0" />
+                  Get Directions
+                </a>
+              ) : (
+                <span
+                  title="Add an address in Website Settings to enable directions"
+                  className="inline-flex items-center justify-center gap-2 px-6 sm:px-7 py-3 sm:py-3.5 rounded-full text-sm font-semibold text-white/20 border border-white/[0.07] cursor-not-allowed select-none"
+                >
+                  <MapPin className="w-3.5 h-3.5 shrink-0" />
+                  Get Directions
+                </span>
+              )}
+            </motion.div>
+
+            {/* ── Hero info strip ────────────────────────────────────── */}
+            <motion.div
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 1.45, duration: 0.65 }}
+              className="mt-6 sm:mt-7 flex flex-wrap gap-x-5 gap-y-2"
+            >
+              {(
+                [
+                  locationCity ? { icon: <MapPin  className="w-3 h-3" />, text: locationCity } : null,
+                  ratingLabel  ? { icon: <Star    className="w-3 h-3" />, text: ratingLabel }  : null,
+                  openLabel    ? { icon: <Clock   className="w-3 h-3" />, text: openLabel }    : null,
+                                 { icon: <Coffee  className="w-3 h-3" />, text: "Specialty Coffee" },
+                ] as Array<{ icon: React.ReactNode; text: string } | null>
+              ).filter((x): x is { icon: React.ReactNode; text: string } => x !== null).map(({ icon, text }) => (
+                <span
+                  key={text}
+                  className="inline-flex items-center gap-1.5 text-[11px] tracking-[0.06em] text-white/32"
+                >
+                  <span style={{ color: GOLD }}>{icon}</span>
+                  {text}
+                </span>
+              ))}
             </motion.div>
           </div>
 
