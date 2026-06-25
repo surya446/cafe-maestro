@@ -1,157 +1,95 @@
-# Cafe Maestro — Complete Local Setup Guide
+# Cafe Maestro — Local Setup Guide
 
-> **Audience**: Complete beginners. No previous experience with this project required.
-> **Target OS**: Windows 10/11 (notes for macOS/Linux included where different).
-> **Last verified against**: Node.js 24, pnpm 10, Supabase CLI 1.x.
+> Every command, script name, environment variable, package name, and version in this guide was read directly from the repository source files. Nothing is assumed or invented. Where something is absent from the repository, that is stated explicitly.
 
 ---
 
 ## Table of Contents
 
 1. [Prerequisites](#1-prerequisites)
-2. [Downloading the Project](#2-downloading-the-project)
-3. [Opening the Project](#3-opening-the-project)
-4. [Critical Windows Fix](#4-critical-windows-fix)
-5. [Installing Dependencies](#5-installing-dependencies)
-6. [Environment Variables](#6-environment-variables)
-7. [Database Setup](#7-database-setup)
-8. [Storage Buckets](#8-storage-buckets)
-9. [Running the Project](#9-running-the-project)
+2. [Getting the Code](#2-getting-the-code)
+3. [Critical: Fix pnpm-workspace.yaml for Non-Linux Systems](#3-critical-fix-pnpm-workspaceyaml-for-non-linux-systems)
+4. [Installing Dependencies](#4-installing-dependencies)
+5. [Environment Variables](#5-environment-variables)
+6. [Database Setup (Supabase)](#6-database-setup-supabase)
+7. [Storage Buckets](#7-storage-buckets)
+8. [Running the Project](#8-running-the-project)
+9. [Edge Functions (Staff Management)](#9-edge-functions-staff-management)
 10. [First Login](#10-first-login)
-11. [Troubleshooting](#11-troubleshooting)
-12. [Updating the Project](#12-updating-the-project)
-13. [Deploying](#13-deploying)
-14. [Project Structure](#14-project-structure)
-15. [Backup Strategy](#15-backup-strategy)
-16. [Production Checklist](#16-production-checklist)
+11. [Useful Commands Reference](#11-useful-commands-reference)
+12. [Troubleshooting](#12-troubleshooting)
+13. [Project Structure](#13-project-structure)
 
 ---
 
 ## 1. Prerequisites
 
-Install all of the following before continuing. Each link goes to the official download page.
+### Required
 
-### Required tools
+| Tool | Version required | How to verify | Download |
+|---|---|---|---|
+| **Node.js** | **24.x** (exact major version used by the project) | `node --version` | https://nodejs.org/en/download |
+| **pnpm** | 10.x | `pnpm --version` | Install after Node — see below |
+| **Git** | Any recent version | `git --version` | https://git-scm.com/download |
 
-| Tool | Recommended version | Download |
-|---|---|---|
-| **Git** | 2.44 or newer | https://git-scm.com/download/win |
-| **Node.js (LTS)** | **24.x** (must match project) | https://nodejs.org/en/download |
-| **pnpm** | 10.x | Installed via Node — see below |
-| **VS Code** | Latest stable | https://code.visualstudio.com |
-
-### Required accounts
-
-| Service | Purpose | Sign up |
-|---|---|---|
-| **Supabase** | Database, Auth, Storage, Realtime | https://supabase.com |
-
-### Optional (for local Supabase instead of cloud)
-
-| Tool | Purpose | Download |
-|---|---|---|
-| **Docker Desktop** | Required by `supabase start` (local Supabase only) | https://www.docker.com/products/docker-desktop |
-| **Supabase CLI** | Apply migrations, manage local DB | https://supabase.com/docs/guides/cli/getting-started |
-
-> **Recommendation for beginners**: Use **Supabase Cloud** (free tier). Skip Docker entirely. The cloud approach is covered in detail in [Section 7](#7-database-setup).
+> **The project's preinstall script actively rejects `npm` and `yarn`.** Running `npm install` will print "Use pnpm instead" and exit with an error. You must use pnpm.
 
 ### Installing pnpm
 
-After Node.js is installed, open a terminal and run:
+After Node.js is installed:
 
 ```bash
 npm install -g pnpm
 ```
 
-Verify:
+### Required accounts
 
-```bash
-pnpm --version
-# Expected: 10.x.x
-```
+| Service | Purpose |
+|---|---|
+| **Supabase** (https://supabase.com) | PostgreSQL database, Auth, Realtime, Storage, and Edge Functions |
 
-> **Important**: This project enforces pnpm. Running `npm install` or `yarn install` will fail with an error on purpose. Always use `pnpm`.
+### Windows-specific requirement
 
----
+The preinstall script in `package.json` uses `sh -c '...'`, which is POSIX shell syntax. On Windows, this requires either:
 
-## 2. Downloading the Project
+- **Git Bash** (included with Git for Windows — recommended), or
+- **WSL2** (Windows Subsystem for Linux)
 
-### Option A — Clone from GitHub (recommended)
+Windows Command Prompt and PowerShell alone will not work.
 
-If the project is on GitHub, open a terminal and run:
+### Docker
 
-```bash
-git clone https://github.com/YOUR_USERNAME/cafe-maestro.git
-cd cafe-maestro
-```
-
-Replace `YOUR_USERNAME/cafe-maestro` with the actual repository path.
-
-### Option B — Download ZIP from GitHub
-
-1. Go to the repository page on GitHub.
-2. Click the green **Code** button → **Download ZIP**.
-3. Save the ZIP to a folder like `C:\Projects\`.
-4. Right-click the ZIP → **Extract All** → choose `C:\Projects\cafe-maestro\`.
-5. Open VS Code.
-6. Go to **File → Open Folder** and select `C:\Projects\cafe-maestro\`.
+**This project does not define a Dockerfile or docker-compose file.** Docker is not required.
 
 ---
 
-## 3. Opening the Project
+## 2. Getting the Code
 
-1. Open VS Code.
-2. Open the project folder (**File → Open Folder**).
-3. Open the integrated terminal: **Terminal → New Terminal** (or press `` Ctrl+` ``).
-4. Verify your tools are installed correctly:
+Clone the repository:
 
 ```bash
-node --version
-# Expected: v24.x.x
-
-npm --version
-# Expected: 10.x.x
-
-pnpm --version
-# Expected: 10.x.x
-
-git --version
-# Expected: git version 2.44.x
+git clone https://github.com/YOUR_USERNAME/YOUR_REPO_NAME.git
+cd YOUR_REPO_NAME
 ```
 
-If any version is wrong, re-install that tool from the links in Section 1.
+Or download the ZIP from GitHub: **Code → Download ZIP**, extract it, and open the folder in VS Code.
 
 ---
 
-## 4. Critical Windows Fix
+## 3. Critical: Fix pnpm-workspace.yaml for Non-Linux Systems
 
-> **Skip this section if you are on macOS or Linux.**
+**Skip this section only if you are running Linux x86-64.**
 
-The project's `pnpm-workspace.yaml` file contains optimizations for Replit's Linux environment. These optimizations **exclude Windows-specific binary packages**, which will cause `pnpm install` to fail on Windows.
+The file `pnpm-workspace.yaml` contains an `overrides:` block that was added for Replit's Linux x86-64 environment. It explicitly excludes the native binary packages for esbuild, rollup, lightningcss, and `@tailwindcss/oxide` on every platform *other* than Linux x86-64 — including **Windows, macOS, and Linux ARM**.
 
-You must edit `pnpm-workspace.yaml` and remove all the `overrides` lines that exclude Windows, macOS, and ARM packages. Here is what to do:
+This means `pnpm install` will succeed but the binaries required to actually run the tools will be missing, causing build failures.
 
-1. Open `pnpm-workspace.yaml` in VS Code.
-2. Find the `overrides:` section (near the bottom of the file).
-3. **Delete the entire `overrides:` block** (from `overrides:` down to the last `"-"` line).
+**What to do:**
 
-The resulting file should end after the `autoInstallPeers: false` and `onlyBuiltDependencies:` sections, like this:
+Open `pnpm-workspace.yaml` and delete the entire `overrides:` block — everything from the `overrides:` line to the end of the file. The file should end after the `onlyBuiltDependencies:` section:
 
 ```yaml
-minimumReleaseAge: 1440
-
-minimumReleaseAgeExclude:
-  - '@replit/*'
-  - stripe-replit-sync
-
-packages:
-  - artifacts/*
-  - lib/*
-  - lib/integrations/*
-  - scripts
-
-catalog:
-  # ... (keep all catalog entries unchanged)
+# Keep everything above this unchanged ...
 
 autoInstallPeers: false
 
@@ -160,115 +98,50 @@ onlyBuiltDependencies:
   - esbuild
   - msw
   - unrs-resolver
+
+# DELETE everything from "overrides:" to the end of the file
 ```
 
-> **Why this is necessary**: Replit runs on Linux x64 exclusively, so the workspace config blocks Windows/macOS binaries to reduce install size. On your Windows PC, those same binaries are required.
-
-Also, the Vite config reads two environment variables that Replit injects automatically but you must set manually. This is covered in [Section 6](#6-environment-variables).
+Also note: the api-server dev script (`artifacts/api-server/package.json`) uses `export NODE_ENV=development` which is bash syntax. On Windows, run it in Git Bash, not in Command Prompt or PowerShell.
 
 ---
 
-## 5. Installing Dependencies
+## 4. Installing Dependencies
 
-From the **root of the project** (the folder that contains `pnpm-workspace.yaml`), run:
+From the **root of the project** (the directory that contains `pnpm-workspace.yaml`):
 
 ```bash
 pnpm install
 ```
 
-This installs all packages for every workspace — the admin dashboard, API server, and shared libraries — in one command.
+This single command installs packages for all workspaces: the admin dashboard, api server, and all shared libraries under `lib/`.
 
-Expected output ends with something like:
+**What the workspace contains** (from `pnpm-workspace.yaml`):
 
 ```
-Progress: resolved 1200 packages, reused 1180 packages
-Done in 45s
+packages:
+  - artifacts/*
+  - lib/*
+  - lib/integrations/*
+  - scripts
 ```
 
-> **If `pnpm install` fails** with "minimum release age" errors, a very recently published package is being blocked. Wait 24 hours and try again, or see [Troubleshooting](#11-troubleshooting).
+You do **not** need to `cd` into subdirectories and run `pnpm install` separately.
 
-You do **not** need to `cd` into subfolders and run `pnpm install` separately. The workspace handles everything from the root.
+**Note on `minimumReleaseAge: 1440`:** The workspace is configured to reject any npm package published less than 24 hours ago as a supply-chain attack defense. If you try to install a very newly published package, pnpm will block it. This setting should not cause problems during normal setup.
 
 ---
 
-## 6. Environment Variables
+## 5. Environment Variables
 
-The project uses environment variables for secrets and configuration. These are never committed to Git.
+### What does NOT exist in this repository
 
-### Files you need to create
+- There is **no `.env.example` file** in this repository. Create the files below from scratch.
+- The `.gitignore` does **not** include `.env` or `.env.local`. You must not commit these files manually. Add them to `.gitignore` yourself (see below).
 
-| File | Used by | Committed to Git? |
-|---|---|---|
-| `artifacts/admin-dashboard/.env.local` | Admin dashboard (Vite) | **Never** |
-| `artifacts/api-server/.env` | API server (Express) | **Never** |
+### Add to .gitignore
 
-### Admin Dashboard — `artifacts/admin-dashboard/.env.local`
-
-Create this file with exactly the following content (fill in your values):
-
-```env
-# ── Supabase ──────────────────────────────────────────────────────────────────
-# Your Supabase project URL
-# Found: Supabase Dashboard → Project Settings → API → Project URL
-VITE_SUPABASE_URL=https://xxxxxxxxxxxxxxxxxxxx.supabase.co
-
-# Your Supabase anonymous/public key (safe to expose in browser)
-# Found: Supabase Dashboard → Project Settings → API → Project API keys → anon / public
-VITE_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
-
-# The UUID of your cafe row (from the cafes table after running the seed)
-# After running the seed: SELECT id FROM cafes LIMIT 1;
-VITE_CAFE_ID=a1b2c3d4-0000-0000-0000-000000000001
-
-# ── Dev server config ─────────────────────────────────────────────────────────
-# Port the Vite dev server listens on
-PORT=3000
-
-# Base path — must end with a slash; use / for root
-BASE_PATH=/
-```
-
-> Vite automatically loads `.env.local` in development. Never use `.env` for secrets (it may be committed).
-
-### API Server — `artifacts/api-server/.env`
-
-Create this file:
-
-```env
-# ── Database ──────────────────────────────────────────────────────────────────
-# Postgres connection string for Drizzle ORM
-# Found: Supabase Dashboard → Project Settings → Database → Connection string → URI
-# Use the "Transaction" pooler string for best compatibility:
-DATABASE_URL=postgresql://postgres.xxxxxxxxxxxxxxxxxxxx:YOUR_PASSWORD@aws-0-us-east-1.pooler.supabase.com:6543/postgres
-
-# ── Server ────────────────────────────────────────────────────────────────────
-PORT=5000
-NODE_ENV=development
-
-# ── Logging (optional) ────────────────────────────────────────────────────────
-# LOG_LEVEL=info
-```
-
-### Full environment variable reference
-
-| Variable | Service | Description | Where to find it |
-|---|---|---|---|
-| `VITE_SUPABASE_URL` | Admin Dashboard | Your Supabase project URL | Dashboard → Settings → API → Project URL |
-| `VITE_SUPABASE_ANON_KEY` | Admin Dashboard | Public anon key (safe for browser) | Dashboard → Settings → API → anon/public key |
-| `VITE_CAFE_ID` | Admin Dashboard | UUID of the cafe row in the `cafes` table | Run `SELECT id FROM cafes LIMIT 1;` after seed |
-| `DATABASE_URL` | API Server | PostgreSQL connection string (Drizzle) | Dashboard → Settings → Database → Connection string → URI |
-| `PORT` | Both services | Port for the dev server | Set to `3000` (dashboard) and `5000` (API) |
-| `BASE_PATH` | Admin Dashboard | URL base path prefix for Vite | Set to `/` for local dev |
-| `NODE_ENV` | API Server | Runtime environment | `development` locally, `production` in prod |
-| `LOG_LEVEL` | API Server | Pino log level (optional) | `info`, `debug`, `warn`, or `error` |
-
-### Secrets that must NEVER be committed to Git
-
-- `VITE_SUPABASE_ANON_KEY`
-- `DATABASE_URL` (contains your password)
-- Any `SERVICE_ROLE_KEY` if you add one later
-
-Add these to `.gitignore` if they are not already there:
+Before creating any `.env` file, add these lines to `.gitignore` if they are not already there:
 
 ```
 .env
@@ -279,28 +152,132 @@ Add these to `.gitignore` if they are not already there:
 
 ---
 
-## 7. Database Setup
+### Admin Dashboard — `artifacts/admin-dashboard/.env.local`
 
-This project uses **Supabase** as its database, authentication provider, and realtime engine.
+These variables were verified by reading `vite.config.ts` and `src/lib/supabase.ts`.
+
+Create `artifacts/admin-dashboard/.env.local`:
+
+```env
+# ── Vite dev server ───────────────────────────────────────────────────────────
+# Required. vite.config.ts throws an error if PORT is missing.
+PORT=3000
+
+# Required. vite.config.ts throws an error if BASE_PATH is missing.
+# Use / for local development (no sub-path prefix).
+BASE_PATH=/
+
+# ── Supabase ──────────────────────────────────────────────────────────────────
+# Required. Read in src/lib/supabase.ts.
+# Supabase Dashboard → Project Settings → API → Project URL
+VITE_SUPABASE_URL=https://xxxxxxxxxxxxxxxxxxxx.supabase.co
+
+# Required. Read in src/lib/supabase.ts.
+# Supabase Dashboard → Project Settings → API → anon / public key
+VITE_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+
+# Optional. Read only in src/hooks/usePublicBooking.ts.
+# Only needed if you use the public booking feature.
+# Run: SELECT id FROM cafes LIMIT 1; after applying the seed.
+# The seed file hardcodes this UUID:
+VITE_CAFE_ID=a1b2c3d4-0000-0000-0000-000000000001
+```
+
+**What each variable does (verified from source):**
+
+| Variable | File that reads it | Behaviour if missing |
+|---|---|---|
+| `PORT` | `vite.config.ts` line 7 | Throws: *"PORT environment variable is required"* |
+| `BASE_PATH` | `vite.config.ts` line 21 | Throws: *"BASE_PATH environment variable is required"* |
+| `VITE_SUPABASE_URL` | `src/lib/supabase.ts` line 3 | `console.warn`, falls back to placeholder — login fails silently |
+| `VITE_SUPABASE_ANON_KEY` | `src/lib/supabase.ts` line 4 | `console.warn`, falls back to placeholder — login fails silently |
+| `VITE_CAFE_ID` | `src/hooks/usePublicBooking.ts` line 45 | Public booking hook receives `undefined`; admin dashboard is unaffected |
+
+**Note on `import.meta.env.BASE_URL`:** This is a Vite built-in variable that is automatically set to the value of `BASE_PATH`. You do not set it manually.
+
+**Note on `REPL_ID` and `NODE_ENV`:** `vite.config.ts` conditionally loads Replit-specific plugins (`@replit/vite-plugin-cartographer`, `@replit/vite-plugin-dev-banner`) only when `REPL_ID` is defined and `NODE_ENV !== "production"`. Neither variable needs to be set for local development — the check will simply skip those plugins.
+
+---
+
+### API Server — `artifacts/api-server/.env`
+
+These variables were verified by reading `src/index.ts` and `src/lib/logger.ts`.
+
+Create `artifacts/api-server/.env`:
+
+```env
+# Required. src/index.ts throws if PORT is missing.
+PORT=5000
+
+# Optional. Used in src/lib/logger.ts to toggle pino-pretty formatting.
+# In development, pino-pretty (colourised) output is used when NODE_ENV != "production".
+NODE_ENV=development
+
+# Optional. src/lib/logger.ts: level defaults to "info" if not set.
+# Valid values: trace, debug, info, warn, error, fatal
+# LOG_LEVEL=info
+```
+
+**Note:** The api-server **also** requires `DATABASE_URL` when its database connection is used. However, `DATABASE_URL` is consumed by `lib/db/src/index.ts` (which the api-server imports). See the table below.
+
+---
+
+### lib/db — database connection
+
+These variables were verified by reading `lib/db/src/index.ts` and `lib/db/drizzle.config.ts`.
+
+The api-server imports `@workspace/db`. Add `DATABASE_URL` to `artifacts/api-server/.env`:
+
+```env
+# Required when the api-server uses the database.
+# lib/db/src/index.ts throws if DATABASE_URL is missing.
+# Supabase Dashboard → Project Settings → Database → Connection string → URI
+# Use the "Transaction" mode pooler (port 6543) for Node.js compatibility:
+DATABASE_URL=postgresql://postgres.xxxxxxxxxxxxxxxxxxxx:YOUR_DB_PASSWORD@aws-0-REGION.pooler.supabase.com:6543/postgres
+```
+
+---
+
+### Complete environment variable table (all verified from source code)
+
+| Variable | File | Required? | Default if absent |
+|---|---|---|---|
+| `PORT` | `artifacts/admin-dashboard/vite.config.ts` | **Yes** | Throws on startup |
+| `BASE_PATH` | `artifacts/admin-dashboard/vite.config.ts` | **Yes** | Throws on startup |
+| `VITE_SUPABASE_URL` | `artifacts/admin-dashboard/src/lib/supabase.ts` | **Yes** | `console.warn`, uses placeholder; login fails |
+| `VITE_SUPABASE_ANON_KEY` | `artifacts/admin-dashboard/src/lib/supabase.ts` | **Yes** | `console.warn`, uses placeholder; login fails |
+| `VITE_CAFE_ID` | `artifacts/admin-dashboard/src/hooks/usePublicBooking.ts` | No | `undefined` — public booking broken, admin unaffected |
+| `PORT` | `artifacts/api-server/src/index.ts` | **Yes** | Throws on startup |
+| `NODE_ENV` | `artifacts/api-server/src/lib/logger.ts` | No | `undefined` — pino-pretty used (dev-style logging) |
+| `LOG_LEVEL` | `artifacts/api-server/src/lib/logger.ts` | No | `"info"` |
+| `DATABASE_URL` | `lib/db/src/index.ts`, `lib/db/drizzle.config.ts` | **Yes (for api-server and db push)** | Throws when DB module is first imported |
+
+---
+
+## 6. Database Setup (Supabase)
 
 ### Step 1 — Create a Supabase project
 
-1. Go to https://supabase.com and sign in.
-2. Click **New project**.
-3. Choose a name (e.g. `cafe-maestro`), set a strong database password, and pick a region close to you.
-4. Wait for the project to finish provisioning (~2 minutes).
+1. Go to https://supabase.com → **New project**.
+2. Choose a name, set a strong password, pick a region.
+3. Wait ~2 minutes for provisioning.
+4. Go to **Project Settings → API** and copy:
+   - **Project URL** → `VITE_SUPABASE_URL`
+   - **anon / public key** → `VITE_SUPABASE_ANON_KEY`
+5. Go to **Project Settings → Database → Connection string → URI** and copy:
+   - The **Transaction** pooler string (port 6543) → `DATABASE_URL`
 
 ### Step 2 — Apply migrations
 
-The project has **35 SQL migration files** in `supabase/migrations/`. They must be applied in order.
+There are **35 migration files** in `supabase/migrations/`. They must be applied in strictly ascending numeric order. Each one depends on the previous.
 
-**Option A — Via the Supabase Dashboard SQL editor (beginner-friendly)**
+**Note:** There is no `supabase/config.toml` in this repository. The Supabase CLI `supabase db push` command requires a linked project. If you prefer the Dashboard SQL editor, paste each file manually.
 
-1. In your Supabase project, click **SQL Editor** in the left sidebar.
-2. Click **New query**.
-3. Open each migration file in VS Code and copy its contents.
-4. Paste into the SQL editor and click **Run**.
-5. Repeat for every file in this order:
+**Option A — Supabase Dashboard SQL editor (no CLI required)**
+
+1. Supabase Dashboard → **SQL Editor → New query**.
+2. Open each file in VS Code, copy the full contents, paste into the editor, click **Run**.
+3. Repeat for all 35 files in this exact order:
 
 ```
 001_extensions_and_helpers.sql
@@ -340,42 +317,45 @@ The project has **35 SQL migration files** in `supabase/migrations/`. They must 
 035_maintenance_flag.sql
 ```
 
-> **Important**: Run them strictly in numeric order. Each migration builds on the previous one.
-
-**Option B — Via Supabase CLI (advanced)**
-
-If you have the Supabase CLI and Docker Desktop installed:
+**Option B — Supabase CLI**
 
 ```bash
-# Link to your cloud project (get the project ref from the Supabase Dashboard URL)
+# Install the CLI: https://supabase.com/docs/guides/cli/getting-started
+
+# Link to your cloud project (project ref is in the Dashboard URL)
 supabase link --project-ref xxxxxxxxxxxxxxxxxxxx
 
-# Push all migrations
+# Push migrations
 supabase db push
 ```
 
-### Step 3 — Run the seed data
+### Step 3 — Apply seed data
 
-The seed file creates the example "Cup & Cozy" cafe with tables, menu categories, menu items, and a sample offer.
+There is one seed file: `supabase/seed/001_cup_and_cozy.sql`.
 
-1. In the Supabase SQL editor, open `supabase/seed/001_cup_and_cozy.sql`.
-2. Copy the entire file and paste it into a new SQL editor query.
-3. Click **Run**.
+Run it **after** all 35 migrations are applied. Paste the full file contents into the SQL editor and click **Run**.
 
-### Step 4 — Create the first staff account (owner)
+This creates:
 
-The seed data does **not** create a staff account because passwords cannot be seeded safely. You must create the first owner account manually:
+- **Cafe**: "Cup & Cozy" with ID `a1b2c3d4-0000-0000-0000-000000000001`
+- **8 physical tables**: Table 1, Table 2, Window Seat, Garden Corner, Long Table, Sofa Nook, Bar Stool 1, Bar Stool 2
+- **Menu categories and items**
+- **A sample promotional offer**
 
-1. In Supabase Dashboard → **Authentication → Users** → **Invite user** (or **Add user**).
-2. Enter an email and temporary password.
-3. In the **SQL editor**, run:
+### Step 4 — Create the first staff (owner) account
+
+The seed does **not** create a staff account — passwords cannot be seeded in SQL safely.
+
+**4a.** In Supabase Dashboard → **Authentication → Users**, create a new user with your email and a password.
+
+**4b.** In the SQL editor, run:
 
 ```sql
 INSERT INTO staff_users (id, cafe_id, email, full_name, role, is_active, must_change_password)
 VALUES (
-  (SELECT id FROM auth.users WHERE email = 'your@email.com'),
+  (SELECT id FROM auth.users WHERE email = 'YOUR_EMAIL_HERE'),
   'a1b2c3d4-0000-0000-0000-000000000001',
-  'your@email.com',
+  'YOUR_EMAIL_HERE',
   'Your Name',
   'owner',
   true,
@@ -383,83 +363,55 @@ VALUES (
 );
 ```
 
-Replace `your@email.com` and `Your Name` with your actual values. The cafe UUID `a1b2c3d4-0000-0000-0000-000000000001` is what the seed created — verify with `SELECT id FROM cafes LIMIT 1;`.
+Replace `YOUR_EMAIL_HERE` and `Your Name` with your actual values.
 
-### Step 5 — Verify the setup
-
-Run these queries in the SQL editor to confirm everything is correct:
+### Step 5 — Verify
 
 ```sql
 -- Should return 1 row: Cup & Cozy
-SELECT id, name, slug FROM cafes;
+SELECT id, name FROM cafes;
 
--- Should return 8 rows (tables 1–8)
+-- Should return 8 rows
 SELECT number, name FROM cafe_tables ORDER BY number;
 
--- Should return menu categories with items
-SELECT c.name AS category, COUNT(i.id) AS item_count
-FROM menu_categories c
-LEFT JOIN menu_items i ON i.category_id = c.id
-GROUP BY c.name;
-
--- Should return 1 owner row
+-- Should return your owner account
 SELECT email, role, is_active FROM staff_users;
 ```
 
 ---
 
-## 8. Storage Buckets
+## 7. Storage Buckets
 
-The `website-assets` storage bucket is created automatically by migration `030_website_settings.sql`. Verify it exists:
+Migration `030_website_settings.sql` automatically creates the following storage bucket:
 
-1. Supabase Dashboard → **Storage**.
-2. You should see a bucket named `website-assets` (public).
+| Bucket | Public | Max file size | Allowed types | Created by |
+|---|---|---|---|---|
+| `website-assets` | Yes | 5 MB (5,242,880 bytes) | jpeg, png, webp, gif, svg+xml | Migration 030 |
 
-If it is missing, run this in the SQL editor:
+**The RLS policies applied by migration 030:**
 
-```sql
-INSERT INTO storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
-VALUES (
-  'website-assets',
-  'website-assets',
-  true,
-  5242880,
-  ARRAY['image/jpeg','image/png','image/webp','image/gif']
-)
-ON CONFLICT (id) DO NOTHING;
-```
+| Operation | Who |
+|---|---|
+| SELECT (read) | Everyone (public bucket) |
+| INSERT (upload) | Authenticated users with `role = 'owner'` only |
+| UPDATE | Authenticated users with `role = 'owner'` only |
+| DELETE | Authenticated users with `role = 'owner'` only |
 
-### RLS policies
+**There is no `gallery` bucket defined in this repository.** The previous version of this guide incorrectly mentioned one.
 
-The migration already applies the following policies to `website-assets`:
-
-| Operation | Who | Condition |
-|---|---|---|
-| SELECT (read) | Everyone (public) | Bucket is public |
-| INSERT (upload) | Authenticated staff | Their `cafe_id` matches |
-| UPDATE | Authenticated staff | Their `cafe_id` matches |
-| DELETE | Authenticated staff | Their `cafe_id` matches |
-
-These are applied via migration — you do not need to set them manually.
-
-### Gallery bucket
-
-If you add a `gallery` bucket for photo uploads, create it the same way and apply matching RLS policies. The admin dashboard gallery feature uses signed URLs and expects the bucket to be named `gallery`.
-
-### Verify uploads work
-
-1. Start the admin dashboard (see Section 9).
-2. Log in as owner.
-3. Go to **Gallery → Upload photo**.
-4. Select an image. If it appears in the gallery grid, storage is working correctly.
+If migration 030 ran successfully, the bucket already exists. Verify in Supabase Dashboard → **Storage** — you should see `website-assets` listed.
 
 ---
 
-## 9. Running the Project
+## 8. Running the Project
 
-The project has two services. Run each in a **separate terminal window**.
+There are two runnable services. Run each in a separate terminal.
 
-### Terminal 1 — Admin Dashboard (React + Vite)
+### Terminal 1 — Admin Dashboard
+
+Package: `@workspace/admin-dashboard`  
+Script (from `artifacts/admin-dashboard/package.json`): `dev`  
+Command: `vite --config vite.config.ts --host 0.0.0.0`
 
 ```bash
 pnpm --filter @workspace/admin-dashboard run dev
@@ -468,340 +420,274 @@ pnpm --filter @workspace/admin-dashboard run dev
 Expected output:
 
 ```
-VITE v7.x.x  ready in 1800ms
+VITE v7.x.x  ready in XXXX ms
 
   ➜  Local:   http://localhost:3000/
-  ➜  Network: http://192.168.x.x:3000/
+  ➜  Network: http://0.0.0.0:3000/
 ```
 
-Open http://localhost:3000 in your browser.
+Open **http://localhost:3000** in your browser.
 
-### Terminal 2 — API Server (Express)
+> The dev server uses `strictPort: true` — if port 3000 is in use, it will fail rather than try the next port. Change `PORT=` in `.env.local` to use a different port.
+
+### Terminal 2 — API Server
+
+Package: `@workspace/api-server`  
+Script (from `artifacts/api-server/package.json`): `dev`  
+Command: `export NODE_ENV=development && pnpm run build && pnpm run start`
 
 ```bash
 pnpm --filter @workspace/api-server run dev
 ```
 
+**Important for Windows users:** The dev script uses `export`, which is bash syntax. Run this in **Git Bash**, not in Command Prompt or PowerShell.
+
 Expected output:
 
-```
+```json
 {"level":"info","msg":"Server listening","port":5000}
 ```
 
-The API server is available at http://localhost:5000/api.
+The API server is available at **http://localhost:5000/api**.
 
-### What each service does
+> The api-server dev script runs a full esbuild compile before starting. There is no hot-reload — changes require restarting the script.
 
-| Service | URL | Description |
+### Relationship between the two services
+
+The admin dashboard communicates **directly with Supabase** via Row-Level Security — it does not proxy through the api-server for most features. The api-server is for guest-facing endpoints (QR ordering, table sessions). You do not need the api-server running for the admin dashboard to work.
+
+---
+
+## 9. Edge Functions (Staff Management)
+
+Two Supabase Edge Functions live in `supabase/functions/`:
+
+| Function | Purpose |
+|---|---|
+| `create-staff-member` | Creates a Supabase Auth user with a temporary password and sends login credentials via Gmail SMTP |
+| `invite-staff-member` | Sends a Supabase Auth invite email to a new staff member |
+
+These run on Supabase's Deno runtime — they are not run locally with `pnpm`. They must be deployed to your Supabase project.
+
+### Environment variables for edge functions
+
+These are set as **Supabase Edge Function Secrets** (Dashboard → Edge Functions → Manage secrets), not in any local `.env` file.
+
+**Auto-injected by Supabase (do NOT set manually):**
+
+| Variable | Description |
+|---|---|
+| `SUPABASE_URL` | Project REST URL |
+| `SUPABASE_ANON_KEY` | Public anon key |
+| `SUPABASE_SERVICE_ROLE_KEY` | Service role key (bypasses RLS) |
+
+**Must be set manually via Supabase dashboard or CLI:**
+
+| Variable | Required by | Description |
 |---|---|---|
-| Admin Dashboard | http://localhost:3000 | Staff login, menu, bookings, analytics |
-| API Server | http://localhost:5000/api | Express REST API (guest ordering, future use) |
+| `SMTP_USER` | `create-staff-member` only | Gmail address used to send credential emails |
+| `SMTP_PASSWORD` | `create-staff-member` only | Gmail App Password (not your account password) |
+| `SITE_URL` | Both functions | Admin dashboard base URL, e.g. `https://your-domain.com/admin` |
 
-> **Note**: The admin dashboard communicates **directly with Supabase** via Row-Level Security — it does not need the API server to be running for most features. The API server is for guest-facing endpoints.
-
-### Full typecheck (optional)
-
-To check TypeScript across all packages:
+### Deploying edge functions
 
 ```bash
-pnpm run typecheck
+# Install Supabase CLI and link your project first (see Section 6 Option B)
+supabase functions deploy create-staff-member
+supabase functions deploy invite-staff-member
+```
+
+### Setting secrets via CLI
+
+```bash
+supabase secrets set SMTP_USER=yourapp@gmail.com
+supabase secrets set SMTP_PASSWORD=your-gmail-app-password
+supabase secrets set SITE_URL=https://your-domain.com/admin
 ```
 
 ---
 
 ## 10. First Login
 
-1. Open http://localhost:3000 in your browser.
-2. Enter the email and password you created in Step 4 of [Section 7](#step-4--create-the-first-staff-account-owner).
+1. Open **http://localhost:3000** in your browser.
+2. Enter the email and password you created in Section 6, Step 4.
 3. You will be redirected to the Dashboard.
 
-If you set `must_change_password = true` when creating the account, the app will prompt you to change your password before proceeding.
-
-### Default seeded data
-
-The seed file creates:
-
-- **Cafe**: Cup & Cozy
-- **Tables**: 8 cafe tables (Table 1–8)
-- **Menu categories**: Coffees, Teas, Cold Drinks, Pastries, Toasties, Seasonal Specials
-- **Menu items**: ~20 items across categories
-- **Offer**: A sample promotional offer
-
-No staff accounts are seeded (see Section 7, Step 4).
+If `must_change_password` is `true` in the `staff_users` row, the app will prompt for a password change before proceeding.
 
 ---
 
-## 11. Troubleshooting
+## 11. Useful Commands Reference
 
-| Problem | Cause | Fix |
-|---|---|---|
-| `pnpm install` fails with "use pnpm instead" | Running `npm install` by mistake | Use `pnpm install` |
-| `pnpm install` fails on Windows with esbuild errors | Windows binaries excluded in workspace config | Complete [Section 4](#4-critical-windows-fix) |
-| `pnpm install` fails with "minimum release age" | A new package is too fresh (< 24 hours old) | Wait 24 hours and retry |
-| `PORT environment variable is required` | Missing `PORT` in `.env.local` | Add `PORT=3000` to `artifacts/admin-dashboard/.env.local` |
-| `BASE_PATH environment variable is required` | Missing `BASE_PATH` in `.env.local` | Add `BASE_PATH=/` to `artifacts/admin-dashboard/.env.local` |
-| Blank white screen in browser | Env vars missing or wrong | Check `.env.local` values, restart dev server |
-| Login fails: "Invalid login credentials" | Staff user not in `staff_users` table | Run the INSERT from Section 7 Step 4 |
-| Login fails: user not found | Account not in Supabase Auth | Create user via Dashboard → Authentication → Users |
-| Realtime updates not working | Realtime not enabled for tables | Check migration 010 ran; enable realtime in Dashboard → Database → Replication |
-| Images not uploading | Storage bucket missing or wrong RLS | Verify `website-assets` bucket exists; re-run migration 030 |
-| QR scanner not opening | Browser camera permission denied | Allow camera in browser settings; must be on HTTPS or localhost |
-| `DATABASE_URL` connection refused | Wrong connection string | Use the "Transaction" pooler URI from Supabase Dashboard |
-| Port already in use | Another process using port 3000 or 5000 | Change `PORT=` in `.env.local` / `.env`, or kill the conflicting process |
-| Migration failed: "relation does not exist" | Migrations run out of order | Re-apply all migrations in strict numeric order |
-| Node version mismatch | Using Node 18 or 20 instead of 24 | Install Node 24 from nodejs.org; use `nvm` to switch if needed |
-| Git authentication failed on clone | SSH key not set up | Use HTTPS URL instead: `https://github.com/...` |
-| `supabase db push` fails | Not linked to project | Run `supabase link --project-ref YOUR_REF` first |
+All commands verified against `package.json` scripts in the repository.
 
----
-
-## 12. Updating the Project
-
-### Pull latest code
+### From the project root
 
 ```bash
-git pull origin main
-```
-
-### Install new dependencies
-
-Always run after pulling, in case new packages were added:
-
-```bash
+# Install all workspace dependencies
 pnpm install
+
+# TypeScript check — all packages
+pnpm run typecheck
+
+# TypeScript check — shared libraries only (lib/*)
+pnpm run typecheck:libs
+
+# Build all packages (runs typecheck first)
+pnpm run build
 ```
 
-### Apply new migrations
-
-Check if any new `.sql` files were added to `supabase/migrations/` since your last pull.
-
-Apply only the new ones (in order) via the Supabase SQL editor.
-
-Or with the CLI:
+### Admin Dashboard (`@workspace/admin-dashboard`)
 
 ```bash
-supabase db push
+# Start dev server (requires PORT and BASE_PATH in .env.local)
+pnpm --filter @workspace/admin-dashboard run dev
+
+# Build for production (output: artifacts/admin-dashboard/dist/public/)
+pnpm --filter @workspace/admin-dashboard run build
+
+# Preview production build locally
+pnpm --filter @workspace/admin-dashboard run serve
+
+# TypeScript check only
+pnpm --filter @workspace/admin-dashboard run typecheck
 ```
 
-### Regenerate API types (if API spec changed)
+### API Server (`@workspace/api-server`)
 
 ```bash
+# Build + start (development mode, bash required on Windows)
+pnpm --filter @workspace/api-server run dev
+
+# Build only (esbuild, output: artifacts/api-server/dist/)
+pnpm --filter @workspace/api-server run build
+
+# Start only (requires build to have run first)
+pnpm --filter @workspace/api-server run start
+
+# TypeScript check only
+pnpm --filter @workspace/api-server run typecheck
+```
+
+### Database (`@workspace/db`)
+
+```bash
+# Push Drizzle schema to database (requires DATABASE_URL)
+pnpm --filter @workspace/db run push
+
+# Push with --force flag (skips confirmation prompts)
+pnpm --filter @workspace/db run push-force
+```
+
+### API Codegen (`@workspace/api-spec`)
+
+```bash
+# Regenerate Zod schemas and TanStack Query hooks from OpenAPI spec
 pnpm --filter @workspace/api-spec run codegen
 ```
 
----
-
-## 13. Deploying
-
-### Frontend — Admin Dashboard
-
-Build the static bundle:
-
-```bash
-pnpm --filter @workspace/admin-dashboard run build
-```
-
-Output is in `artifacts/admin-dashboard/dist/public/`.
-
-Deploy to any static host (Vercel, Netlify, Cloudflare Pages):
-
-- **Vercel**: Connect your GitHub repo, set root to `artifacts/admin-dashboard`, build command `pnpm run build`, output directory `dist/public`.
-- **Netlify**: Same settings. Add your env vars in the Netlify dashboard.
-
-Set these environment variables in your hosting provider:
-
-```
-VITE_SUPABASE_URL=https://xxxx.supabase.co
-VITE_SUPABASE_ANON_KEY=eyJ...
-VITE_CAFE_ID=a1b2c3d4-0000-0000-0000-000000000001
-PORT=3000
-BASE_PATH=/
-```
-
-### Backend — API Server
-
-Build:
-
-```bash
-pnpm --filter @workspace/api-server run build
-```
-
-Output is in `artifacts/api-server/dist/`.
-
-Deploy to any Node.js host (Railway, Fly.io, Render):
-
-Start command: `node --enable-source-maps ./dist/index.mjs`
-
-Set environment variables:
-
-```
-DATABASE_URL=postgresql://...
-PORT=8080
-NODE_ENV=production
-```
-
-### Database — Supabase
-
-Supabase Cloud handles hosting. Apply any new migrations before deploying code changes:
-
-```bash
-supabase db push
-```
-
-### CORS
-
-For production, update the API server to restrict CORS to your actual frontend domain. In `artifacts/api-server/src/app.ts`, change:
-
-```ts
-app.use(cors());
-```
-
-to:
-
-```ts
-app.use(cors({ origin: 'https://your-dashboard.vercel.app' }));
-```
+Run this whenever `lib/api-spec/` changes.
 
 ---
 
-## 14. Project Structure
+## 12. Troubleshooting
+
+| Problem | Actual cause | Fix |
+|---|---|---|
+| `"Use pnpm instead"` on install | Ran `npm install` or `yarn install` | Use `pnpm install` |
+| `pnpm install` fails with missing esbuild/rollup/tailwindcss binary | Linux-only overrides in `pnpm-workspace.yaml` | Remove the entire `overrides:` block (see Section 3) |
+| `export: command not found` or similar on Windows | API server dev script uses bash `export` | Run in Git Bash, not Command Prompt or PowerShell |
+| `PORT environment variable is required` | Missing `PORT` in `.env.local` | Add `PORT=3000` to `artifacts/admin-dashboard/.env.local` |
+| `BASE_PATH environment variable is required` | Missing `BASE_PATH` in `.env.local` | Add `BASE_PATH=/` to `artifacts/admin-dashboard/.env.local` |
+| Vite starts but login fails silently | Missing or wrong Supabase env vars | Check `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` in `.env.local` |
+| `DATABASE_URL must be set` | `DATABASE_URL` missing when api-server starts | Add `DATABASE_URL` to `artifacts/api-server/.env` |
+| Port 3000 already in use | Another process using that port | Change `PORT=` in `.env.local` or kill the process |
+| Port 5000 already in use | Another process using that port | Change `PORT=` in `artifacts/api-server/.env` |
+| Migration error: `relation does not exist` | Migrations applied out of order | Re-apply all migrations strictly in numeric order (001 → 035) |
+| Login works but no data appears | Seed not applied, or wrong `VITE_CAFE_ID` | Apply `supabase/seed/001_cup_and_cozy.sql`; set `VITE_CAFE_ID=a1b2c3d4-0000-0000-0000-000000000001` |
+| Staff account login fails: "Invalid login credentials" | User exists in `auth.users` but not in `staff_users` | Run the INSERT from Section 6, Step 4 |
+| `minimum release age` install error | A package is < 24 hours old (supply-chain guard) | Wait 24 hours and retry |
+| Realtime not working | Realtime not enabled for tables | Run migration 010 if not yet applied; check Dashboard → Database → Replication |
+| Storage upload fails | RLS blocks non-owner roles | Only `owner` role can upload to `website-assets` (see migration 030) |
+| Node version mismatch | Using Node 18 or 20 | Install Node 24 — use `nvm` to switch if needed |
+
+---
+
+## 13. Project Structure
+
+Every folder listed here was verified by reading the repository.
 
 ```
-cafe-maestro/
+.
 ├── artifacts/
-│   ├── admin-dashboard/          React + Vite staff dashboard
+│   ├── admin-dashboard/        @workspace/admin-dashboard — React + Vite staff dashboard
 │   │   ├── src/
-│   │   │   ├── components/       Shared UI components (shadcn/ui + custom)
-│   │   │   ├── hooks/            TanStack Query data hooks (useMenu, useBookings…)
-│   │   │   ├── lib/              Supabase client, utilities, formatCurrency
-│   │   │   ├── pages/            One file per page (MenuPage, BookingsPage…)
-│   │   │   └── types/            TypeScript types mirroring the DB schema
-│   │   ├── .env.local            Your local secrets (never commit)
-│   │   └── vite.config.ts        Vite configuration
+│   │   │   ├── components/     UI components (shadcn/ui wrappers + custom)
+│   │   │   ├── hooks/          TanStack Query data hooks (useMenu, useBookings, useStaff, …)
+│   │   │   ├── lib/            supabase.ts (client), utils.ts (formatCurrency, cn)
+│   │   │   ├── pages/          One file per page (MenuPage, BookingsPage, AnalyticsPage, …)
+│   │   │   └── types/          TypeScript types mirroring the Supabase schema
+│   │   ├── vite.config.ts      Requires PORT and BASE_PATH env vars at startup
+│   │   └── package.json        Scripts: dev, build, serve, typecheck
 │   │
-│   └── api-server/               Express 5 REST API (guest-facing)
-│       ├── src/
-│       │   ├── app.ts            Express app setup (CORS, middleware, routing)
-│       │   ├── routes/           API route handlers
-│       │   └── lib/              Logger (pino), helpers
-│       └── .env                  Your local secrets (never commit)
+│   ├── api-server/             @workspace/api-server — Express 5 REST API
+│   │   ├── src/
+│   │   │   ├── app.ts          Express setup: CORS (open), JSON body, routes at /api
+│   │   │   ├── index.ts        Entry: reads PORT, starts server
+│   │   │   ├── routes/         API route handlers
+│   │   │   └── lib/logger.ts   Pino logger; reads LOG_LEVEL (default "info"), NODE_ENV
+│   │   └── package.json        Scripts: dev, build, start, typecheck
+│   │
+│   └── mockup-sandbox/         Design preview server (Replit canvas tool — not needed locally)
 │
 ├── lib/
-│   ├── db/                       Drizzle ORM schema + client (used by API server)
-│   ├── api-spec/                 OpenAPI spec (source of truth for the API)
-│   ├── api-zod/                  Zod schemas auto-generated from the OpenAPI spec
-│   └── api-client-react/         TanStack Query hooks auto-generated from the spec
+│   ├── db/                     @workspace/db — Drizzle ORM schema + pg Pool
+│   │   ├── src/index.ts        Reads DATABASE_URL; throws if missing
+│   │   ├── drizzle.config.ts   Reads DATABASE_URL; used by "pnpm run push"
+│   │   └── package.json        Scripts: push, push-force
+│   │
+│   ├── api-spec/               @workspace/api-spec — OpenAPI YAML spec (source of truth)
+│   │   └── package.json        Scripts: codegen (runs orval)
+│   │
+│   ├── api-zod/                @workspace/api-zod — Zod schemas (auto-generated by codegen)
+│   └── api-client-react/       @workspace/api-client-react — TanStack Query hooks (auto-generated)
+│
+├── scripts/                    @workspace/scripts — workspace utility scripts
+│   ├── post-merge.sh           Runs after task merges: pnpm install + db push
+│   └── package.json            Scripts: hello (tsx), typecheck
 │
 ├── supabase/
-│   ├── migrations/               35 SQL migration files (apply in order)
-│   ├── seed/                     001_cup_and_cozy.sql — example tenant data
-│   └── README.md                 Migration index and key design decisions
+│   ├── migrations/             35 SQL files (001–035) — full database schema
+│   ├── seed/
+│   │   └── 001_cup_and_cozy.sql  Creates "Cup & Cozy" demo tenant
+│   └── README.md               Migration index (documents 001–018; 019–035 not yet listed)
 │
 ├── docs/
-│   └── auth/                     Role permission matrix, auth types reference
+│   └── auth/                   Role permission matrix reference
 │
-├── scripts/                      Workspace utility scripts
-├── pnpm-workspace.yaml           Monorepo configuration (edit for Windows — Section 4)
-├── package.json                  Root scripts: typecheck, build
-└── LOCAL_SETUP.md                This file
+├── .gitignore                  Does NOT include .env or .env.local — add them manually
+├── package.json                Root scripts: build, typecheck, typecheck:libs
+├── pnpm-workspace.yaml         Workspace config; overrides block must be removed on non-Linux
+└── tsconfig.base.json          Shared TypeScript base config
 ```
 
-### What each area is responsible for
+### Packages and their names
 
-| Area | Responsibility |
+| Directory | Package name (`name` in package.json) |
 |---|---|
-| `artifacts/admin-dashboard/` | Everything staff see: login, dashboard, menu management, bookings, gallery, offers, analytics, settings |
-| `artifacts/api-server/` | REST API for guest interactions (QR ordering, table sessions). Does not handle admin auth. |
-| `lib/db/` | Drizzle ORM schema definitions and the Postgres connection pool. Shared by the API server. |
-| `lib/api-spec/` | The single OpenAPI YAML file that defines every API endpoint. Edit this to add endpoints. |
-| `lib/api-zod/` | Auto-generated Zod schemas (run `codegen` to refresh after spec changes). |
-| `lib/api-client-react/` | Auto-generated TanStack Query hooks consumed by the admin dashboard. |
-| `supabase/migrations/` | Complete Postgres schema as SQL files. Applied once to your Supabase project. |
-| `supabase/seed/` | Sample data for the Cup & Cozy demo tenant. |
-| `docs/auth/` | Human-readable reference for the four-role permission model (owner / manager / staff / chef). |
+| `artifacts/admin-dashboard` | `@workspace/admin-dashboard` |
+| `artifacts/api-server` | `@workspace/api-server` |
+| `lib/db` | `@workspace/db` |
+| `lib/api-spec` | `@workspace/api-spec` |
+| `lib/api-zod` | `@workspace/api-zod` |
+| `lib/api-client-react` | `@workspace/api-client-react` |
+| `scripts` | `@workspace/scripts` |
+| Root | `workspace` (private, not publishable) |
 
----
-
-## 15. Backup Strategy
-
-### Database
-
-Supabase Cloud automatically backs up your database daily on paid plans. On the free plan, create manual backups regularly:
-
-1. Supabase Dashboard → **Database → Backups**.
-2. Click **Create backup**.
-
-Or export via `pg_dump` (requires the Supabase connection string):
+Use the package name with `pnpm --filter` to run scripts in a specific package:
 
 ```bash
-pg_dump "postgresql://postgres.xxxx:PASSWORD@aws-0-us-east-1.pooler.supabase.com:6543/postgres" \
-  --file backup-$(date +%Y%m%d).sql
+pnpm --filter @workspace/admin-dashboard run dev
+pnpm --filter @workspace/db run push
+pnpm --filter @workspace/api-spec run codegen
 ```
-
-### Storage
-
-Download your storage files from Supabase Dashboard → **Storage** → select a bucket → download files manually, or use the Supabase CLI:
-
-```bash
-supabase storage cp ss://website-assets . --recursive
-```
-
-### Environment Variables
-
-Store your `.env.local` and `.env` files in a **password manager** (Bitwarden, 1Password) or a secure encrypted notes app. Never commit them to Git.
-
-### Git Repository
-
-Push to GitHub or another remote regularly:
-
-```bash
-git add .
-git commit -m "checkpoint: description of changes"
-git push origin main
-```
-
-Consider enabling GitHub branch protection so `main` cannot be force-pushed.
-
----
-
-## 16. Production Checklist
-
-Run through this list before going live:
-
-### Environment
-- [ ] `NODE_ENV=production` set in API server environment
-- [ ] All `VITE_*` variables set in hosting provider dashboard
-- [ ] `DATABASE_URL` uses the **Transaction pooler** connection string (port 6543)
-- [ ] No `.env` files committed to the Git repository
-- [ ] `.gitignore` includes `.env`, `.env.local`, `.env.production`
-
-### Database
-- [ ] All 35 migrations applied in order
-- [ ] Seed data verified (`SELECT COUNT(*) FROM menu_items` returns expected count)
-- [ ] `staff_users` table has at least one owner account
-- [ ] RLS is enabled on all tables (check via Supabase Dashboard → Database → Tables → RLS column shows "enabled")
-- [ ] Realtime is enabled for `cafe_tables`, `table_sessions`, `orders`, `menu_items` (migration 010)
-
-### Storage
-- [ ] `website-assets` bucket exists and is public
-- [ ] RLS policies on `storage.objects` are applied
-- [ ] Test upload from the admin dashboard succeeds
-
-### API
-- [ ] CORS is restricted to your production frontend domain (not `*`)
-- [ ] API server health check responds at `/api/`
-- [ ] `LOG_LEVEL=warn` or `error` in production (avoid verbose logging)
-
-### Security
-- [ ] `SUPABASE_SERVICE_ROLE_KEY` is never exposed to the browser or frontend code
-- [ ] Supabase email confirmation is enabled for new auth users (Dashboard → Auth → Settings)
-- [ ] Strong database password set (not the default)
-- [ ] Supabase project is not set to "Allow new user signups" unless intentional
-
-### Functionality
-- [ ] Staff login works end-to-end
-- [ ] Menu items load on the admin dashboard
-- [ ] Creating and editing a menu item works
-- [ ] Analytics page loads without errors
-- [ ] Gallery upload works (tests storage integration)
-- [ ] Realtime table status updates when a session is created
