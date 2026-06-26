@@ -59,6 +59,11 @@ Deno.serve(async (req: Request) => {
   const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
   const anonKey = Deno.env.get("SUPABASE_ANON_KEY");
 
+  // Item 1 & 2: verify key presence without printing its value
+  console.log("[delete-staff-member] SUPABASE_SERVICE_ROLE_KEY present:", !!serviceRoleKey);
+  console.log("[delete-staff-member] SUPABASE_ANON_KEY present:", !!anonKey);
+  console.log("[delete-staff-member] SUPABASE_URL present:", !!supabaseUrl);
+
   if (!supabaseUrl || !serviceRoleKey || !anonKey) {
     console.error("[delete-staff-member] Missing Supabase environment variables");
     return json({ error: "Server configuration error" }, 500);
@@ -225,16 +230,26 @@ Deno.serve(async (req: Request) => {
   );
 
   if (authDeleteError) {
+    // Capture the complete error — not just .message — so the root cause
+    // is visible in both the function logs and the response body.
+    const fullError = {
+      message:  authDeleteError.message,
+      name:     authDeleteError.name,
+      status:   (authDeleteError as Record<string, unknown>)["status"],
+      code:     (authDeleteError as Record<string, unknown>)["code"],
+      stack:    authDeleteError.stack,
+      raw:      JSON.stringify(authDeleteError),
+    };
     console.error(
-      "[delete-staff-member] auth.admin.deleteUser error:",
-      authDeleteError,
+      "[delete-staff-member] auth.admin.deleteUser failed for user_id:", user_id,
+      "| full error:", JSON.stringify(fullError),
     );
     // The staff_users row is already soft-deleted at this point.
     // The account is effectively disabled even if auth deletion failed.
     return json(
       {
         error: "Failed to delete auth account. Staff record has been deactivated.",
-        detail: authDeleteError.message,
+        detail: fullError,
         code: "AUTH_DELETE_FAILED",
       },
       500,
