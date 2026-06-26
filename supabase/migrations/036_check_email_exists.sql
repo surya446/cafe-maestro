@@ -27,6 +27,7 @@ BEGIN
     SELECT 1
     FROM   staff_users
     WHERE  lower(email) = lower(trim(p_email))
+      AND  deleted_at IS NULL
   ) INTO v_exists;
 
   RETURN jsonb_build_object('exists', v_exists);

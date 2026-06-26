@@ -456,11 +456,15 @@ Deno.serve(async (req: Request) => {
     );
   }
 
-  // ── Block if email already exists in staff_users ──────────────
+  // ── Block if email already exists in an active staff_users row ─
+  // Rows with deleted_at IS NOT NULL are soft-deleted historical
+  // records (auth user already removed). They must not block
+  // re-creation with the same email address.
   const { data: existingStaffRow, error: staffCheckError } = await adminClient
     .from("staff_users")
     .select("id, role")
     .eq("email", normalizedEmail)
+    .is("deleted_at", null)
     .maybeSingle<{ id: string; role: string }>();
 
   if (staffCheckError) {
@@ -470,7 +474,7 @@ Deno.serve(async (req: Request) => {
 
   if (existingStaffRow) {
     console.warn(
-      `[create-staff-member] email check: ${normalizedEmail} → EXISTS in staff_users (role=${existingStaffRow.role}) — blocked`,
+      `[create-staff-member] email check: ${normalizedEmail} → EXISTS in active staff_users (role=${existingStaffRow.role}) — blocked`,
     );
     return json(
       { error: "An account with this email already exists.", code: "EMAIL_ALREADY_EXISTS" },
