@@ -2,13 +2,26 @@
 // Edge Function: delete-staff-member
 // Cafe Maestro Platform
 // ============================================================
-// Fully removes a staff member:
-//   1. Validates caller identity and role permissions.
-//   2. Calls auth.admin.deleteUser() via the service role key.
-//      Because staff_users.id has ON DELETE CASCADE, the
-//      staff_users row is removed automatically by Postgres.
-//      The audit trigger fires on that DELETE, preserving the
-//      audit trail.
+// Fully removes a staff member's authentication access while
+// preserving their historical record:
+//
+//   Step 1 — Soft-delete staff_users row
+//             Sets is_active=false, deleted_at=NOW(),
+//             deleted_by=<caller uuid>.
+//             The audit trigger fires here, writing a
+//             'staff.deactivated' + context snapshot to audit_logs.
+//
+//   Step 2 — Hard-delete auth user
+//             Calls auth.admin.deleteUser() with the service role key.
+//             Because migration 037 dropped the ON DELETE CASCADE
+//             constraint on staff_users.id, the staff_users row is
+//             NOT removed — it survives as a permanent historical record.
+//             The email address is freed immediately for reuse.
+//
+// Attribution columns (approved_by, cancelled_by, etc.) on orders,
+// bookings, and sessions will be SET NULL by Postgres (their existing
+// FK behaviour). The full actor history is preserved in audit_logs,
+// where actor_id is stored as plain text (no FK).
 //
 // Auto-injected by Supabase:
 //   SUPABASE_URL              — project REST URL
@@ -93,7 +106,10 @@ Deno.serve(async (req: Request) => {
 
   // ── Cannot delete self ────────────────────────────────────────
   if (caller.id === user_id) {
-    return json({ error: "You cannot delete your own account", code: "CANNOT_DELETE_SELF" }, 400);
+    return json(
+      { error: "You cannot delete your own account", code: "CANNOT_DELETE_SELF" },
+      400,
+    );
   }
 
   // ── Verify caller is active owner or manager ──────────────────
@@ -109,15 +125,24 @@ Deno.serve(async (req: Request) => {
   }
 
   if (!["owner", "manager"].includes(callerStaff.role)) {
-    return json({ error: "Only owners and managers can delete staff accounts" }, 403);
+    return json(
+      { error: "Only owners and managers can delete staff accounts" },
+      403,
+    );
   }
 
   // ── Fetch target staff record ─────────────────────────────────
   const { data: targetStaff, error: targetError } = await adminClient
     .from("staff_users")
-    .select("role, cafe_id, full_name, email")
+    .select("role, cafe_id, full_name, email, is_active")
     .eq("id", user_id)
-    .single<{ role: string; cafe_id: string; full_name: string; email: string }>();
+    .single<{
+      role: string;
+      cafe_id: string;
+      full_name: string;
+      email: string;
+      is_active: boolean;
+    }>();
 
   if (targetError || !targetStaff) {
     return json({ error: "Staff member not found", code: "USER_NOT_FOUND" }, 404);
@@ -125,41 +150,105 @@ Deno.serve(async (req: Request) => {
 
   // ── Same-cafe enforcement ─────────────────────────────────────
   if (targetStaff.cafe_id !== callerStaff.cafe_id) {
-    return json({ error: "You may only manage staff in your own cafe" }, 403);
+    return json(
+      { error: "You may only manage staff in your own cafe" },
+      403,
+    );
   }
 
   // ── Owner accounts are permanently protected ──────────────────
   if (targetStaff.role === "owner") {
-    return json({ error: "Owner accounts cannot be deleted", code: "CANNOT_DELETE_OWNER" }, 403);
+    return json(
+      { error: "Owner accounts cannot be deleted", code: "CANNOT_DELETE_OWNER" },
+      403,
+    );
   }
 
   // ── Manager may only delete staff/chef ───────────────────────
-  if (callerStaff.role === "manager" && !["staff", "chef"].includes(targetStaff.role)) {
-    return json({ error: "Managers may only delete staff and chef accounts" }, 403);
+  if (
+    callerStaff.role === "manager" &&
+    !["staff", "chef"].includes(targetStaff.role)
+  ) {
+    return json(
+      { error: "Managers may only delete staff and chef accounts" },
+      403,
+    );
   }
 
-  // ── Hard-delete from auth.users ───────────────────────────────
-  // ON DELETE CASCADE on staff_users.id → auth.users(id) means
-  // Postgres automatically removes the staff_users row, and the
-  // audit trigger fires on that DELETE to preserve the audit trail.
-  const { error: deleteError } = await adminClient.auth.admin.deleteUser(user_id);
+  // ── Step 1: Soft-delete staff_users row ───────────────────────
+  // Sets is_active=false, deleted_at=NOW(), deleted_by=caller.id.
+  // The audit trigger fires here and writes a 'staff.deactivated'
+  // event to audit_logs with old_data/new_data snapshots, preserving
+  // the full context of who was deleted, by whom, and when.
+  // We use the adminClient (service role) to bypass RLS so this
+  // works regardless of how RLS policies are currently configured.
+  const { error: softDeleteError } = await adminClient
+    .from("staff_users")
+    .update({
+      is_active: false,
+      deleted_at: new Date().toISOString(),
+      deleted_by: caller.id,
+    })
+    .eq("id", user_id);
 
-  if (deleteError) {
-    console.error("[delete-staff-member] auth.admin.deleteUser error:", deleteError);
+  if (softDeleteError) {
+    console.error(
+      "[delete-staff-member] soft-delete error:",
+      softDeleteError,
+    );
     return json(
-      { error: "Failed to delete staff account", detail: deleteError.message },
+      {
+        error: "Failed to soft-delete staff record",
+        detail: softDeleteError.message,
+      },
       500,
     );
   }
 
   console.log(
-    `[delete-staff-member] Deleted auth user ${user_id} (${targetStaff.email}) — staff_users row removed via CASCADE`,
+    `[delete-staff-member] Soft-deleted staff_users row for ${user_id} (${targetStaff.email}) — deleted_by=${caller.id}`,
+  );
+
+  // ── Step 2: Hard-delete auth user ────────────────────────────
+  // Removes the Supabase Auth account, freeing the email address
+  // for immediate reuse. Because migration 037 dropped the
+  // ON DELETE CASCADE constraint on staff_users.id, the staff_users
+  // row created above is NOT removed — it persists as a permanent
+  // historical record with is_active=false, deleted_at, and deleted_by set.
+  //
+  // Side effect: columns on other tables that reference auth.users(id)
+  // ON DELETE SET NULL (approved_by, cancelled_by, confirmed_by, etc.)
+  // will be set to NULL by Postgres. Full actor history is preserved in
+  // audit_logs where actor_id is stored as plain text (no FK).
+  const { error: authDeleteError } = await adminClient.auth.admin.deleteUser(
+    user_id,
+  );
+
+  if (authDeleteError) {
+    console.error(
+      "[delete-staff-member] auth.admin.deleteUser error:",
+      authDeleteError,
+    );
+    // The staff_users row is already soft-deleted at this point.
+    // The account is effectively disabled even if auth deletion failed.
+    return json(
+      {
+        error: "Failed to delete auth account. Staff record has been deactivated.",
+        detail: authDeleteError.message,
+        code: "AUTH_DELETE_FAILED",
+      },
+      500,
+    );
+  }
+
+  console.log(
+    `[delete-staff-member] Deleted auth user ${user_id} (${targetStaff.email}). Email is now reusable. staff_users row preserved.`,
   );
 
   return json(
     {
       success: true,
-      message: `${targetStaff.full_name} has been permanently removed.`,
+      message: `${targetStaff.full_name} has been permanently removed. Their email address is now available for a new account.`,
     },
     200,
   );
