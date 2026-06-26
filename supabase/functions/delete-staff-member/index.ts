@@ -230,30 +230,49 @@ Deno.serve(async (req: Request) => {
   );
 
   if (authDeleteError) {
-    // Capture the complete error — not just .message — so the root cause
-    // is visible in both the function logs and the response body.
-    const fullError = {
-      message:  authDeleteError.message,
-      name:     authDeleteError.name,
-      status:   (authDeleteError as Record<string, unknown>)["status"],
-      code:     (authDeleteError as Record<string, unknown>)["code"],
-      stack:    authDeleteError.stack,
-      raw:      JSON.stringify(authDeleteError),
-    };
+    // Extract all properties explicitly — JSON.stringify(AuthError) returns {}
+    // because Error properties are non-enumerable.
+    const errStatus   = (authDeleteError as Record<string, unknown>)["status"] as number | undefined;
+    const errCode     = (authDeleteError as Record<string, unknown>)["code"]   as string | undefined;
+    const errMessage  = authDeleteError.message ?? "";
+
     console.error(
       "[delete-staff-member] auth.admin.deleteUser failed for user_id:", user_id,
-      "| full error:", JSON.stringify(fullError),
+      "| status:", errStatus,
+      "| code:", errCode,
+      "| message:", errMessage,
     );
-    // The staff_users row is already soft-deleted at this point.
-    // The account is effectively disabled even if auth deletion failed.
-    return json(
-      {
-        error: "Failed to delete auth account. Staff record has been deactivated.",
-        detail: fullError,
-        code: "AUTH_DELETE_FAILED",
-      },
-      500,
-    );
+
+    // If the auth user is already gone, the goal is already met: no auth
+    // access, email is free.  Treat as success so that orphaned staff_users
+    // rows (e.g. created by repair SQL without a matching auth account) can
+    // still be cleaned up cleanly.
+    //
+    // Detection: prefer the explicit error code from the Supabase Admin API
+    // ("user_not_found").  Accept a 404 status only when accompanied by a
+    // corroborating code or message, so we do not accidentally swallow
+    // unrelated 404s from the auth endpoint.
+    const messageIndicatesNotFound = errMessage.toLowerCase().includes("user not found");
+    const isNotFound =
+      errCode === "user_not_found" ||
+      messageIndicatesNotFound ||
+      (errStatus === 404 && (errCode != null || messageIndicatesNotFound));
+
+    if (isNotFound) {
+      console.log(
+        `[delete-staff-member] Auth user ${user_id} was already absent from auth.users — treating as success.`,
+      );
+    } else {
+      // Genuine failure: auth account still exists and could not be removed.
+      return json(
+        {
+          error: "Failed to delete auth account. Staff record has been deactivated.",
+          detail: { status: errStatus, code: errCode, message: errMessage },
+          code: "AUTH_DELETE_FAILED",
+        },
+        500,
+      );
+    }
   }
 
   console.log(
