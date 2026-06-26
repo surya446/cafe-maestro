@@ -1,6 +1,6 @@
 // ============================================================
 // Edge Function: invite-staff-member
-// Cafe Maestro Platform
+// Cup & Cozy Management System
 // ============================================================
 // Sends a Supabase Auth invite email to a new staff member and
 // creates / updates their staff_users row with full security

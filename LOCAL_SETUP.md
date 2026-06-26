@@ -1,4 +1,4 @@
-# Cafe Maestro — Local Setup Guide
+# Cup & Cozy — Local Setup Guide
 
 > Every command, script name, environment variable, package name, and version in this guide was read directly from the repository source files. Nothing is assumed or invented. Where something is absent from the repository, that is stated explicitly.
 

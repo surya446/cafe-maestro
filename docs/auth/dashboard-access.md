@@ -1,4 +1,4 @@
-# Authorization Model — Cafe Maestro (Final)
+# Authorization Model — Cup & Cozy Management System
 
 ---
 

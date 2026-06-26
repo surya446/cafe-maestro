@@ -1,6 +1,6 @@
 // ============================================================
 // Next.js Middleware — Route Protection
-// Cafe Maestro Platform — Final Authorization Model
+// Cup & Cozy Management System — Final Authorization Model
 // Copy into: middleware.ts (project root)
 // ============================================================
 //

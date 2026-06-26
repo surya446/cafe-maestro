@@ -1,6 +1,6 @@
-# Cafe Maestro
+# Cup & Cozy
 
-Multi-tenant SaaS cafe management platform. First tenant: Cup & Cozy. Staff log in to manage menu, bookings, gallery, offers, and view analytics.
+A premium digital ordering, table booking, QR ordering, and café management platform built exclusively for Cup & Cozy. Staff log in to manage menu, bookings, gallery, offers, and view analytics.
 
 ## Run & Operate
 

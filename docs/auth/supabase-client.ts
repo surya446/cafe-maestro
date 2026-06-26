@@ -1,5 +1,5 @@
 // ============================================================
-// Supabase Client Setup — Cafe Maestro Platform
+// Supabase Client Setup — Cup & Cozy Management System
 // ============================================================
 // Three clients, three contexts. Never mix them.
 //

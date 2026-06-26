@@ -1,6 +1,6 @@
 // ============================================================
 // Edge Function: create-staff-member
-// Cafe Maestro Platform
+// Cup & Cozy Management System
 // ============================================================
 // Creates a Supabase Auth user directly with a temporary
 // password (no invite email). Sends login credentials via
@@ -153,11 +153,11 @@ async function sendCredentialEmail(opts: {
 <html>
 <head><meta charset="utf-8"></head>
 <body style="font-family:sans-serif;max-width:480px;margin:0 auto;padding:32px 16px;color:#111;">
-  <h2 style="margin-bottom:4px;">Welcome to Cafe Maestro</h2>
+  <h2 style="margin-bottom:4px;">Welcome to Cup & Cozy</h2>
   <p style="color:#666;margin-top:0;">Your staff account is ready.</p>
 
   <p>Hi <strong>${fullName}</strong>,</p>
-  <p>An account has been created for you on the Cafe Maestro Admin Dashboard. Use the credentials below to sign in.</p>
+  <p>An account has been created for you on the Cup & Cozy Management System. Use the credentials below to sign in.</p>
 
   <div style="background:#f5f5f5;border-radius:8px;padding:20px 24px;margin:24px 0;">
     <p style="margin:0 0 8px;font-size:13px;color:#666;text-transform:uppercase;letter-spacing:.05em;">Your login details</p>
@@ -182,9 +182,9 @@ async function sendCredentialEmail(opts: {
   console.log(`[create-staff-member] Sending credential email to ${toEmail}...`);
   try {
     const info = await transporter.sendMail({
-      from: `"Cafe Maestro" <${smtpUser}>`,
+      from: `"Cup & Cozy" <${smtpUser}>`,
       to: toEmail,
-      subject: "Your Cafe Maestro staff account is ready",
+      subject: "Your Cup & Cozy staff account is ready",
       html,
     });
     console.log(`[create-staff-member] Email sent successfully. MessageId: ${info.messageId}, Response: ${info.response}`);

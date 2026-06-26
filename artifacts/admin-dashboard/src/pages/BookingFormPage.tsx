@@ -93,7 +93,7 @@ export function BookingFormPage() {
               <Coffee className="w-6 h-6" />
             </div>
             <span className="text-lg font-bold text-sidebar-foreground">
-              {cafeLoading ? "Loading…" : (cafe?.name ?? "Cafe Maestro")}
+              {cafeLoading ? "Loading…" : (cafe?.name ?? "Cup & Cozy")}
             </span>
           </div>
           <h2 className="text-3xl font-bold text-sidebar-foreground leading-tight">
@@ -132,7 +132,7 @@ export function BookingFormPage() {
               <Coffee className="w-5 h-5" />
             </div>
             <span className="text-base font-bold text-foreground">
-              {cafeLoading ? "Loading…" : (cafe?.name ?? "Cafe Maestro")}
+              {cafeLoading ? "Loading…" : (cafe?.name ?? "Cup & Cozy")}
             </span>
           </div>
 

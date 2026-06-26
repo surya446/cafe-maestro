@@ -1,5 +1,5 @@
 // ============================================================
-// useAuth Hook — Cafe Maestro Platform
+// useAuth Hook — Cup & Cozy Management System
 // Copy into: lib/auth/use-auth.ts
 // ============================================================
 // Client-side auth hook for 'use client' dashboard components.

@@ -45,7 +45,7 @@ export function AppLayout({ children }: AppLayoutProps) {
           >
             <Menu className="w-5 h-5" />
           </button>
-          <span className="ml-3 text-sm font-semibold text-foreground">Cafe Maestro</span>
+          <span className="ml-3 text-sm font-semibold text-foreground">Cup & Cozy</span>
         </header>
 
         <main className="flex-1 min-w-0 overflow-auto">

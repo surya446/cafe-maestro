@@ -1,5 +1,5 @@
 // ============================================================
-// Server Auth Helpers — Cafe Maestro Platform
+// Server Auth Helpers — Cup & Cozy Management System
 // Copy into: lib/auth/server.ts
 // ============================================================
 // Used in API Route Handlers and Server Components.

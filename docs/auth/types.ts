@@ -1,5 +1,5 @@
 // ============================================================
-// Auth Types — Cafe Maestro Platform
+// Auth Types — Cup & Cozy Management System
 // Final Authorization Model (no inheritance)
 // Copy into: lib/auth/types.ts
 // ============================================================

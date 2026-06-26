@@ -208,7 +208,7 @@ export function QRScannerModal({ isOpen, onClose, onNavigate }: Props) {
         <div className="flex items-center justify-between px-5 pt-6 pb-4">
           <div>
             <p className="text-[11px] uppercase tracking-widest mb-0.5" style={{ color: C.gold, ...SANS }}>
-              Cafe Maestro
+              Cup & Cozy
             </p>
             <h2 className="text-xl font-light" style={{ color: C.text, ...SERIF }}>
               Scan Table QR
@@ -373,7 +373,7 @@ export function QRScannerModal({ isOpen, onClose, onNavigate }: Props) {
                   transition={{ duration: 0.2 }}
                   style={{ color: C.error, ...SANS }}
                 >
-                  Not a Cafe Maestro table QR — try again
+                  Not a Cup & Cozy table QR — try again
                 </motion.p>
               )}
               {(status === "denied" || status === "error") && (

@@ -1,4 +1,4 @@
-# Cafe Maestro — Supabase Schema
+# Cup & Cozy — Supabase Schema
 
 ## Migration Run Order
 
@@ -34,7 +34,7 @@ Run via the Supabase Dashboard SQL editor or `supabase db push`.
 
 ## Key Design Decisions
 
-- **`cafe_id` on every row** — multi-tenant from day one; cross-cafe leakage is impossible via RLS
+- **`cafe_id` on every row** — every data row is scoped to the cafe; cross-cafe data leakage is impossible via RLS
 - **`device_count` is never stored** — always computed from `session_devices` via `COUNT()`
 - **Unique partial index** on `table_sessions(table_id) WHERE status='active'` — database-enforced one active session per table
 - **`unit_price` snapshotted** in `order_items` — historical order values survive menu price changes

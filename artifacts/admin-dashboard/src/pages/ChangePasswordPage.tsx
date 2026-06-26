@@ -61,7 +61,7 @@ export function ChangePasswordPage() {
               <Coffee className="w-6 h-6" />
             </div>
             <span className="text-lg font-bold text-sidebar-foreground">
-              Cafe Maestro
+              Cup & Cozy
             </span>
           </div>
           <h2 className="text-3xl font-bold text-sidebar-foreground leading-tight">
@@ -97,7 +97,7 @@ export function ChangePasswordPage() {
               <Coffee className="w-5 h-5" />
             </div>
             <span className="text-base font-bold text-foreground">
-              Cafe Maestro
+              Cup & Cozy
             </span>
           </div>
 
