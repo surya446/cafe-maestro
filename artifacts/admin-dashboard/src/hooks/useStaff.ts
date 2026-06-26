@@ -76,10 +76,14 @@ export function useDeleteStaffUser() {
 
   return useMutation({
     mutationFn: async (userId: string) => {
-      const { error } = await supabase.rpc("delete_staff_user", {
-        p_user_id: userId,
-      });
+      const { data, error } = await supabase.functions.invoke(
+        "delete-staff-member",
+        { body: { user_id: userId } },
+      );
       if (error) throw error;
+      if (data && !data.success) {
+        throw new Error(data.error ?? "Failed to delete staff member");
+      }
     },
     onSuccess: () =>
       qc.invalidateQueries({ queryKey: STAFF_KEY(user?.cafeId ?? "") }),
