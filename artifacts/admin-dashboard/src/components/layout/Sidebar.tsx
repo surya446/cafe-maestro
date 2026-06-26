@@ -75,10 +75,7 @@ export function Sidebar({ collapsed, mobileOpen, onToggleCollapse, onCloseMobile
           </div>
           {!collapsed && (
             <div className="min-w-0 flex-1">
-              <p className="text-xs font-medium text-sidebar-foreground/50 uppercase tracking-widest leading-none">
-                Cup & Cozy
-              </p>
-              <p className="text-sm font-semibold text-sidebar-foreground truncate leading-tight mt-0.5">
+              <p className="text-sm font-semibold text-sidebar-foreground truncate leading-tight">
                 {user?.cafeName ?? "Loading…"}
               </p>
             </div>
@@ -184,10 +181,7 @@ export function Sidebar({ collapsed, mobileOpen, onToggleCollapse, onCloseMobile
             <Coffee className="w-5 h-5" />
           </div>
           <div className="min-w-0 flex-1">
-            <p className="text-xs font-medium text-sidebar-foreground/50 uppercase tracking-widest leading-none">
-              Cup & Cozy
-            </p>
-            <p className="text-sm font-semibold text-sidebar-foreground truncate leading-tight mt-0.5">
+            <p className="text-sm font-semibold text-sidebar-foreground truncate leading-tight">
               {user?.cafeName ?? "Loading…"}
             </p>
           </div>
