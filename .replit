@@ -40,7 +40,7 @@ externalPort = 3000
 [userenv.shared]
 VITE_SUPABASE_ANON_KEY = "sb_publishable_Wo9WRTgiL6wMdZ_TqoewxA_hgYZ142O"
 VITE_SUPABASE_URL = "https://usllfqogcdskfeszntwf.supabase.co"
-SUPABASE_ACCESS_TOKEN = "sbp_e06459ffe9cdb03fc7f0323e1d2d667a29b35b80"
+SUPABASE_ACCESS_TOKEN = "sbp_a96279ee8c99189acaf7f2ef5bfae3a89d6c9b4a"
 
 [nix]
 channel = "stable-25_05"
