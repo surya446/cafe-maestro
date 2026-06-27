@@ -59,10 +59,14 @@ Deno.serve(async (req: Request) => {
   const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
   const anonKey = Deno.env.get("SUPABASE_ANON_KEY");
 
-  // Item 1 & 2: verify key presence without printing its value
-  console.log("[delete-staff-member] SUPABASE_SERVICE_ROLE_KEY present:", !!serviceRoleKey);
-  console.log("[delete-staff-member] SUPABASE_ANON_KEY present:", !!anonKey);
-  console.log("[delete-staff-member] SUPABASE_URL present:", !!supabaseUrl);
+  console.log("SUPABASE_URL present:", !!supabaseUrl);
+  console.log("SUPABASE_ANON_KEY present:", !!anonKey);
+  console.log("SUPABASE_SERVICE_ROLE_KEY present:", !!serviceRoleKey);
+  console.log(
+    "SUPABASE_SERVICE_ROLE_KEY prefix:",
+    serviceRoleKey ? serviceRoleKey.substring(0, 20) : "<missing>",
+  );
+  console.log("SUPABASE_URL:", supabaseUrl);
 
   if (!supabaseUrl || !serviceRoleKey || !anonKey) {
     console.error("[delete-staff-member] Missing Supabase environment variables");
@@ -215,13 +219,15 @@ Deno.serve(async (req: Request) => {
   );
 
   // ── Step 2: Hard-delete auth user ────────────────────────────
-  // Log service-role client credentials before calling deleteUser
-  console.log("[delete-staff-member] SUPABASE_URL present:", !!supabaseUrl);
-  console.log("[delete-staff-member] SUPABASE_SERVICE_ROLE_KEY present:", !!serviceRoleKey);
-  console.log(
-    "[delete-staff-member] SUPABASE_SERVICE_ROLE_KEY prefix:",
-    serviceRoleKey ? serviceRoleKey.slice(0, 10) + "..." : "N/A",
-  );
+  const health = await adminClient.auth.admin.listUsers({
+    page: 1,
+    perPage: 1,
+  });
+
+  console.log("listUsers result:", {
+    data: !!health.data,
+    error: health.error,
+  });
 
   const { error: authDeleteError } = await adminClient.auth.admin.deleteUser(user_id);
 
