@@ -229,36 +229,31 @@ Deno.serve(async (req: Request) => {
     error: health.error,
   });
 
-  const { error: authDeleteError } = await adminClient.auth.admin.deleteUser(user_id);
+  try {
+    const result = await adminClient.auth.admin.deleteUser(user_id);
 
-  if (authDeleteError) {
-    console.error("deleteUser error", {
-      status:  authDeleteError?.status,
-      code:    authDeleteError?.code,
-      name:    authDeleteError?.name,
-      message: authDeleteError instanceof Error
-        ? authDeleteError.message
-        : String(authDeleteError),
-      stack: authDeleteError instanceof Error
-        ? authDeleteError.stack
-        : undefined,
-    });
+    console.log("deleteUser returned:", result);
 
-    return json(
-      {
-        error: "Failed to delete auth account. Staff record has been deactivated.",
-        detail: {
-          status:  authDeleteError?.status,
-          code:    authDeleteError?.code,
-          name:    authDeleteError?.name,
-          message: authDeleteError instanceof Error
-            ? authDeleteError.message
-            : String(authDeleteError),
+    if (result.error) {
+      console.error("deleteUser error object:", result.error);
+      console.error("deleteUser error constructor:", result.error.constructor?.name);
+      console.error("deleteUser error own keys:", Object.getOwnPropertyNames(result.error));
+      console.error("deleteUser error descriptors:", Object.getOwnPropertyDescriptors(result.error));
+
+      return json(
+        {
+          error: "Failed to delete auth account. Staff record has been deactivated.",
+          code: "AUTH_DELETE_FAILED",
         },
-        code: "AUTH_DELETE_FAILED",
-      },
-      500,
-    );
+        500,
+      );
+    }
+  } catch (e) {
+    console.error("deleteUser threw:", e);
+    console.error("constructor:", e?.constructor?.name);
+    console.error("keys:", Object.getOwnPropertyNames(e));
+    console.error("descriptors:", Object.getOwnPropertyDescriptors(e));
+    throw e;
   }
 
   console.log(
