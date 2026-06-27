@@ -259,23 +259,6 @@ Deno.serve(async (req: Request) => {
   console.log("auth email:", authRecord.data?.user?.email);
   console.log("full auth user object:", JSON.stringify(authRecord.data?.user, null, 2));
 
-  // ── Raw GoTrue DELETE (diagnostic only) ──────────────────────
-  const rawResponse = await fetch(
-    `${supabaseUrl}/auth/v1/admin/users/${user_id}`,
-    {
-      method: "DELETE",
-      headers: {
-        Authorization: `Bearer ${serviceRoleKey}`,
-        apikey: serviceRoleKey,
-        "Content-Type": "application/json",
-      },
-    },
-  );
-
-  console.log("RAW DELETE STATUS:", rawResponse.status);
-  console.log("RAW DELETE HEADERS:", Object.fromEntries(rawResponse.headers.entries()));
-  console.log("RAW DELETE BODY:", await rawResponse.text());
-
   try {
     const result = await adminClient.auth.admin.deleteUser(user_id);
 
