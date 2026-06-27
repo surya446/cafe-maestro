@@ -551,7 +551,7 @@ Deno.serve(async (req: Request) => {
   return json(
     {
       success: true,
-      already_registered: alreadyRegistered,
+      already_registered: false,
       email_sent: emailSent,
       email_info: emailSent ? emailInfo : undefined,
       email_error: emailSent ? undefined : emailError,
