@@ -45,6 +45,7 @@ import {
   useCreateStaffMember,
 } from "@/hooks/useStaff";
 import { useAuth } from "@/hooks/useAuth";
+import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/lib/supabase";
 import { StaffUser, UserRole, AuthUser } from "@/types";
 import { ROLE_LABELS, formatDate } from "@/lib/utils";
@@ -355,6 +356,7 @@ export function StaffPage() {
   const deleteUser = useDeleteStaffUser();
   const { user } = useAuth();
 
+  const { toast } = useToast();
   const [inviteOpen, setInviteOpen] = useState(false);
   const [deletingMember, setDeletingMember] = useState<StaffUser | null>(null);
 
@@ -362,8 +364,19 @@ export function StaffPage() {
 
   function handleDeleteConfirm() {
     if (!deletingMember) return;
+    const name = deletingMember.full_name;
     deleteUser.mutate(deletingMember.id, {
-      onSuccess: () => setDeletingMember(null),
+      onSuccess: () => {
+        setDeletingMember(null);
+        toast({ title: `${name} has been removed` });
+      },
+      onError: (err) => {
+        toast({
+          title: "Failed to delete staff member",
+          description: err instanceof Error ? err.message : "An unexpected error occurred",
+          variant: "destructive",
+        });
+      },
     });
   }
 

@@ -86,8 +86,13 @@ export function useDeleteStaffUser() {
         throw new Error(data.error ?? "Failed to delete staff member");
       }
     },
-    onSuccess: () =>
-      qc.invalidateQueries({ queryKey: STAFF_KEY(user?.cafeId ?? "") }),
+    onSuccess: (_data, userId) => {
+      qc.setQueryData<StaffUser[]>(
+        STAFF_KEY(user?.cafeId ?? ""),
+        (old) => old?.filter((m) => m.id !== userId) ?? [],
+      );
+      qc.invalidateQueries({ queryKey: STAFF_KEY(user?.cafeId ?? "") });
+    },
   });
 }
 
