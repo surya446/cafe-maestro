@@ -267,17 +267,28 @@ Deno.serve(async (req: Request) => {
     console.log("deleteUser result.error truthy:", !!result.error);
 
     if (result.error) {
-      console.error("deleteUser error object:", result.error);
-      console.error("deleteUser error constructor:", result.error.constructor?.name);
-      console.error("deleteUser error own keys:", Object.getOwnPropertyNames(result.error));
-      console.error("deleteUser error descriptors:", Object.getOwnPropertyDescriptors(result.error));
+      const isAlreadyGone =
+        (result.error as { status?: number }).status === 404 ||
+        (result.error as { code?: string }).code === "user_not_found" ||
+        result.error.message?.includes("User not found");
 
-      const body500 = {
-        error: "Failed to delete auth account. Staff record has been deactivated.",
-        code: "AUTH_DELETE_FAILED",
-      };
-      console.log("RETURNING HTTP 500", body500);
-      return json(body500, 500);
+      if (isAlreadyGone) {
+        console.log(
+          `[delete-staff-member] Auth user ${user_id} was already deleted — treating as success.`,
+        );
+      } else {
+        console.error("deleteUser error object:", result.error);
+        console.error("deleteUser error constructor:", result.error.constructor?.name);
+        console.error("deleteUser error own keys:", Object.getOwnPropertyNames(result.error));
+        console.error("deleteUser error descriptors:", Object.getOwnPropertyDescriptors(result.error));
+
+        const body500 = {
+          error: "Failed to delete auth account. Staff record has been deactivated.",
+          code: "AUTH_DELETE_FAILED",
+        };
+        console.log("RETURNING HTTP 500", body500);
+        return json(body500, 500);
+      }
     }
   } catch (e) {
     console.error("deleteUser threw:", e);
