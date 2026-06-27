@@ -746,32 +746,11 @@ function TablesTab() {
 
   return (
     <div className="space-y-4">
-      {canManage && (
-        <div className="flex justify-end">
-          <Button size="sm" onClick={() => setAddOpen(true)}>
-            <Plus className="h-4 w-4 mr-2" />
-            Add table
-          </Button>
-        </div>
-      )}
-
       {tableOverview.length === 0 ? (
         <EmptyState
           icon={TableProperties}
           title="No active sessions"
-          description={
-            canManage
-              ? "Add a table to generate a QR code. Guests scan it to start a session."
-              : "Tables appear here when guests scan a QR code and enter their name."
-          }
-          action={
-            canManage ? (
-              <Button size="sm" onClick={() => setAddOpen(true)}>
-                <Plus className="h-4 w-4 mr-2" />
-                Add table
-              </Button>
-            ) : undefined
-          }
+          description="Guest sessions will appear here automatically when customers scan a table QR code."
         />
       ) : (
         tableOverview.map((table) => (
@@ -1181,9 +1160,9 @@ export function OrdersPage() {
   return (
     <AppLayout>
       <PageHeader
-        title="Orders & Tables"
+        title="Orders & Sessions"
         icon={ClipboardList}
-        description="Kitchen queue, live table status, and bill requests"
+        description="Kitchen queue, live session status, and bill requests"
       />
 
       <Tabs defaultValue="orders" className="mt-4">
@@ -1200,7 +1179,7 @@ export function OrdersPage() {
 
           <TabsTrigger value="tables" className="flex items-center gap-2">
             <TableProperties className="h-4 w-4" />
-            Tables
+            Sessions
           </TabsTrigger>
 
           <TabsTrigger value="bills" className="flex items-center gap-2">
