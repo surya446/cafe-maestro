@@ -215,64 +215,53 @@ Deno.serve(async (req: Request) => {
   );
 
   // ── Step 2: Hard-delete auth user ────────────────────────────
-  // Removes the Supabase Auth account, freeing the email address
-  // for immediate reuse. Because migration 037 dropped the
-  // ON DELETE CASCADE constraint on staff_users.id, the staff_users
-  // row created above is NOT removed — it persists as a permanent
-  // historical record with is_active=false, deleted_at, and deleted_by set.
-  //
-  // Side effect: columns on other tables that reference auth.users(id)
-  // ON DELETE SET NULL (approved_by, cancelled_by, confirmed_by, etc.)
-  // will be set to NULL by Postgres. Full actor history is preserved in
-  // audit_logs where actor_id is stored as plain text (no FK).
-  const { error: authDeleteError } = await adminClient.auth.admin.deleteUser(
-    user_id,
-  );
+  // [DEBUG] Full result logging enabled to diagnose deleteUser failures.
+  const result = await adminClient.auth.admin.deleteUser(user_id);
+
+  // Log the raw result object (shallow — avoids JSON.stringify({}) on Error)
+  console.log("[delete-staff-member][DEBUG] deleteUser result:", result);
+  console.log("[delete-staff-member][DEBUG] result.data:", result.data);
+  console.log("[delete-staff-member][DEBUG] result.error:", result.error);
+
+  const authDeleteError = result.error;
 
   if (authDeleteError) {
-    // Extract all properties explicitly — JSON.stringify(AuthError) returns {}
-    // because Error properties are non-enumerable.
-    const errStatus   = (authDeleteError as Record<string, unknown>)["status"] as number | undefined;
-    const errCode     = (authDeleteError as Record<string, unknown>)["code"]   as string | undefined;
-    const errMessage  = authDeleteError.message ?? "";
+    // Cast to a plain record so we can safely read non-enumerable properties
+    const errObj = authDeleteError as unknown as Record<string, unknown>;
 
-    console.error(
-      "[delete-staff-member] auth.admin.deleteUser failed for user_id:", user_id,
-      "| status:", errStatus,
-      "| code:", errCode,
-      "| message:", errMessage,
-    );
+    const errStatus  = errObj["status"];
+    const errCode    = errObj["code"];
+    const errName    = errObj["name"];
+    const errMessage = errObj["message"] ?? authDeleteError.message;
 
-    // If the auth user is already gone, the goal is already met: no auth
-    // access, email is free.  Treat as success so that orphaned staff_users
-    // rows (e.g. created by repair SQL without a matching auth account) can
-    // still be cleaned up cleanly.
-    //
-    // Detection: prefer the explicit error code from the Supabase Admin API
-    // ("user_not_found").  Accept a 404 status only when accompanied by a
-    // corroborating code or message, so we do not accidentally swallow
-    // unrelated 404s from the auth endpoint.
-    const messageIndicatesNotFound = errMessage.toLowerCase().includes("user not found");
-    const isNotFound =
-      errCode === "user_not_found" ||
-      messageIndicatesNotFound ||
-      (errStatus === 404 && (errCode != null || messageIndicatesNotFound));
+    // Log every known property individually
+    console.error("[delete-staff-member][DEBUG] error.status:", errStatus);
+    console.error("[delete-staff-member][DEBUG] error.code:", errCode);
+    console.error("[delete-staff-member][DEBUG] error.name:", errName);
+    console.error("[delete-staff-member][DEBUG] error.message:", errMessage);
 
-    if (isNotFound) {
-      console.log(
-        `[delete-staff-member] Auth user ${user_id} was already absent from auth.users — treating as success.`,
-      );
-    } else {
-      // Genuine failure: auth account still exists and could not be removed.
-      return json(
-        {
-          error: "Failed to delete auth account. Staff record has been deactivated.",
-          detail: { status: errStatus, code: errCode, message: errMessage },
-          code: "AUTH_DELETE_FAILED",
-        },
-        500,
-      );
+    // Log all enumerable own properties (catches anything non-standard)
+    const enumerable: Record<string, unknown> = {};
+    for (const key of Object.keys(authDeleteError)) {
+      enumerable[key] = errObj[key];
     }
+    console.error("[delete-staff-member][DEBUG] error enumerable keys:", Object.keys(authDeleteError));
+    console.error("[delete-staff-member][DEBUG] error enumerable props:", enumerable);
+
+    return json(
+      {
+        error: "deleteUser failed — check Edge Function logs for full detail.",
+        detail: {
+          status:  errStatus,
+          code:    errCode,
+          name:    errName,
+          message: errMessage,
+          enumerable,
+        },
+        code: "AUTH_DELETE_FAILED",
+      },
+      500,
+    );
   }
 
   console.log(
