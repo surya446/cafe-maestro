@@ -263,6 +263,8 @@ Deno.serve(async (req: Request) => {
     const result = await adminClient.auth.admin.deleteUser(user_id);
 
     console.log("deleteUser returned:", result);
+    console.log("deleteUser result.error:", result.error);
+    console.log("deleteUser result.error truthy:", !!result.error);
 
     if (result.error) {
       console.error("deleteUser error object:", result.error);
@@ -270,19 +272,19 @@ Deno.serve(async (req: Request) => {
       console.error("deleteUser error own keys:", Object.getOwnPropertyNames(result.error));
       console.error("deleteUser error descriptors:", Object.getOwnPropertyDescriptors(result.error));
 
-      return json(
-        {
-          error: "Failed to delete auth account. Staff record has been deactivated.",
-          code: "AUTH_DELETE_FAILED",
-        },
-        500,
-      );
+      const body500 = {
+        error: "Failed to delete auth account. Staff record has been deactivated.",
+        code: "AUTH_DELETE_FAILED",
+      };
+      console.log("RETURNING HTTP 500", body500);
+      return json(body500, 500);
     }
   } catch (e) {
     console.error("deleteUser threw:", e);
     console.error("constructor:", e?.constructor?.name);
     console.error("keys:", Object.getOwnPropertyNames(e));
     console.error("descriptors:", Object.getOwnPropertyDescriptors(e));
+    console.log("RETURNING HTTP 500 (thrown)", String(e));
     throw e;
   }
 
@@ -290,11 +292,10 @@ Deno.serve(async (req: Request) => {
     `[delete-staff-member] Deleted auth user ${user_id} (${targetStaff.email}). Email is now reusable. staff_users row preserved.`,
   );
 
-  return json(
-    {
-      success: true,
-      message: `${targetStaff.full_name} has been permanently removed. Their email address is now available for a new account.`,
-    },
-    200,
-  );
+  const body200 = {
+    success: true,
+    message: `${targetStaff.full_name} has been permanently removed. Their email address is now available for a new account.`,
+  };
+  console.log("RETURNING HTTP 200", body200);
+  return json(body200, 200);
 });
