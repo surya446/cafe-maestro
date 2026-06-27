@@ -446,10 +446,18 @@ Deno.serve(async (req: Request) => {
     (u) => u.email?.toLowerCase() === normalizedEmail,
   );
 
+  // ── DIAGNOSTIC: log auth.users check result ──────────────────
+  console.log("EMAIL_CHECK auth.users: email being checked:", normalizedEmail);
+  console.log("EMAIL_CHECK auth.users: total users scanned:", listData?.users?.length ?? 0);
+  console.log("EMAIL_CHECK auth.users: row found:", existingAuthUser ?? null);
+  console.log("EMAIL_CHECK auth.users: match found:", !!existingAuthUser);
+
   if (existingAuthUser) {
-    console.warn(
-      `[create-staff-member] email check: ${normalizedEmail} → EXISTS in auth.users (id=${existingAuthUser.id}) — blocked`,
-    );
+    console.warn("EMAIL_CHECK auth.users: BLOCKING — check failing here");
+    console.warn("EMAIL_CHECK auth.users: matched id:", existingAuthUser.id);
+    console.warn("EMAIL_CHECK auth.users: matched email:", existingAuthUser.email);
+    console.warn("EMAIL_CHECK auth.users: deleted_at:", (existingAuthUser as Record<string, unknown>).deleted_at ?? null);
+    console.warn("EMAIL_CHECK auth.users: full row:", JSON.stringify(existingAuthUser, null, 2));
     return json(
       { error: "An account with this email already exists.", code: "EMAIL_ALREADY_EXISTS" },
       409,
@@ -462,10 +470,23 @@ Deno.serve(async (req: Request) => {
   // re-creation with the same email address.
   const { data: existingStaffRow, error: staffCheckError } = await adminClient
     .from("staff_users")
-    .select("id, role")
+    .select("id, role, is_active, deleted_at")
     .eq("email", normalizedEmail)
     .is("deleted_at", null)
-    .maybeSingle<{ id: string; role: string }>();
+    .maybeSingle<{ id: string; role: string; is_active: boolean; deleted_at: string | null }>();
+
+  // ── DIAGNOSTIC: log staff_users check result ──────────────────
+  console.log("EMAIL_CHECK staff_users: email being checked:", normalizedEmail);
+  console.log("EMAIL_CHECK staff_users: query filter deleted_at IS NULL applied: true");
+  console.log("EMAIL_CHECK staff_users: query error:", staffCheckError ?? null);
+  console.log("EMAIL_CHECK staff_users: row found:", existingStaffRow ?? null);
+  console.log("EMAIL_CHECK staff_users: match found:", !!existingStaffRow);
+  if (existingStaffRow) {
+    console.log("EMAIL_CHECK staff_users: id:", existingStaffRow.id);
+    console.log("EMAIL_CHECK staff_users: is_active:", existingStaffRow.is_active);
+    console.log("EMAIL_CHECK staff_users: deleted_at:", existingStaffRow.deleted_at);
+    console.log("EMAIL_CHECK staff_users: role:", existingStaffRow.role);
+  }
 
   if (staffCheckError) {
     console.error("[create-staff-member] staff_users email check error:", staffCheckError);
@@ -473,16 +494,14 @@ Deno.serve(async (req: Request) => {
   }
 
   if (existingStaffRow) {
-    console.warn(
-      `[create-staff-member] email check: ${normalizedEmail} → EXISTS in active staff_users (role=${existingStaffRow.role}) — blocked`,
-    );
+    console.warn("EMAIL_CHECK staff_users: BLOCKING — check failing here");
     return json(
       { error: "An account with this email already exists.", code: "EMAIL_ALREADY_EXISTS" },
       409,
     );
   }
 
-  console.log(`[create-staff-member] email check: ${normalizedEmail} → not found in auth.users or staff_users — proceeding`);
+  console.log(`EMAIL_CHECK: ${normalizedEmail} → not found in auth.users or staff_users — proceeding`);
 
   // ── Create brand-new auth user ────────────────────────────────
   let targetUserId: string;
