@@ -229,6 +229,36 @@ Deno.serve(async (req: Request) => {
     error: health.error,
   });
 
+  // ── Pre-delete user verification ──────────────────────────────
+  const [staffRecord, authRecord] = await Promise.all([
+    adminClient
+      .from("staff_users")
+      .select("id, email, is_active")
+      .eq("id", user_id)
+      .single(),
+    adminClient.auth.admin.getUserById(user_id),
+  ]);
+
+  console.log("pre-delete staff_users record:", {
+    data: staffRecord.data,
+    error: staffRecord.error,
+  });
+  console.log("pre-delete auth.users record:", {
+    data: authRecord.data?.user ?? null,
+    error: authRecord.error,
+  });
+  console.log("user_id passed to deleteUser:", user_id);
+  console.log("typeof user_id:", typeof user_id);
+  console.log("staff_users.id match:", staffRecord.data?.id === user_id);
+  console.log("auth.users.id match:", authRecord.data?.user?.id === user_id);
+  console.log(
+    "email match:",
+    staffRecord.data?.email === authRecord.data?.user?.email,
+  );
+  console.log("staff email:", staffRecord.data?.email);
+  console.log("auth email:", authRecord.data?.user?.email);
+  console.log("full auth user object:", JSON.stringify(authRecord.data?.user, null, 2));
+
   try {
     const result = await adminClient.auth.admin.deleteUser(user_id);
 
