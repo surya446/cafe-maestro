@@ -215,48 +215,39 @@ Deno.serve(async (req: Request) => {
   );
 
   // ── Step 2: Hard-delete auth user ────────────────────────────
-  // [DEBUG] Full result logging enabled to diagnose deleteUser failures.
-  const result = await adminClient.auth.admin.deleteUser(user_id);
+  // Log service-role client credentials before calling deleteUser
+  console.log("[delete-staff-member] SUPABASE_URL present:", !!supabaseUrl);
+  console.log("[delete-staff-member] SUPABASE_SERVICE_ROLE_KEY present:", !!serviceRoleKey);
+  console.log(
+    "[delete-staff-member] SUPABASE_SERVICE_ROLE_KEY prefix:",
+    serviceRoleKey ? serviceRoleKey.slice(0, 10) + "..." : "N/A",
+  );
 
-  // Log the raw result object (shallow — avoids JSON.stringify({}) on Error)
-  console.log("[delete-staff-member][DEBUG] deleteUser result:", result);
-  console.log("[delete-staff-member][DEBUG] result.data:", result.data);
-  console.log("[delete-staff-member][DEBUG] result.error:", result.error);
-
-  const authDeleteError = result.error;
+  const { error: authDeleteError } = await adminClient.auth.admin.deleteUser(user_id);
 
   if (authDeleteError) {
-    // Cast to a plain record so we can safely read non-enumerable properties
-    const errObj = authDeleteError as unknown as Record<string, unknown>;
-
-    const errStatus  = errObj["status"];
-    const errCode    = errObj["code"];
-    const errName    = errObj["name"];
-    const errMessage = errObj["message"] ?? authDeleteError.message;
-
-    // Log every known property individually
-    console.error("[delete-staff-member][DEBUG] error.status:", errStatus);
-    console.error("[delete-staff-member][DEBUG] error.code:", errCode);
-    console.error("[delete-staff-member][DEBUG] error.name:", errName);
-    console.error("[delete-staff-member][DEBUG] error.message:", errMessage);
-
-    // Log all enumerable own properties (catches anything non-standard)
-    const enumerable: Record<string, unknown> = {};
-    for (const key of Object.keys(authDeleteError)) {
-      enumerable[key] = errObj[key];
-    }
-    console.error("[delete-staff-member][DEBUG] error enumerable keys:", Object.keys(authDeleteError));
-    console.error("[delete-staff-member][DEBUG] error enumerable props:", enumerable);
+    console.error("deleteUser error", {
+      status:  authDeleteError?.status,
+      code:    authDeleteError?.code,
+      name:    authDeleteError?.name,
+      message: authDeleteError instanceof Error
+        ? authDeleteError.message
+        : String(authDeleteError),
+      stack: authDeleteError instanceof Error
+        ? authDeleteError.stack
+        : undefined,
+    });
 
     return json(
       {
-        error: "deleteUser failed — check Edge Function logs for full detail.",
+        error: "Failed to delete auth account. Staff record has been deactivated.",
         detail: {
-          status:  errStatus,
-          code:    errCode,
-          name:    errName,
-          message: errMessage,
-          enumerable,
+          status:  authDeleteError?.status,
+          code:    authDeleteError?.code,
+          name:    authDeleteError?.name,
+          message: authDeleteError instanceof Error
+            ? authDeleteError.message
+            : String(authDeleteError),
         },
         code: "AUTH_DELETE_FAILED",
       },
