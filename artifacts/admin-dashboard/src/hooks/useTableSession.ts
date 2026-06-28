@@ -277,40 +277,67 @@ export function useTableSession(qrToken: string) {
     let cancelled = false;
 
     async function init() {
-      // ── Rescan guard (sessionStorage) ─────────────────────────────────────
-      // If this tab has previously seen a session termination the rescan flag
-      // is set. sessionStorage survives refresh, address-bar + Enter, back and
-      // forward — but is absent in a genuinely new browser tab (e.g. opened by
-      // a QR scanner). Show the terminal screen unconditionally; only a real
-      // new QR scan (new tab, empty sessionStorage) can ever start a session.
+      // ── 1. Rescan guard ────────────────────────────────────────────────────
+      //
+      // "qr-rescan-required" is written to sessionStorage by THIS tab the
+      // moment a session ends/expires in it. sessionStorage survives refresh,
+      // address-bar + Enter, back and forward — so the same tab stays blocked.
+      //
+      // A genuinely new browser context opened by a QR scanner (Google Lens,
+      // Android/iPhone Camera, etc.) gets its OWN empty sessionStorage, so it
+      // passes this guard and can create a fresh session.
       const rescanStatus = getRescanStatus();
       if (rescanStatus !== null) {
         setSessionState(rescanStatus);
         return;
       }
 
+      // ── 2. Same-tab detection ─────────────────────────────────────────────
+      //
+      // "qr-tab-seen" is written to sessionStorage the first time THIS tab
+      // successfully reaches name-entry or restores an active session.
+      // It survives page refreshes (same tab, same sessionStorage) but is
+      // absent in a new browser context.
+      //
+      // We use it to decide how to interpret a terminated or invalid record
+      // found in localStorage:
+      //
+      //   tabSeen = true  → same browser tab (refresh / back / forward)
+      //                     localStorage record is authoritative → validate + block
+      //
+      //   tabSeen = false → new browser context (QR scanner opened new tab)
+      //                     localStorage record is from a PREVIOUS tab → discard
+      //                     and let this new context start fresh
+      const tabSeen = sessionStorage.getItem("qr-tab-seen") === qrToken;
+
       const stored = loadStored(qrToken);
 
-      if (stored) {
-        // ── Branch A: previously terminated session ───────────────────────
-        // PAGE REFRESH / address-bar navigation: validate with server so the
-        // server — not localStorage — determines what terminal screen to show.
-        if (stored.terminated) {
+      if (stored?.terminated) {
+        // ── Branch A: localStorage has a terminated marker ────────────────
+        if (!tabSeen) {
+          // New browser context (e.g. Google Lens, Camera, QR app).
+          // The terminated marker was written by a previous browser tab and is
+          // now stale. Clear it and fall through to Branch C so this fresh
+          // visit lands on name-entry (or maintenance) as intended.
+          clearStored(qrToken);
+        } else {
+          // Same browser tab. Validate with the server so the server — not
+          // localStorage alone — determines what terminal screen to show.
           const result = await rpcValidateDevice(stored.deviceToken);
           if (cancelled) return;
 
           if (result === null) {
-            // Server has no record for this device (e.g. purged rows).
-            // The session is definitively gone; clear everything and allow
-            // the customer to start a fresh session.
+            // Server has no record (e.g. rows purged). Definitively gone;
+            // clear and allow a fresh session in this tab.
             clearStored(qrToken);
+            sessionStorage.setItem("qr-tab-seen", qrToken);
             setSessionState("entering_name");
             return;
           }
 
           if (result.is_valid) {
-            // Edge case: session was somehow reactivated after we marked it
-            // terminated (extremely rare). Restore the active session.
+            // Extremely rare: session reactivated after we marked it terminated.
+            // Restore it.
             const info: SessionInfo = {
               sessionId:    stored.sessionId,
               deviceToken:  stored.deviceToken,
@@ -328,18 +355,16 @@ export function useTableSession(qrToken: string) {
             return;
           }
 
-          // Server confirms the session is ended or expired.
-          // Keep the terminated marker in storage so further refreshes also
-          // land here and not on the name-entry screen.
-          // Also set the sessionStorage guard so address-bar navigation and
-          // any other same-tab revisit stays on the terminal screen.
+          // Server confirms ended/expired. Arm the rescan guard so every
+          // future same-tab visit is blocked instantly (no network call).
           const confirmedStatus = result.session_status === "ended" ? "ended" : "expired";
           setRescanRequired(confirmedStatus);
           setSessionState(confirmedStatus);
           return;
         }
 
-        // ── Branch B: active stored session → validate ────────────────────
+      } else if (stored) {
+        // ── Branch B: active stored session → validate with server ────────
         const result = await rpcValidateDevice(stored.deviceToken);
         if (cancelled) return;
 
@@ -356,22 +381,29 @@ export function useTableSession(qrToken: string) {
             customerName: result.customer_name,
           };
           saveStored(qrToken, stored.deviceToken, stored.sessionId, result.customer_name);
+          sessionStorage.setItem("qr-tab-seen", qrToken);
           setSessionInfo(info);
           setSessionState("active");
           return;
         }
 
-        // Server says invalid: write terminated marker and set sessionStorage
-        // guard, then show the terminal screen.
+        // Server says the session is no longer valid.
         const termStatus = result?.session_status === "ended" ? "ended" : "expired";
-        markTerminated(qrToken, termStatus);
-        setRescanRequired(termStatus);
-        setSessionState(termStatus);
-        return;
+
+        if (tabSeen) {
+          // Same browser tab — write terminated marker and block this tab.
+          markTerminated(qrToken, termStatus);
+          setRescanRequired(termStatus);
+          setSessionState(termStatus);
+          return;
+        } else {
+          // New browser context — stale session record. Clear it and fall
+          // through to Branch C so the guest can start a new session.
+          clearStored(qrToken);
+        }
       }
 
-      // ── Branch C: nothing stored → check maintenance → name-entry ────
-      // Reads is_under_maintenance directly (anon SELECT allowed by migration 035).
+      // ── Branch C: no stored record (or cleared above) → maintenance → name-entry
       const { data: tableRow } = await supabase
         .from("cafe_tables")
         .select("is_under_maintenance")
@@ -386,6 +418,7 @@ export function useTableSession(qrToken: string) {
         return;
       }
 
+      sessionStorage.setItem("qr-tab-seen", qrToken);
       setSessionState("entering_name");
     }
 
