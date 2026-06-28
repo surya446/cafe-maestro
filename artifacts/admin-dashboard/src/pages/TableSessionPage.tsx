@@ -544,7 +544,7 @@ function QRFoodDetailModal({
           background: `linear-gradient(160deg, ${C.surface} 0%, ${C.card} 100%)`,
           border: `1px solid ${C.goldBorder}`,
           boxShadow: "0 32px 80px rgba(0,0,0,0.7), 0 0 0 1px rgba(212,168,83,0.08), 0 0 60px rgba(212,168,83,0.06)",
-          maxHeight: "92vh",
+          maxHeight: "75vh",
         }}
         initial={{ opacity: 0, scale: 0.95, y: 24 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
@@ -567,7 +567,7 @@ function QRFoodDetailModal({
 
           {/* Image */}
           {item.image_url ? (
-            <div className="relative w-full aspect-square">
+            <div className="relative w-full aspect-[4/3]">
               <img
                 src={item.image_url} alt={item.name}
                 className="w-full h-full object-cover"
@@ -587,7 +587,7 @@ function QRFoodDetailModal({
             </div>
           ) : (
             <div
-              className="w-full aspect-square flex items-center justify-center"
+              className="w-full aspect-[4/3] flex items-center justify-center"
               style={{ background: `linear-gradient(135deg, ${C.cardHover} 0%, ${C.bg} 100%)` }}
             >
               <UtensilsCrossed className="w-14 h-14 opacity-10" style={{ color: C.text }} />
