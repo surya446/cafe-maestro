@@ -1001,16 +1001,20 @@ function QRTableCard({
       </div>
 
       {/* QR display */}
-      <div className="flex flex-col items-center px-3 py-3 gap-2">
+      <div className="flex flex-col px-3 py-3 gap-2">
         {guestUrl ? (
           <div
             ref={qrContainerRef}
-            className="bg-white p-2.5 rounded-lg border shadow-sm"
+            className="w-full bg-white p-2 rounded-lg border shadow-sm"
           >
-            <QRCode value={guestUrl} size={128} />
+            <QRCode
+              value={guestUrl}
+              size={256}
+              style={{ width: "100%", height: "auto", display: "block" }}
+            />
           </div>
         ) : (
-          <div className="w-[152px] h-[152px] rounded-lg border-2 border-dashed bg-muted flex flex-col items-center justify-center gap-2 text-muted-foreground">
+          <div className="w-full aspect-square rounded-lg border-2 border-dashed bg-muted flex flex-col items-center justify-center gap-2 text-muted-foreground">
             <QrCode className="h-8 w-8 opacity-30" />
             <span className="text-xs text-center px-3">No QR token</span>
           </div>
