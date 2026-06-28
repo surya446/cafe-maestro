@@ -146,7 +146,7 @@ function BrandedLoader() {
 function SkeletonCard() {
   return (
     <div className="rounded-2xl overflow-hidden" style={{ background: C.card, border: `1px solid ${C.border}` }}>
-      <div className="aspect-[4/3] sm:aspect-[8/3] w-full" style={{ background: C.cardHover, animation: "pulse 2s cubic-bezier(.4,0,.6,1) infinite" }} />
+      <div className="aspect-[4/3] sm:aspect-square w-full" style={{ background: C.cardHover, animation: "pulse 2s cubic-bezier(.4,0,.6,1) infinite" }} />
       <div className="p-4 space-y-2.5">
         <div className="h-4 w-3/5 rounded-full" style={{ background: C.cardHover, animation: "pulse 2s cubic-bezier(.4,0,.6,1) infinite" }} />
         <div className="h-3 w-full rounded-full" style={{ background: C.cardHover, animation: "pulse 2s cubic-bezier(.4,0,.6,1) .15s infinite" }} />
@@ -354,9 +354,9 @@ function QRMenuItemCard({
       }}
       whileHover={unavailable ? {} : { boxShadow: "0 6px 28px rgba(0,0,0,0.55)" }}
     >
-      {/* Food image — mobile: 4:3, sm+: fixed 144 px (≈35% shorter than 16:9 equivalent) */}
+      {/* Food image — mobile: 4:3, tablet/desktop: 1:1 square (matches mobile proportions) */}
       {item.image_url ? (
-        <div className="relative overflow-hidden aspect-[4/3] sm:aspect-auto sm:h-36">
+        <div className="relative overflow-hidden aspect-[4/3] sm:aspect-square">
           <img
             src={item.image_url} alt={item.name} loading="lazy"
             className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-[1.04]"
