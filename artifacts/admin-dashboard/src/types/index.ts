@@ -72,6 +72,7 @@ export interface MenuItem {
   tags: string[];
   calories: number | null;
   allergens: string[];
+  ingredients: string | null;
   created_at: string;
   updated_at: string;
   menu_categories?: MenuCategory;

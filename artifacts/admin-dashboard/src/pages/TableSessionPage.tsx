@@ -37,7 +37,8 @@ interface MenuCategory { id: string; name: string; description: string | null; p
 interface MenuItem {
   id: string; category_id: string; name: string; description: string | null;
   price: number; image_url: string | null; tags: string[];
-  prep_time_min: number | null; allergens: string[]; is_available: boolean;
+  prep_time_min: number | null; allergens: string[]; ingredients: string | null;
+  is_available: boolean; is_archived: boolean;
 }
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────────
@@ -335,14 +336,14 @@ function QRNameEntry({
 
 // ─── Menu item card ───────────────────────────────────────────────────────────────
 function QRMenuItemCard({
-  item, qty, onAdd, onDecrement, justAdded,
-}: { item: MenuItem; qty: number; onAdd: () => void; onDecrement: () => void; justAdded: boolean }) {
+  item, qty, onAdd, onDecrement, justAdded, onOpenModal,
+}: { item: MenuItem; qty: number; onAdd: () => void; onDecrement: () => void; justAdded: boolean; onOpenModal: () => void }) {
   const unavailable = !item.is_available;
 
   return (
     <motion.div
       layout
-      className="rounded-2xl overflow-hidden group"
+      className="rounded-2xl overflow-hidden group cursor-pointer"
       animate={justAdded ? { scale: [1, 1.02, 1] } : { scale: 1 }}
       transition={{ duration: 0.28, ease: "easeOut" }}
       style={{
@@ -353,6 +354,7 @@ function QRMenuItemCard({
         transition: "border-color 0.35s ease, box-shadow 0.25s ease",
       }}
       whileHover={unavailable ? {} : { boxShadow: "0 6px 28px rgba(0,0,0,0.55)" }}
+      onClick={onOpenModal}
     >
       {/* Food image — mobile: 4:3, tablet: 1:1 square, desktop: 4:3 at 3-col width (~310×233 px) */}
       {item.image_url ? (
@@ -371,8 +373,9 @@ function QRMenuItemCard({
                 transition={{ type: "spring", damping: 18, stiffness: 300 }}
                 className="absolute top-2.5 right-2.5 flex items-center rounded-full overflow-hidden shadow-lg"
                 style={{ background: C.bg, border: `1px solid ${C.goldBorder}` }}
+                onClick={(e) => e.stopPropagation()}
               >
-                <motion.button whileTap={{ scale: 0.85 }} onClick={onDecrement}
+                <motion.button whileTap={{ scale: 0.85 }} onClick={(e) => { e.stopPropagation(); onDecrement(); }}
                   className="w-7 h-7 flex items-center justify-center" style={{ color: C.gold }}>
                   <Minus className="w-3 h-3" />
                 </motion.button>
@@ -380,7 +383,7 @@ function QRMenuItemCard({
                   className="w-5 text-center text-xs font-bold" style={{ color: C.text }}>
                   {qty}
                 </motion.span>
-                <motion.button whileTap={{ scale: 0.85 }} onClick={onAdd}
+                <motion.button whileTap={{ scale: 0.85 }} onClick={(e) => { e.stopPropagation(); onAdd(); }}
                   className="w-7 h-7 flex items-center justify-center" style={{ background: C.gold, color: C.bg }}>
                   <Plus className="w-3 h-3" />
                 </motion.button>
@@ -439,7 +442,7 @@ function QRMenuItemCard({
             qty === 0 ? (
               <motion.button
                 whileTap={{ scale: 0.88 }}
-                onClick={onAdd}
+                onClick={(e) => { e.stopPropagation(); onAdd(); }}
                 className="flex items-center gap-1 px-3.5 py-1.5 rounded-full text-xs font-semibold"
                 style={{ background: C.goldDim, color: C.gold, border: `1px solid ${C.goldBorder}`, ...SANS }}
               >
@@ -447,14 +450,18 @@ function QRMenuItemCard({
               </motion.button>
             ) : !item.image_url ? (
               /* No-image items: show qty stepper inline */
-              <div className="flex items-center rounded-full overflow-hidden" style={{ border: `1px solid ${C.goldBorder}` }}>
-                <motion.button whileTap={{ scale: 0.85 }} onClick={onDecrement}
+              <div
+                className="flex items-center rounded-full overflow-hidden"
+                style={{ border: `1px solid ${C.goldBorder}` }}
+                onClick={(e) => e.stopPropagation()}
+              >
+                <motion.button whileTap={{ scale: 0.85 }} onClick={(e) => { e.stopPropagation(); onDecrement(); }}
                   className="w-8 h-7 flex items-center justify-center" style={{ color: C.gold }}>
                   <Minus className="w-3 h-3" />
                 </motion.button>
                 <motion.span key={qty} initial={{ scale: 1.3 }} animate={{ scale: 1 }}
                   className="w-5 text-center text-xs font-bold" style={{ color: C.text, ...SANS }}>{qty}</motion.span>
-                <motion.button whileTap={{ scale: 0.85 }} onClick={onAdd}
+                <motion.button whileTap={{ scale: 0.85 }} onClick={(e) => { e.stopPropagation(); onAdd(); }}
                   className="w-8 h-7 flex items-center justify-center" style={{ background: C.gold, color: C.bg }}>
                   <Plus className="w-3 h-3" />
                 </motion.button>
@@ -463,7 +470,7 @@ function QRMenuItemCard({
               /* Image item in cart → qty shown in overlay; add-more pill */
               <motion.button
                 whileTap={{ scale: 0.88 }}
-                onClick={onAdd}
+                onClick={(e) => { e.stopPropagation(); onAdd(); }}
                 className="flex items-center gap-1 px-3.5 py-1.5 rounded-full text-xs font-semibold"
                 style={{ background: C.gold, color: C.bg, ...SANS }}
               >
@@ -473,6 +480,219 @@ function QRMenuItemCard({
           )}
         </div>
       </div>
+    </motion.div>
+  );
+}
+
+// ─── Food detail modal ────────────────────────────────────────────────────────────
+function QRFoodDetailModal({
+  item, categoryName, qty, onAdd, onClose,
+}: { item: MenuItem; categoryName: string | null; qty: number; onAdd: () => void; onClose: () => void; }) {
+  // Lock background scroll
+  useEffect(() => {
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => { document.body.style.overflow = prev; };
+  }, []);
+
+  // ESC to close
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => { if (e.key === "Escape") onClose(); };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, [onClose]);
+
+  const unavailable = !item.is_available;
+
+  const ingredientList: string[] = item.ingredients
+    ? item.ingredients.split(",").map((s) => s.trim()).filter(Boolean)
+    : [];
+
+  // Tag badge colours
+  const tagStyle = (tag: string): React.CSSProperties => {
+    const t = tag.toLowerCase();
+    if (t.includes("veg") && !t.includes("non")) return { background: "rgba(52,211,153,0.12)", color: "#34D399", border: "1px solid rgba(52,211,153,0.22)" };
+    if (t.includes("non")) return { background: "rgba(248,113,113,0.12)", color: "#F87171", border: "1px solid rgba(248,113,113,0.22)" };
+    if (t.includes("spicy")) return { background: "rgba(251,146,60,0.12)", color: "#FB923C", border: "1px solid rgba(251,146,60,0.22)" };
+    if (t.includes("best") || t.includes("chef") || t.includes("special")) return { background: "rgba(212,168,83,0.13)", color: C.gold, border: `1px solid ${C.goldBorder}` };
+    if (t.includes("new")) return { background: "rgba(96,165,250,0.12)", color: "#60A5FA", border: "1px solid rgba(96,165,250,0.22)" };
+    return { background: "rgba(255,255,255,0.06)", color: C.text2, border: `1px solid ${C.border}` };
+  };
+
+  return (
+    <motion.div
+      className="fixed inset-0 z-[60] flex items-end sm:items-center justify-center"
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      transition={{ duration: 0.22 }}
+    >
+      {/* Backdrop */}
+      <motion.div
+        className="absolute inset-0"
+        style={{ background: "rgba(6,4,3,0.82)", backdropFilter: "blur(18px)", WebkitBackdropFilter: "blur(18px)" }}
+        onClick={onClose}
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
+      />
+
+      {/* Panel */}
+      <motion.div
+        className="relative w-full sm:max-w-md sm:mx-4 sm:rounded-3xl rounded-t-3xl overflow-hidden flex flex-col"
+        style={{
+          background: `linear-gradient(160deg, ${C.surface} 0%, ${C.card} 100%)`,
+          border: `1px solid ${C.goldBorder}`,
+          boxShadow: "0 32px 80px rgba(0,0,0,0.7), 0 0 0 1px rgba(212,168,83,0.08), 0 0 60px rgba(212,168,83,0.06)",
+          maxHeight: "92vh",
+        }}
+        initial={{ opacity: 0, scale: 0.95, y: 24 }}
+        animate={{ opacity: 1, scale: 1, y: 0 }}
+        exit={{ opacity: 0, scale: 0.97, y: 12 }}
+        transition={{ type: "spring", damping: 26, stiffness: 320, duration: 0.28 }}
+        onClick={(e) => e.stopPropagation()}
+      >
+        {/* Close button */}
+        <button
+          onClick={onClose}
+          className="absolute top-4 right-4 z-10 w-8 h-8 rounded-full flex items-center justify-center"
+          style={{ background: "rgba(10,8,7,0.7)", border: `1px solid ${C.border}` }}
+          aria-label="Close"
+        >
+          <X className="w-4 h-4" style={{ color: C.text2 }} />
+        </button>
+
+        {/* Scrollable content */}
+        <div className="overflow-y-auto overscroll-contain flex-1">
+
+          {/* Image */}
+          {item.image_url ? (
+            <div className="relative w-full aspect-square">
+              <img
+                src={item.image_url} alt={item.name}
+                className="w-full h-full object-cover"
+              />
+              <div
+                className="absolute inset-0"
+                style={{ background: "linear-gradient(to top, rgba(12,10,9,0.85) 0%, rgba(12,10,9,0.1) 50%, transparent 100%)" }}
+              />
+              {unavailable && (
+                <div
+                  className="absolute bottom-4 left-4 text-[10px] font-semibold uppercase tracking-widest px-3 py-1.5 rounded-full"
+                  style={{ background: "rgba(12,10,9,0.88)", color: C.text3, ...SANS }}
+                >
+                  Currently Unavailable
+                </div>
+              )}
+            </div>
+          ) : (
+            <div
+              className="w-full aspect-square flex items-center justify-center"
+              style={{ background: `linear-gradient(135deg, ${C.cardHover} 0%, ${C.bg} 100%)` }}
+            >
+              <UtensilsCrossed className="w-14 h-14 opacity-10" style={{ color: C.text }} />
+            </div>
+          )}
+
+          {/* Body */}
+          <div className="px-6 pt-5 pb-8 space-y-5">
+
+            {/* Name */}
+            <div>
+              <h2
+                className="text-[1.85rem] font-light leading-[1.15] tracking-[-0.02em]"
+                style={{ color: C.text, ...SERIF }}
+              >
+                {item.name}
+              </h2>
+
+              {/* Category */}
+              {categoryName && (
+                <p className="mt-1 text-xs uppercase tracking-[0.2em] font-medium" style={{ color: C.text3, ...SANS }}>
+                  {categoryName}
+                </p>
+              )}
+            </div>
+
+            {/* Tags */}
+            {item.tags.length > 0 && (
+              <div className="flex flex-wrap gap-1.5">
+                {item.tags.map((tag) => (
+                  <span
+                    key={tag}
+                    className="px-2.5 py-0.5 rounded-full text-[11px] font-medium capitalize"
+                    style={{ ...tagStyle(tag), ...SANS }}
+                  >
+                    {tag}
+                  </span>
+                ))}
+              </div>
+            )}
+
+            {/* Price */}
+            <div className="flex items-baseline gap-2">
+              <span className="text-[2rem] font-light tabular-nums" style={{ color: C.gold, ...SERIF }}>
+                {fmt(item.price)}
+              </span>
+              {item.prep_time_min && (
+                <span className="text-xs flex items-center gap-1" style={{ color: C.text3, ...SANS }}>
+                  <Clock className="w-3 h-3" />~{item.prep_time_min} min
+                </span>
+              )}
+            </div>
+
+            {/* Divider */}
+            <div style={{ height: "1px", background: C.border }} />
+
+            {/* Description */}
+            {item.description && (
+              <div className="space-y-1.5">
+                <p className="text-[10px] font-semibold uppercase tracking-[0.22em]" style={{ color: C.text3, ...SANS }}>
+                  Description
+                </p>
+                <p className="text-sm leading-[1.75]" style={{ color: C.text2, ...SANS }}>
+                  {item.description}
+                </p>
+              </div>
+            )}
+
+            {/* Ingredients */}
+            {ingredientList.length > 0 && (
+              <div className="space-y-2">
+                <p className="text-[10px] font-semibold uppercase tracking-[0.22em]" style={{ color: C.text3, ...SANS }}>
+                  Ingredients
+                </p>
+                <div className="flex flex-wrap gap-x-4 gap-y-1">
+                  {ingredientList.map((ing) => (
+                    <span key={ing} className="text-sm flex items-center gap-1.5" style={{ color: C.text2, ...SANS }}>
+                      <span style={{ color: C.gold, fontSize: "0.5rem", lineHeight: 1 }}>●</span>
+                      {ing}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Add button */}
+            {!unavailable && (
+              <motion.button
+                whileTap={{ scale: 0.97 }}
+                onClick={() => { onAdd(); onClose(); }}
+                className="w-full py-4 rounded-2xl text-[15px] font-semibold flex items-center justify-center gap-2 mt-2"
+                style={{
+                  background: C.gold,
+                  color: C.bg,
+                  boxShadow: "0 4px 24px rgba(212,168,83,0.3)",
+                  ...SANS,
+                }}
+              >
+                <Plus className="w-4 h-4" />
+                {qty > 0 ? `Add another · ${fmt(item.price)}` : `Add to order · ${fmt(item.price)}`}
+              </motion.button>
+            )}
+          </div>
+        </div>
+      </motion.div>
     </motion.div>
   );
 }
@@ -634,6 +854,7 @@ function ActiveSession({
   const { cafeId, cafeName, tableNumber, tableName, expiresAt, sessionId, customerName } = sessionInfo;
 
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
+  const [selectedItem, setSelectedItem] = useState<MenuItem | null>(null);
   const [cart, setCart] = useState<Map<string, CartItem>>(new Map());
   const [cartOpen, setCartOpen] = useState(false);
   const [orderSuccess, setOrderSuccess] = useState(false);
@@ -667,7 +888,7 @@ function ActiveSession({
     queryFn: async () => {
       const { data, error } = await supabase
         .from("menu_items")
-        .select("id, category_id, name, description, price, image_url, tags, prep_time_min, allergens, is_available, is_archived")
+        .select("id, category_id, name, description, price, image_url, tags, prep_time_min, allergens, ingredients, is_available, is_archived")
         .eq("cafe_id", cafeId).eq("is_archived", false).order("position");
       if (error) throw error;
       return (data ?? []) as MenuItem[];
@@ -976,6 +1197,7 @@ function ActiveSession({
                             onAdd={() => addToCart(item)}
                             onDecrement={() => updateCartQty(item.id, -1)}
                             justAdded={justAddedId === item.id}
+                            onOpenModal={() => setSelectedItem(item)}
                           />
                         ))}
                       </div>
@@ -1006,6 +1228,7 @@ function ActiveSession({
                     onAdd={() => addToCart(item)}
                     onDecrement={() => updateCartQty(item.id, -1)}
                     justAdded={justAddedId === item.id}
+                    onOpenModal={() => setSelectedItem(item)}
                   />
                 ))}
               </motion.div>
@@ -1141,6 +1364,19 @@ function ActiveSession({
             onUpdateQty={updateCartQty} onUpdateNote={updateCartNote}
             onRemove={removeFromCart} onClose={() => setCartOpen(false)}
             onPlace={handlePlaceOrder} isPlacing={isPlacingOrder} placeError={placeOrderError}
+          />
+        )}
+      </AnimatePresence>
+
+      {/* ── FOOD DETAIL MODAL ────────────────────────────────────── */}
+      <AnimatePresence>
+        {selectedItem && (
+          <QRFoodDetailModal
+            item={selectedItem}
+            categoryName={categories.find((c) => c.id === selectedItem.category_id)?.name ?? null}
+            qty={cart.get(selectedItem.id)?.quantity ?? 0}
+            onAdd={() => addToCart(selectedItem)}
+            onClose={() => setSelectedItem(null)}
           />
         )}
       </AnimatePresence>

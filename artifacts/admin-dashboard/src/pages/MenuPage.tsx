@@ -150,6 +150,7 @@ function ItemForm({
   const [isAvailable, setIsAvailable] = useState(initial?.is_available ?? true);
   const [tags, setTags] = useState((initial?.tags ?? []).join(", "));
   const [allergens, setAllergens] = useState((initial?.allergens ?? []).join(", "));
+  const [ingredients, setIngredients] = useState(initial?.ingredients ?? "");
   const [localPreview, setLocalPreview] = useState<string | null>(null);
   const [showUrlField, setShowUrlField] = useState(!!initial?.image_url);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -184,6 +185,7 @@ function ItemForm({
       calories: null,
       tags: tags.split(",").map((t) => t.trim()).filter(Boolean),
       allergens: allergens.split(",").map((a) => a.trim()).filter(Boolean),
+      ingredients: ingredients.trim() || null,
     });
   }
 
@@ -365,6 +367,20 @@ function ItemForm({
               className="h-[52px]"
             />
             <p className="text-xs text-muted-foreground">Separate with commas</p>
+          </div>
+
+          <div className="space-y-1.5">
+            <Label htmlFor="item-ingredients">Ingredients</Label>
+            <Textarea
+              id="item-ingredients"
+              value={ingredients}
+              onChange={(e) => setIngredients(e.target.value)}
+              placeholder="Chicken, Onion, Garlic..."
+              className="min-h-[90px] resize-none"
+            />
+            <p className="text-xs text-muted-foreground">
+              Shown to customers on the food detail screen
+            </p>
           </div>
 
           <div className="flex items-center justify-between p-4 rounded-xl bg-muted/50 border border-border/60">
