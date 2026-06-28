@@ -163,14 +163,20 @@ export function useTableGroups() {
 
   // ── Realtime subscriptions ─────────────────────────────────────────────────
   useEffect(() => {
+    // Per-mount UUID prevents the hardcoded-name collision that occurs when
+    // this hook unmounts and remounts (navigation away/back): removeChannel()
+    // is async, so a new channel with the same static name can be returned
+    // before teardown completes, silently dropping event handlers.
+    // This matches the pattern already established in useTableManagement.ts.
+    const channelName = `table_groups_realtime_${crypto.randomUUID()}`;
+
     const channel = supabase
-      .channel("table_groups_realtime")
+      .channel(channelName)
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "table_groups" },
         (payload) => {
           console.log("[RT] table_groups event received", payload);
-          console.log("[RT] Invalidating query", ["table_groups_active"]);
           qc.invalidateQueries({ queryKey: ["table_groups_active"] });
         }
       )
@@ -179,7 +185,6 @@ export function useTableGroups() {
         { event: "*", schema: "public", table: "table_sessions" },
         (payload) => {
           console.log("[RT] table_sessions event received", payload);
-          console.log("[RT] Invalidating query", ["table_groups_active"]);
           qc.invalidateQueries({ queryKey: ["table_groups_active"] });
         }
       )
@@ -188,7 +193,6 @@ export function useTableGroups() {
         { event: "*", schema: "public", table: "session_devices" },
         (payload) => {
           console.log("[RT] session_devices event received", payload);
-          console.log("[RT] Invalidating query", ["table_groups_active"]);
           qc.invalidateQueries({ queryKey: ["table_groups_active"] });
         }
       )
@@ -197,7 +201,6 @@ export function useTableGroups() {
         { event: "*", schema: "public", table: "bill_requests" },
         (payload) => {
           console.log("[RT] bill_requests event received", payload);
-          console.log("[RT] Invalidating query", ["table_pending_bills"], ["staff_bill_requests"]);
           qc.invalidateQueries({ queryKey: ["table_pending_bills"] });
           qc.invalidateQueries({ queryKey: ["staff_bill_requests"] });
         }
@@ -207,7 +210,6 @@ export function useTableGroups() {
         { event: "*", schema: "public", table: "orders" },
         (payload) => {
           console.log("[RT] orders event received", payload);
-          console.log("[RT] Invalidating query", ["table_group_order_totals"]);
           qc.invalidateQueries({
             queryKey: ["table_group_order_totals"],
             exact: false,
@@ -219,7 +221,6 @@ export function useTableGroups() {
         { event: "*", schema: "public", table: "order_items" },
         (payload) => {
           console.log("[RT] order_items event received", payload);
-          console.log("[RT] Invalidating query", ["table_group_order_totals"]);
           qc.invalidateQueries({
             queryKey: ["table_group_order_totals"],
             exact: false,
@@ -227,7 +228,14 @@ export function useTableGroups() {
         }
       )
       .subscribe((status, err) => {
-        console.log("[RT] table_groups_realtime subscription status:", status, err ?? "");
+        console.log("[RT] table_groups subscription status:", status, err ?? "");
+        if (status === "SUBSCRIBED") {
+          // The channel is now ready. Refetch once to pick up any sessions that
+          // were created during the establishment window (the ~100–1000ms between
+          // subscribe() being called and the channel reaching SUBSCRIBED state).
+          // This is not a polling hack — it is a single targeted catch-up fetch.
+          qc.invalidateQueries({ queryKey: ["table_groups_active"] });
+        }
       });
 
     channelRef.current = channel;

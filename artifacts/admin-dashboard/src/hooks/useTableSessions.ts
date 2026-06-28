@@ -97,8 +97,15 @@ export function useTableSessions() {
   });
 
   useEffect(() => {
+    // Per-mount UUID prevents the hardcoded-name collision that occurs when
+    // this hook unmounts and remounts (navigation away/back): removeChannel()
+    // is async, so a new channel with the same static name can be returned
+    // before teardown completes, silently dropping event handlers.
+    // This matches the pattern already established in useTableManagement.ts.
+    const channelName = `staff_sessions_realtime_${crypto.randomUUID()}`;
+
     const channel = supabase
-      .channel("staff_sessions_realtime")
+      .channel(channelName)
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "table_sessions" },
@@ -109,7 +116,13 @@ export function useTableSessions() {
         { event: "*", schema: "public", table: "session_devices" },
         () => qc.invalidateQueries({ queryKey: ["staff_sessions"] })
       )
-      .subscribe();
+      .subscribe((status) => {
+        if (status === "SUBSCRIBED") {
+          // Catch-up fetch: pick up any sessions created during the ~100–1000ms
+          // establishment window between subscribe() and SUBSCRIBED status.
+          qc.invalidateQueries({ queryKey: ["staff_sessions"] });
+        }
+      });
 
     channelRef.current = channel;
     return () => {
