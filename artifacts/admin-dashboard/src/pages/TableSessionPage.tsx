@@ -145,9 +145,9 @@ function BrandedLoader() {
 // ─── Skeleton card ───────────────────────────────────────────────────────────────
 function SkeletonCard() {
   return (
-    <div className="rounded-2xl overflow-hidden" style={{ background: C.card, border: `1px solid ${C.border}` }}>
-      <div className="aspect-[4/3] sm:aspect-square w-full" style={{ background: C.cardHover, animation: "pulse 2s cubic-bezier(.4,0,.6,1) infinite" }} />
-      <div className="p-4 space-y-2.5">
+    <div className="rounded-2xl overflow-hidden lg:flex lg:flex-row lg:items-stretch" style={{ background: C.card, border: `1px solid ${C.border}` }}>
+      <div className="aspect-[4/3] sm:aspect-square lg:aspect-auto lg:w-24 lg:h-24 lg:shrink-0 w-full" style={{ background: C.cardHover, animation: "pulse 2s cubic-bezier(.4,0,.6,1) infinite" }} />
+      <div className="p-4 space-y-2.5 lg:flex-1">
         <div className="h-4 w-3/5 rounded-full" style={{ background: C.cardHover, animation: "pulse 2s cubic-bezier(.4,0,.6,1) infinite" }} />
         <div className="h-3 w-full rounded-full" style={{ background: C.cardHover, animation: "pulse 2s cubic-bezier(.4,0,.6,1) .15s infinite" }} />
         <div className="h-3 w-2/5 rounded-full" style={{ background: C.cardHover, animation: "pulse 2s cubic-bezier(.4,0,.6,1) .3s infinite" }} />
@@ -342,7 +342,7 @@ function QRMenuItemCard({
   return (
     <motion.div
       layout
-      className="rounded-2xl overflow-hidden group"
+      className="rounded-2xl overflow-hidden group lg:flex lg:flex-row lg:items-stretch"
       animate={justAdded ? { scale: [1, 1.02, 1] } : { scale: 1 }}
       transition={{ duration: 0.28, ease: "easeOut" }}
       style={{
@@ -354,9 +354,9 @@ function QRMenuItemCard({
       }}
       whileHover={unavailable ? {} : { boxShadow: "0 6px 28px rgba(0,0,0,0.55)" }}
     >
-      {/* Food image — mobile: 4:3, tablet/desktop: 1:1 square (matches mobile proportions) */}
+      {/* Food image — mobile: 4:3, tablet: 1:1 square, desktop: small 96px fixed thumbnail */}
       {item.image_url ? (
-        <div className="relative overflow-hidden aspect-[4/3] sm:aspect-square">
+        <div className="relative overflow-hidden aspect-[4/3] sm:aspect-square lg:aspect-auto lg:w-24 lg:h-24 lg:shrink-0">
           <img
             src={item.image_url} alt={item.name} loading="lazy"
             className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-[1.04]"
@@ -401,7 +401,7 @@ function QRMenuItemCard({
       )}
 
       {/* Info */}
-      <div className="px-4 pt-3.5 pb-4">
+      <div className="px-4 pt-3.5 pb-4 lg:flex-1">
         {/* Name + price row */}
         <div className="flex items-start justify-between gap-2 mb-1.5">
           <h3
@@ -920,7 +920,7 @@ function ActiveSession({
         {activeTab === "menu" && (
           <>
             {isMenuLoading ? (
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-2 gap-3 lg:grid-cols-1">
                 {Array.from({ length: 4 }).map((_, i) => <SkeletonCard key={i} />)}
               </div>
             ) : visibleItems.length === 0 && categories.length > 0 ? (
@@ -934,7 +934,7 @@ function ActiveSession({
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 transition={{ duration: 0.18 }}
-                className="grid grid-cols-2 gap-3"
+                className="grid grid-cols-2 gap-3 lg:grid-cols-1"
               >
                 {visibleItems.map((item) => (
                   <QRMenuItemCard
