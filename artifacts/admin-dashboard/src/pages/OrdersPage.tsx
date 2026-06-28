@@ -1030,16 +1030,18 @@ function QRTableCard({
       </div>
 
       {/* Actions */}
-      <div className="px-3 pb-3 grid grid-cols-2 gap-1.5">
+      <div className="px-2 pb-3 grid grid-cols-2 gap-2">
         <Button
           size="sm"
           variant="outline"
           disabled={!guestUrl}
           onClick={handleCopy}
-          className="text-xs"
+          className="flex-col h-auto py-2 px-1.5 gap-1 min-w-0 text-xs"
         >
-          <Copy className="h-3.5 w-3.5 mr-1.5" />
-          {copied ? "Copied!" : "Copy URL"}
+          <Copy className="h-3.5 w-3.5 shrink-0" />
+          <span className="break-words text-center leading-tight w-full">
+            {copied ? "Copied!" : "Copy URL"}
+          </span>
         </Button>
 
         <Button
@@ -1047,10 +1049,10 @@ function QRTableCard({
           variant="outline"
           disabled={!guestUrl}
           onClick={handleDownload}
-          className="text-xs"
+          className="flex-col h-auto py-2 px-1.5 gap-1 min-w-0 text-xs"
         >
-          <Download className="h-3.5 w-3.5 mr-1.5" />
-          Download
+          <Download className="h-3.5 w-3.5 shrink-0" />
+          <span className="break-words text-center leading-tight w-full">Download</span>
         </Button>
 
         <Button
@@ -1058,10 +1060,10 @@ function QRTableCard({
           variant="outline"
           disabled={!guestUrl}
           onClick={handlePrint}
-          className="text-xs"
+          className="flex-col h-auto py-2 px-1.5 gap-1 min-w-0 text-xs"
         >
-          <Printer className="h-3.5 w-3.5 mr-1.5" />
-          Print
+          <Printer className="h-3.5 w-3.5 shrink-0" />
+          <span className="break-words text-center leading-tight w-full">Print</span>
         </Button>
 
         {canManage && (
@@ -1070,14 +1072,16 @@ function QRTableCard({
             variant="outline"
             disabled={busy || isRegenerating}
             onClick={handleRegenerate}
-            className="text-xs text-amber-700 border-amber-300 hover:bg-amber-50"
+            className="flex-col h-auto py-2 px-1.5 gap-1 min-w-0 text-xs text-amber-700 border-amber-300 hover:bg-amber-50"
           >
             {busy ? (
-              <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" />
+              <Loader2 className="h-3.5 w-3.5 shrink-0 animate-spin" />
             ) : (
-              <RefreshCw className="h-3.5 w-3.5 mr-1.5" />
+              <RefreshCw className="h-3.5 w-3.5 shrink-0" />
             )}
-            {table.qrCodeToken ? "Regenerate" : "Generate"}
+            <span className="break-words text-center leading-tight w-full">
+              {table.qrCodeToken ? "Regenerate" : "Generate"}
+            </span>
           </Button>
         )}
       </div>
@@ -1170,37 +1174,39 @@ export function OrdersPage() {
       />
 
       <Tabs defaultValue="orders" className="mt-4">
-        <TabsList className="mb-6 flex-wrap h-auto gap-1">
-          <TabsTrigger value="orders" className="flex items-center gap-2">
-            <ChefHat className="h-4 w-4" />
-            Orders
-            {pendingOrders.length > 0 && (
-              <span className="ml-1 flex items-center justify-center rounded-full bg-amber-500 text-white text-[10px] font-bold w-4.5 h-4.5 min-w-[18px] px-1">
-                {pendingOrders.length}
-              </span>
-            )}
-          </TabsTrigger>
+        <div className="overflow-x-auto mb-6 [&::-webkit-scrollbar]:hidden [scrollbar-width:none] [-ms-overflow-style:none]">
+          <TabsList className="flex-nowrap gap-1 h-auto w-max min-w-full">
+            <TabsTrigger value="orders" className="flex items-center gap-2 shrink-0 whitespace-nowrap">
+              <ChefHat className="h-4 w-4" />
+              Orders
+              {pendingOrders.length > 0 && (
+                <span className="ml-1 flex items-center justify-center rounded-full bg-amber-500 text-white text-[10px] font-bold w-4.5 h-4.5 min-w-[18px] px-1">
+                  {pendingOrders.length}
+                </span>
+              )}
+            </TabsTrigger>
 
-          <TabsTrigger value="tables" className="flex items-center gap-2">
-            <TableProperties className="h-4 w-4" />
-            Sessions
-          </TabsTrigger>
+            <TabsTrigger value="tables" className="flex items-center gap-2 shrink-0 whitespace-nowrap">
+              <TableProperties className="h-4 w-4" />
+              Sessions
+            </TabsTrigger>
 
-          <TabsTrigger value="bills" className="flex items-center gap-2">
-            <Receipt className="h-4 w-4" />
-            Bill Requests
-            {pendingBills.length > 0 && (
-              <span className="ml-1 flex items-center justify-center rounded-full bg-amber-500 text-white text-[10px] font-bold w-4.5 h-4.5 min-w-[18px] px-1">
-                {pendingBills.length}
-              </span>
-            )}
-          </TabsTrigger>
+            <TabsTrigger value="bills" className="flex items-center gap-2 shrink-0 whitespace-nowrap">
+              <Receipt className="h-4 w-4" />
+              Bill Requests
+              {pendingBills.length > 0 && (
+                <span className="ml-1 flex items-center justify-center rounded-full bg-amber-500 text-white text-[10px] font-bold w-4.5 h-4.5 min-w-[18px] px-1">
+                  {pendingBills.length}
+                </span>
+              )}
+            </TabsTrigger>
 
-          <TabsTrigger value="qr" className="flex items-center gap-2">
-            <QrCode className="h-4 w-4" />
-            QR Codes
-          </TabsTrigger>
-        </TabsList>
+            <TabsTrigger value="qr" className="flex items-center gap-2 shrink-0 whitespace-nowrap">
+              <QrCode className="h-4 w-4" />
+              QR Codes
+            </TabsTrigger>
+          </TabsList>
+        </div>
 
         <TabsContent value="orders">
           <OrdersTab />
