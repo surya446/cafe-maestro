@@ -141,28 +141,36 @@ function clearStored(qrToken: string) {
   localStorage.removeItem(storageKey(qrToken));
 }
 
-// Returns true when the page was opened by a genuine URL navigation
-// (typed address bar, external QR scanner, link click, etc.) as opposed
-// to a page refresh (F5 / pull-to-refresh) or browser back/forward.
+// ─── sessionStorage rescan guard ──────────────────────────────────────────────
 //
-// We use this to distinguish:
-//   navigate → guest physically re-scanned the QR code → start fresh
-//   reload   → guest just refreshed the ended/expired screen → keep showing it
-//              (security: prevents refresh-to-rejoin bypassing staff termination)
-function isFreshUrlNavigation(): boolean {
+// Once a session terminates (ended / expired / invalid) we write a flag to
+// sessionStorage so the same browser tab can never silently create a new session.
+//
+// sessionStorage survives:  refresh, address-bar + Enter, back, forward.
+// sessionStorage is RESET by: closing the tab, opening a link in a new tab,
+//   or scanning a QR code that opens a fresh browser context (Google Lens,
+//   iPhone Camera, etc. all open their own new tab with empty sessionStorage).
+//
+// This replaces the previous `performance.navigation.type === "navigate"` check,
+// which incorrectly treated an address-bar Enter as a "fresh navigation" and
+// allowed a new session to be created after a staff-forced termination.
+//
+// Value stored is "ended" | "expired" so the correct terminal screen is shown
+// on every subsequent visit within the same tab (refresh, back, forward, …).
+
+const RESCAN_KEY = "qr-rescan-required";
+
+function setRescanRequired(status: "ended" | "expired"): void {
+  try { sessionStorage.setItem(RESCAN_KEY, status); } catch { /* ignore */ }
+}
+
+// Returns the stored terminal status if the guard is active, otherwise null.
+function getRescanStatus(): "ended" | "expired" | null {
   try {
-    // Performance Navigation Timing Level 2 (all modern browsers)
-    const entries = performance.getEntriesByType("navigation");
-    if (entries.length > 0) {
-      return (entries[0] as PerformanceNavigationTiming).type === "navigate";
-    }
-    // Legacy fallback (IE9+, always present)
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const legacyType = (performance as any).navigation?.type;
-    if (legacyType !== undefined) return legacyType === 0; // 0 = TYPE_NAVIGATE
-  } catch { /* ignore */ }
-  // Unknown: assume fresh navigation (better UX for external scanner case)
-  return true;
+    const v = sessionStorage.getItem(RESCAN_KEY);
+    if (v === "ended" || v === "expired") return v;
+    return null;
+  } catch { return null; }
 }
 
 // ─── RPC types ─────────────────────────────────────────────────────────────────
@@ -269,38 +277,24 @@ export function useTableSession(qrToken: string) {
     let cancelled = false;
 
     async function init() {
+      // ── Rescan guard (sessionStorage) ─────────────────────────────────────
+      // If this tab has previously seen a session termination the rescan flag
+      // is set. sessionStorage survives refresh, address-bar + Enter, back and
+      // forward — but is absent in a genuinely new browser tab (e.g. opened by
+      // a QR scanner). Show the terminal screen unconditionally; only a real
+      // new QR scan (new tab, empty sessionStorage) can ever start a session.
+      const rescanStatus = getRescanStatus();
+      if (rescanStatus !== null) {
+        setSessionState(rescanStatus);
+        return;
+      }
+
       const stored = loadStored(qrToken);
 
       if (stored) {
         // ── Branch A: previously terminated session ───────────────────────
-        // We have a terminated marker.
-        //
-        // FRESH NAVIGATION (external QR scan via Google Lens, Camera, etc.):
-        // The guest physically re-scanned the QR code. This is a brand-new
-        // visit. Clear the stale terminated state and treat it like Branch C
-        // (no stored session). A genuine page refresh is `type === 'reload'`
-        // and is handled below to keep the ended/expired screen visible —
-        // preventing refresh-to-rejoin bypassing a staff-forced termination.
-        if (stored.terminated && isFreshUrlNavigation()) {
-          clearStored(qrToken);
-          // Check maintenance before landing on name-entry (same as Branch C).
-          const { data: tableRow } = await supabase
-            .from("cafe_tables")
-            .select("is_under_maintenance")
-            .eq("qr_code_token", qrToken)
-            .eq("is_active", true)
-            .maybeSingle();
-          if (cancelled) return;
-          if (tableRow?.is_under_maintenance) {
-            setSessionState("maintenance");
-            return;
-          }
-          setSessionState("entering_name");
-          return;
-        }
-
-        // PAGE REFRESH: validate with server so the server — not localStorage
-        // — determines what terminal screen to show.
+        // PAGE REFRESH / address-bar navigation: validate with server so the
+        // server — not localStorage — determines what terminal screen to show.
         if (stored.terminated) {
           const result = await rpcValidateDevice(stored.deviceToken);
           if (cancelled) return;
@@ -337,7 +331,11 @@ export function useTableSession(qrToken: string) {
           // Server confirms the session is ended or expired.
           // Keep the terminated marker in storage so further refreshes also
           // land here and not on the name-entry screen.
-          setSessionState(result.session_status === "ended" ? "ended" : "expired");
+          // Also set the sessionStorage guard so address-bar navigation and
+          // any other same-tab revisit stays on the terminal screen.
+          const confirmedStatus = result.session_status === "ended" ? "ended" : "expired";
+          setRescanRequired(confirmedStatus);
+          setSessionState(confirmedStatus);
           return;
         }
 
@@ -363,9 +361,11 @@ export function useTableSession(qrToken: string) {
           return;
         }
 
-        // Server says invalid: write terminated marker and show terminal screen.
+        // Server says invalid: write terminated marker and set sessionStorage
+        // guard, then show the terminal screen.
         const termStatus = result?.session_status === "ended" ? "ended" : "expired";
         markTerminated(qrToken, termStatus);
+        setRescanRequired(termStatus);
         setSessionState(termStatus);
         return;
       }
@@ -404,6 +404,7 @@ export function useTableSession(qrToken: string) {
 
       if (!result) {
         markTerminated(qrToken, "expired");
+        setRescanRequired("expired");
         setSessionState("expired");
         return null;
       }
@@ -411,6 +412,7 @@ export function useTableSession(qrToken: string) {
       if (!result.is_valid) {
         const termStatus = result.session_status === "ended" ? "ended" : "expired";
         markTerminated(qrToken, termStatus);
+        setRescanRequired(termStatus);
         setSessionState(termStatus);
       }
 
@@ -443,7 +445,11 @@ export function useTableSession(qrToken: string) {
             const termStatus = rec.status === "ended" ? "ended" : "expired";
             // Write terminated marker BEFORE updating state so a concurrent
             // refresh (extremely unlikely but possible) also hits Branch A.
+            // Also arm the sessionStorage guard so any same-tab revisit
+            // (refresh, address-bar Enter, back, forward) stays on the
+            // terminal screen without ever reaching name-entry.
             markTerminated(qrToken, termStatus);
+            setRescanRequired(termStatus);
             setSessionState(termStatus);
           }
         }
