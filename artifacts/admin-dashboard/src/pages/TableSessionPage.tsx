@@ -779,13 +779,10 @@ function ActiveSession({
   return (
     <div className="min-h-screen flex flex-col" style={{ background: C.bg }}>
 
-      {/* ── HEADER ───────────────────────────────────────────────── */}
-      <div
-        className="sticky top-0 z-30"
-        style={{ background: `${C.bg}F2`, backdropFilter: "blur(16px)", borderBottom: `1px solid ${C.border}` }}
-      >
+      {/* ── HEADER + CATEGORY NAV — single sticky block so categories are always flush below header ── */}
+      <div className="sticky top-0 z-30" style={{ background: `${C.bg}F2`, backdropFilter: "blur(16px)" }}>
         {/* Top row: branding + guest name */}
-        <div className="flex items-center justify-between px-4 pt-4 pb-2">
+        <div className="flex items-center justify-between px-4 pt-4 pb-2" style={{ borderBottom: `1px solid ${C.border}` }}>
           <div className="flex items-center gap-3 min-w-0">
             <div
               className="w-8 h-8 rounded-xl flex items-center justify-center shrink-0"
@@ -844,61 +841,55 @@ function ActiveSession({
             ))}
           </div>
         </div>
-      </div>
 
-      {/* ── CATEGORY NAV — animated sliding pill ────────────────── */}
-      <AnimatePresence>
-        {activeTab === "menu" && categories.length > 0 && (
-          <motion.div
-            initial={{ opacity: 0, y: -6 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -6 }}
-            transition={{ duration: 0.2 }}
-            className="sticky z-20 px-4 py-3"
-            style={{
-              top: 116,
-              background: `${C.bg}EE`,
-              backdropFilter: "blur(12px)",
-              borderBottom: `1px solid ${C.border}`,
-            }}
-          >
-            <div
-              ref={scrollRef}
-              className="flex gap-2 overflow-x-auto"
-              style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}
+        {/* ── CATEGORY NAV — lives inside the sticky block so it's always flush below the tab bar ── */}
+        <AnimatePresence>
+          {activeTab === "menu" && categories.length > 0 && (
+            <motion.div
+              initial={{ opacity: 0, y: -6 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -6 }}
+              transition={{ duration: 0.2 }}
+              className="px-4 py-3"
+              style={{ borderTop: `1px solid ${C.border}` }}
             >
-              {categories.map((cat) => {
-                const active = activeCategoryId === cat.id;
-                return (
-                  <motion.button
-                    key={cat.id}
-                    ref={(el) => { btnRefs.current[cat.id] = el; }}
-                    onClick={() => setSelectedCategory(cat.id)}
-                    className="relative shrink-0 px-4 py-[7px] rounded-full text-xs font-semibold overflow-hidden"
-                    style={{
-                      color: active ? C.bg : C.text2,
-                      border: `1px solid ${active ? "transparent" : C.border}`,
-                      ...SANS,
-                    }}
-                    whileTap={{ scale: 0.93 }}
-                  >
-                    {/* Animated fill background */}
-                    {active && (
-                      <motion.div
-                        layoutId="cat-active"
-                        className="absolute inset-0"
-                        style={{ background: C.gold, borderRadius: "inherit" }}
-                        transition={{ type: "spring", damping: 24, stiffness: 260 }}
-                      />
-                    )}
-                    <span className="relative z-10">{cat.name}</span>
-                  </motion.button>
-                );
-              })}
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+              <div
+                ref={scrollRef}
+                className="flex gap-2 overflow-x-auto"
+                style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}
+              >
+                {categories.map((cat) => {
+                  const active = activeCategoryId === cat.id;
+                  return (
+                    <motion.button
+                      key={cat.id}
+                      ref={(el) => { btnRefs.current[cat.id] = el; }}
+                      onClick={() => setSelectedCategory(cat.id)}
+                      className="relative shrink-0 px-4 py-[7px] rounded-full text-xs font-semibold overflow-hidden"
+                      style={{
+                        color: active ? C.bg : C.text2,
+                        border: `1px solid ${active ? "transparent" : C.border}`,
+                        ...SANS,
+                      }}
+                      whileTap={{ scale: 0.93 }}
+                    >
+                      {active && (
+                        <motion.div
+                          layoutId="cat-active"
+                          className="absolute inset-0"
+                          style={{ background: C.gold, borderRadius: "inherit" }}
+                          transition={{ type: "spring", damping: 24, stiffness: 260 }}
+                        />
+                      )}
+                      <span className="relative z-10">{cat.name}</span>
+                    </motion.button>
+                  );
+                })}
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </div>
 
       {/* ── MAIN CONTENT ─────────────────────────────────────────── */}
       <div className={`flex-1 px-4 pt-4 lg:pt-2 ${cartCount > 0 ? "pb-32" : "pb-10"}`}>
@@ -923,7 +914,7 @@ function ActiveSession({
         {activeTab === "menu" && (
           <>
             {isMenuLoading ? (
-              <div className="grid grid-cols-2 gap-3 lg:grid-cols-3">
+              <div className="grid grid-cols-2 gap-3 lg:grid-cols-5">
                 {Array.from({ length: 4 }).map((_, i) => <SkeletonCard key={i} />)}
               </div>
             ) : visibleItems.length === 0 && categories.length > 0 ? (
@@ -937,7 +928,7 @@ function ActiveSession({
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 transition={{ duration: 0.18 }}
-                className="grid grid-cols-2 gap-3 lg:grid-cols-3"
+                className="grid grid-cols-2 gap-3 lg:grid-cols-5"
               >
                 {visibleItems.map((item) => (
                   <QRMenuItemCard
