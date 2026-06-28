@@ -699,15 +699,29 @@ function ActiveSession({
     return () => { supabase.removeChannel(ch); };
   }, [cafeId, qc]);
 
-  const activeCategoryId = selectedCategory ?? categories[0]?.id ?? null;
+  // "__all__" is the sentinel for the "All" tab; defaults on first render (selectedCategory is null)
+  const activeCategoryId = selectedCategory ?? "__all__";
+  const isAllMode = activeCategoryId === "__all__";
 
   // Auto-scroll active tab into view
   useEffect(() => {
-    const btn = btnRefs.current[activeCategoryId ?? ""];
+    const btn = btnRefs.current[activeCategoryId];
     if (btn && scrollRef.current) btn.scrollIntoView({ behavior: "smooth", block: "nearest", inline: "center" });
   }, [activeCategoryId]);
 
-  const visibleItems = useMemo(() => menuItems.filter((i) => i.category_id === activeCategoryId), [menuItems, activeCategoryId]);
+  // Filtered items for single-category mode
+  const visibleItems = useMemo(
+    () => isAllMode ? [] : menuItems.filter((i) => i.category_id === activeCategoryId),
+    [menuItems, activeCategoryId, isAllMode]
+  );
+
+  // Grouped items for All mode — reuses existing data, no duplication
+  const itemsByCategory = useMemo(
+    () => categories
+      .map((cat) => ({ ...cat, items: menuItems.filter((i) => i.category_id === cat.id) }))
+      .filter((cat) => cat.items.length > 0),
+    [categories, menuItems]
+  );
 
   const unavailableInCart = useMemo(() => {
     const unavailableIds = new Set(menuItems.filter((m) => !m.is_available || m.is_archived).map((m) => m.id));
@@ -858,6 +872,23 @@ function ActiveSession({
                 className="flex gap-2 overflow-x-auto"
                 style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}
               >
+                {/* "All" tab — always first */}
+                <motion.button
+                  ref={(el) => { btnRefs.current["__all__"] = el; }}
+                  onClick={() => setSelectedCategory("__all__")}
+                  className="relative shrink-0 px-4 py-[7px] rounded-full text-xs font-semibold overflow-hidden"
+                  style={{ color: isAllMode ? C.bg : C.text2, border: `1px solid ${isAllMode ? "transparent" : C.border}`, ...SANS }}
+                  whileTap={{ scale: 0.93 }}
+                >
+                  {isAllMode && (
+                    <motion.div layoutId="cat-active" className="absolute inset-0"
+                      style={{ background: C.gold, borderRadius: "inherit" }}
+                      transition={{ type: "spring", damping: 24, stiffness: 260 }}
+                    />
+                  )}
+                  <span className="relative z-10">All</span>
+                </motion.button>
+
                 {categories.map((cat) => {
                   const active = activeCategoryId === cat.id;
                   return (
@@ -917,12 +948,49 @@ function ActiveSession({
               <div className="grid grid-cols-2 gap-3 lg:grid-cols-5">
                 {Array.from({ length: 4 }).map((_, i) => <SkeletonCard key={i} />)}
               </div>
+            ) : isAllMode ? (
+              /* ── ALL MODE: every category with its own heading + grid ── */
+              itemsByCategory.length === 0 ? (
+                <div className="text-center py-20">
+                  <UtensilsCrossed className="w-7 h-7 mx-auto mb-3 opacity-20" style={{ color: C.text }} />
+                  <p className="text-sm" style={{ color: C.text3, ...SANS }}>No menu items yet</p>
+                </div>
+              ) : (
+                <motion.div key="__all__" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.18 }}>
+                  {itemsByCategory.map((cat, idx) => (
+                    <div key={cat.id} className={idx > 0 ? "mt-8" : ""}>
+                      {/* Category heading */}
+                      <div className="flex items-center gap-3 mb-3">
+                        <span className="text-[11px] font-semibold uppercase tracking-widest shrink-0" style={{ color: C.gold, ...SANS }}>
+                          {cat.name}
+                        </span>
+                        <div className="flex-1 h-px" style={{ background: C.border }} />
+                      </div>
+                      {/* Items grid — same responsive grid as single-category mode */}
+                      <div className="grid grid-cols-2 gap-3 lg:grid-cols-5">
+                        {cat.items.map((item) => (
+                          <QRMenuItemCard
+                            key={item.id}
+                            item={item}
+                            qty={cart.get(item.id)?.quantity ?? 0}
+                            onAdd={() => addToCart(item)}
+                            onDecrement={() => updateCartQty(item.id, -1)}
+                            justAdded={justAddedId === item.id}
+                          />
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                </motion.div>
+              )
             ) : visibleItems.length === 0 && categories.length > 0 ? (
+              /* ── SINGLE CATEGORY — empty ── */
               <div className="text-center py-20">
                 <UtensilsCrossed className="w-7 h-7 mx-auto mb-3 opacity-20" style={{ color: C.text }} />
                 <p className="text-sm" style={{ color: C.text3, ...SANS }}>Nothing in this category yet</p>
               </div>
             ) : (
+              /* ── SINGLE CATEGORY — filtered grid ── */
               <motion.div
                 key={activeCategoryId}
                 initial={{ opacity: 0 }}
