@@ -141,6 +141,30 @@ function clearStored(qrToken: string) {
   localStorage.removeItem(storageKey(qrToken));
 }
 
+// Returns true when the page was opened by a genuine URL navigation
+// (typed address bar, external QR scanner, link click, etc.) as opposed
+// to a page refresh (F5 / pull-to-refresh) or browser back/forward.
+//
+// We use this to distinguish:
+//   navigate → guest physically re-scanned the QR code → start fresh
+//   reload   → guest just refreshed the ended/expired screen → keep showing it
+//              (security: prevents refresh-to-rejoin bypassing staff termination)
+function isFreshUrlNavigation(): boolean {
+  try {
+    // Performance Navigation Timing Level 2 (all modern browsers)
+    const entries = performance.getEntriesByType("navigation");
+    if (entries.length > 0) {
+      return (entries[0] as PerformanceNavigationTiming).type === "navigate";
+    }
+    // Legacy fallback (IE9+, always present)
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const legacyType = (performance as any).navigation?.type;
+    if (legacyType !== undefined) return legacyType === 0; // 0 = TYPE_NAVIGATE
+  } catch { /* ignore */ }
+  // Unknown: assume fresh navigation (better UX for external scanner case)
+  return true;
+}
+
 // ─── RPC types ─────────────────────────────────────────────────────────────────
 
 interface CreateSessionResult {
@@ -249,8 +273,34 @@ export function useTableSession(qrToken: string) {
 
       if (stored) {
         // ── Branch A: previously terminated session ───────────────────────
-        // We have a terminated marker. Always call validate_device so the
-        // server — not localStorage — determines what screen to show.
+        // We have a terminated marker.
+        //
+        // FRESH NAVIGATION (external QR scan via Google Lens, Camera, etc.):
+        // The guest physically re-scanned the QR code. This is a brand-new
+        // visit. Clear the stale terminated state and treat it like Branch C
+        // (no stored session). A genuine page refresh is `type === 'reload'`
+        // and is handled below to keep the ended/expired screen visible —
+        // preventing refresh-to-rejoin bypassing a staff-forced termination.
+        if (stored.terminated && isFreshUrlNavigation()) {
+          clearStored(qrToken);
+          // Check maintenance before landing on name-entry (same as Branch C).
+          const { data: tableRow } = await supabase
+            .from("cafe_tables")
+            .select("is_under_maintenance")
+            .eq("qr_code_token", qrToken)
+            .eq("is_active", true)
+            .maybeSingle();
+          if (cancelled) return;
+          if (tableRow?.is_under_maintenance) {
+            setSessionState("maintenance");
+            return;
+          }
+          setSessionState("entering_name");
+          return;
+        }
+
+        // PAGE REFRESH: validate with server so the server — not localStorage
+        // — determines what terminal screen to show.
         if (stored.terminated) {
           const result = await rpcValidateDevice(stored.deviceToken);
           if (cancelled) return;
