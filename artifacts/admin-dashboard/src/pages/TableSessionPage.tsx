@@ -539,12 +539,11 @@ function QRFoodDetailModal({
 
       {/* Panel */}
       <motion.div
-        className="relative w-full sm:max-w-md sm:mx-4 sm:rounded-3xl rounded-t-3xl overflow-hidden flex flex-col"
+        className="relative w-full sm:max-w-md sm:mx-4 sm:rounded-3xl rounded-t-3xl overflow-hidden flex flex-col max-h-[62vh] sm:max-h-[85vh]"
         style={{
           background: `linear-gradient(160deg, ${C.surface} 0%, ${C.card} 100%)`,
           border: `1px solid ${C.goldBorder}`,
           boxShadow: "0 32px 80px rgba(0,0,0,0.7), 0 0 0 1px rgba(212,168,83,0.08), 0 0 60px rgba(212,168,83,0.06)",
-          maxHeight: "75vh",
         }}
         initial={{ opacity: 0, scale: 0.95, y: 24 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
