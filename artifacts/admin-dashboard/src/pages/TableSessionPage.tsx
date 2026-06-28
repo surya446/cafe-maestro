@@ -521,7 +521,7 @@ function QRFoodDetailModal({
 
   return (
     <motion.div
-      className="fixed inset-0 z-[60] flex items-end sm:items-center justify-center"
+      className="fixed inset-0 z-[60] flex items-center justify-center p-4 sm:p-6"
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
@@ -539,7 +539,7 @@ function QRFoodDetailModal({
 
       {/* Panel */}
       <motion.div
-        className="relative w-full sm:max-w-md sm:mx-4 sm:rounded-3xl rounded-t-3xl overflow-hidden flex flex-col max-h-[62vh] sm:max-h-[85vh]"
+        className="relative w-full max-w-sm sm:max-w-md rounded-3xl overflow-hidden flex flex-col max-h-[70vh] sm:max-h-[85vh]"
         style={{
           background: `linear-gradient(160deg, ${C.surface} 0%, ${C.card} 100%)`,
           border: `1px solid ${C.goldBorder}`,
@@ -566,7 +566,7 @@ function QRFoodDetailModal({
 
           {/* Image */}
           {item.image_url ? (
-            <div className="relative w-full aspect-[4/3]">
+            <div className="relative w-full h-[140px] sm:h-auto sm:aspect-[4/3]">
               <img
                 src={item.image_url} alt={item.name}
                 className="w-full h-full object-cover"
@@ -586,7 +586,7 @@ function QRFoodDetailModal({
             </div>
           ) : (
             <div
-              className="w-full aspect-[4/3] flex items-center justify-center"
+              className="w-full h-[140px] sm:h-auto sm:aspect-[4/3] flex items-center justify-center"
               style={{ background: `linear-gradient(135deg, ${C.cardHover} 0%, ${C.bg} 100%)` }}
             >
               <UtensilsCrossed className="w-14 h-14 opacity-10" style={{ color: C.text }} />
