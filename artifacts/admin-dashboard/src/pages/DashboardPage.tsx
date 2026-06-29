@@ -1,6 +1,6 @@
 import {
   ShoppingBag,
-  DollarSign,
+  IndianRupee,
   Users,
   CalendarDays,
   Clock,
@@ -101,7 +101,7 @@ export function DashboardPage() {
           <StatCard
             label="Revenue Today"
             value={formatCurrency(stats?.revenueToday ?? 0)}
-            icon={DollarSign}
+            icon={IndianRupee}
             accent
           />
           <StatCard
