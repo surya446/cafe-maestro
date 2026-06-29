@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Menu, ChevronLeft, ChevronRight } from "lucide-react";
 import { Sidebar } from "./Sidebar";
+import { useAuth } from "@/hooks/useAuth";
 
 interface AppLayoutProps {
   children: React.ReactNode;
@@ -9,6 +10,7 @@ interface AppLayoutProps {
 export function AppLayout({ children }: AppLayoutProps) {
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
+  const { user } = useAuth();
 
   return (
     <div className="flex min-h-screen bg-background">
@@ -45,7 +47,7 @@ export function AppLayout({ children }: AppLayoutProps) {
           >
             <Menu className="w-5 h-5" />
           </button>
-          <span className="ml-3 text-sm font-semibold text-foreground">Cup & Cozy</span>
+          <span className="ml-3 text-sm font-semibold text-foreground">{user?.cafeName ?? "Loading…"}</span>
         </header>
 
         <main className="flex-1 min-w-0 overflow-auto">

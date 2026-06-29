@@ -1,4 +1,5 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useRef } from "react";
+import { useIsMobile } from "@/hooks/use-mobile";
 import * as DialogPrimitive from "@radix-ui/react-dialog";
 import {
   Plus,
@@ -7,7 +8,6 @@ import {
   Archive,
   ArchiveRestore,
   UtensilsCrossed,
-  GripVertical,
   Eye,
   EyeOff,
   AlertCircle,
@@ -574,21 +574,6 @@ function ArchivedItemCard({
   );
 }
 
-/* ─── Responsive hook ───────────────────────────────────────────────────── */
-function useIsMobile() {
-  const [isMobile, setIsMobile] = useState(() =>
-    typeof window !== "undefined" ? window.innerWidth < 768 : false
-  );
-  useEffect(() => {
-    const mq = window.matchMedia("(max-width: 767px)");
-    setIsMobile(mq.matches);
-    const handler = (e: MediaQueryListEvent) => setIsMobile(e.matches);
-    mq.addEventListener("change", handler);
-    return () => mq.removeEventListener("change", handler);
-  }, []);
-  return isMobile;
-}
-
 /* ─── Responsive item dialog ─────────────────────────────────────────────── */
 function ResponsiveItemDialog({
   open,
@@ -940,7 +925,6 @@ export function MenuPage() {
                       key={cat.id}
                       className="flex items-center gap-4 p-4 bg-card border border-card-border rounded-xl shadow-sm"
                     >
-                      <GripVertical className="w-4 h-4 text-muted-foreground/40 shrink-0" />
                       <div className="flex-1 min-w-0">
                         <p className="font-medium text-foreground">{cat.name}</p>
                         {cat.description && (

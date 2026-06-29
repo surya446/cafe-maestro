@@ -492,7 +492,7 @@ export function StaffPage() {
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      {ROLES.map((r) => (
+                      {(isOwner ? ROLES : ROLES.filter((r) => r !== "owner")).map((r) => (
                         <SelectItem key={r} value={r} className="text-xs">
                           {ROLE_LABELS[r]}
                         </SelectItem>

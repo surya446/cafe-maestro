@@ -419,6 +419,7 @@ function TableCard({
   const label = tableLabel(table.tableNumber, table.tableName);
   const [confirmEndId, setConfirmEndId] = useState<string | null>(null);
   const [confirmClear, setConfirmClear] = useState(false);
+  const { toast } = useToast();
   const [busyEnd, setBusyEnd] = useState(false);
   const [busyBill, setBusyBill] = useState(false);
   const [busyClear, setBusyClear] = useState(false);
@@ -428,7 +429,7 @@ function TableCard({
     try {
       await onEndSession(sessionId);
     } catch (err) {
-      console.error("[end_session]", err);
+      toast({ title: "Could not end session", description: err instanceof Error ? err.message : "Please try again.", variant: "destructive" });
     } finally {
       setBusyEnd(false);
       setConfirmEndId(null);
@@ -440,7 +441,7 @@ function TableCard({
     try {
       await onRequestBill(table.tableId);
     } catch (err) {
-      console.error("[staff_request_bill]", err);
+      toast({ title: "Could not request bill", description: err instanceof Error ? err.message : "Please try again.", variant: "destructive" });
     } finally {
       setBusyBill(false);
     }
@@ -451,7 +452,7 @@ function TableCard({
     try {
       await onClearTable(table.tableId);
     } catch (err) {
-      console.error("[clear_table]", err);
+      toast({ title: "Could not clear table", description: err instanceof Error ? err.message : "Please try again.", variant: "destructive" });
     } finally {
       setBusyClear(false);
       setConfirmClear(false);
