@@ -25,6 +25,7 @@ import {
   DialogHeader,
   DialogTitle,
   DialogFooter,
+  DialogDescription,
 } from "@/components/ui/dialog";
 import {
   AlertDialog,
@@ -239,6 +240,9 @@ function CreateMemberDialog({
       <DialogContent className="max-w-sm">
         <DialogHeader>
           <DialogTitle>Add staff member</DialogTitle>
+          <DialogDescription>
+            Create a new staff account with a temporary password.
+          </DialogDescription>
         </DialogHeader>
         {result ? (
           <div className="py-4 space-y-4">
@@ -381,7 +385,7 @@ export function StaffPage() {
 
   return (
     <>
-      <div className="p-8 max-w-4xl mx-auto">
+      <div className="max-w-4xl mx-auto pb-8">
         <PageHeader
           title="Staff"
           subtitle={`${active.length} active member${active.length !== 1 ? "s" : ""}`}

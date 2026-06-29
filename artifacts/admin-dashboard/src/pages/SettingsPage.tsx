@@ -87,7 +87,7 @@ export function SettingsPage() {
 
   if (!isOwner) {
     return (
-      <div className="p-8 max-w-3xl mx-auto">
+      <div className="max-w-3xl mx-auto pb-8">
           <PageHeader title="Settings" />
           <div className="flex items-start gap-3 p-4 bg-amber-50 border border-amber-200 rounded-xl">
             <AlertCircle className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
@@ -103,7 +103,7 @@ export function SettingsPage() {
   }
 
   return (
-    <div className="p-8 max-w-2xl mx-auto">
+    <div className="max-w-2xl mx-auto pb-8">
         <PageHeader
           title="Settings"
           subtitle="Manage your cafe's public information"

@@ -44,7 +44,7 @@ export function AnalyticsPage() {
   const { data: stats, isLoading } = useDashboard();
 
   return (
-    <div className="p-8 max-w-5xl mx-auto">
+    <div className="max-w-5xl mx-auto pb-8">
         <PageHeader
           title="Analytics"
           subtitle="Revenue, orders, and performance insights"

@@ -24,6 +24,7 @@ import {
   DialogHeader,
   DialogTitle,
   DialogFooter,
+  DialogDescription,
 } from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
 import {
@@ -139,7 +140,9 @@ function BookingForm({
   }
 
   return (
-    <form onSubmit={handle} className="space-y-4 max-h-[70vh] overflow-y-auto pr-1">
+    <form onSubmit={handle}>
+      {/* Scrollable body */}
+      <div className="space-y-4 max-h-[55vh] overflow-y-auto overscroll-contain pr-2 pb-1">
       {/* Name */}
       <div className="space-y-1.5">
         <Label>Name *</Label>
@@ -293,8 +296,9 @@ function BookingForm({
           <span>{formError}</span>
         </div>
       )}
+      </div>{/* end scrollable body */}
 
-      <DialogFooter>
+      <DialogFooter className="pt-4 mt-1 border-t border-border">
         <Button
           variant="outline"
           type="button"
@@ -673,7 +677,7 @@ export function BookingsPage() {
 
   return (
     <>
-      <div className="p-6 lg:p-8 max-w-4xl mx-auto">
+      <div className="max-w-4xl mx-auto pb-8">
         <PageHeader
           title="Bookings"
           subtitle={`${allBookings.length} booking${allBookings.length !== 1 ? "s" : ""} on this day`}
@@ -690,9 +694,10 @@ export function BookingsPage() {
           <div className="flex items-center gap-2 bg-card border border-card-border rounded-xl p-2.5">
             <button
               onClick={() => setSelectedDate(addDays(selectedDate, -1))}
-              className="p-1.5 rounded-lg hover:bg-muted transition-colors"
+              aria-label="Previous day"
+              className="p-1.5 rounded-lg hover:bg-muted transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
             >
-              <ChevronLeft className="w-4 h-4" />
+              <ChevronLeft className="w-4 h-4" aria-hidden="true" />
             </button>
             <div className="text-center min-w-44">
               <p className="text-sm font-semibold text-foreground">
@@ -704,9 +709,10 @@ export function BookingsPage() {
             </div>
             <button
               onClick={() => setSelectedDate(addDays(selectedDate, 1))}
-              className="p-1.5 rounded-lg hover:bg-muted transition-colors"
+              aria-label="Next day"
+              className="p-1.5 rounded-lg hover:bg-muted transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
             >
-              <ChevronRight className="w-4 h-4" />
+              <ChevronRight className="w-4 h-4" aria-hidden="true" />
             </button>
           </div>
           <Button
@@ -724,7 +730,7 @@ export function BookingsPage() {
         </div>
 
         {/* Status filter tabs */}
-        <div className="flex flex-wrap gap-1.5 mb-5">
+        <div className="flex flex-wrap gap-1.5 mb-5" role="group" aria-label="Filter bookings by status">
           {STATUS_FILTER_TABS.map(({ value, label }) => {
             const count =
               value === "all" ? allBookings.length : counts[value] ?? 0;
@@ -733,8 +739,9 @@ export function BookingsPage() {
               <button
                 key={value}
                 onClick={() => setStatusFilter(value)}
+                aria-pressed={active}
                 className={cn(
-                  "flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors",
+                  "flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary",
                   active
                     ? "bg-primary text-primary-foreground"
                     : "bg-card border border-card-border text-muted-foreground hover:text-foreground hover:bg-muted"
@@ -743,6 +750,7 @@ export function BookingsPage() {
                 {label}
                 {count > 0 && (
                   <span
+                    aria-hidden="true"
                     className={cn(
                       "inline-flex items-center justify-center w-4 h-4 rounded-full text-[10px] font-bold",
                       active
@@ -809,6 +817,11 @@ export function BookingsPage() {
               <DialogTitle>
                 {editBooking ? "Edit booking" : "New booking"}
               </DialogTitle>
+              <DialogDescription>
+                {editBooking
+                  ? "Update the booking details below."
+                  : "Fill in the guest details to create a new booking."}
+              </DialogDescription>
             </DialogHeader>
             <BookingForm
               initial={editBooking ?? { booking_date: selectedDate }}

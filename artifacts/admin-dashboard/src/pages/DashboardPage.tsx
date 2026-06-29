@@ -63,7 +63,7 @@ function StatCard({
 
 function LoadingSkeleton() {
   return (
-    <div className="p-8 max-w-6xl mx-auto">
+    <div className="max-w-6xl mx-auto pb-8">
         <div className="h-8 w-48 bg-muted rounded-lg animate-pulse mb-8" />
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
           {Array.from({ length: 4 }).map((_, i) => (
@@ -90,7 +90,7 @@ export function DashboardPage() {
   });
 
   return (
-    <div className="p-8 max-w-6xl mx-auto">
+    <div className="max-w-6xl mx-auto pb-8">
         <PageHeader
           title="Dashboard"
           subtitle={today}

@@ -359,16 +359,18 @@ function BookingsPanel({ table }: { table: ManagedTable }) {
     <div className="mt-2 border-t border-border/50 pt-2">
       <button
         onClick={() => setOpen((p) => !p)}
-        className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground hover:text-foreground transition-colors"
+        aria-expanded={open}
+        aria-controls={`bookings-panel-${table.id}`}
+        className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground hover:text-foreground transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary rounded"
       >
-        {open ? <ChevronDown className="h-3.5 w-3.5" /> : <ChevronRight className="h-3.5 w-3.5" />}
-        <CalendarClock className="h-3.5 w-3.5" />
+        {open ? <ChevronDown className="h-3.5 w-3.5" aria-hidden="true" /> : <ChevronRight className="h-3.5 w-3.5" aria-hidden="true" />}
+        <CalendarClock className="h-3.5 w-3.5" aria-hidden="true" />
         Today: {confirmedCount} confirmed booking{confirmedCount !== 1 ? "s" : ""}
-        {count > confirmedCount && <span className="text-muted-foreground/60">({count - confirmedCount} pending)</span>}
+        {count > confirmedCount && <span className="text-muted-foreground/60" aria-hidden="true">({count - confirmedCount} pending)</span>}
       </button>
 
       {open && (
-        <div className="mt-2 space-y-1.5">
+        <div id={`bookings-panel-${table.id}`} className="mt-2 space-y-1.5">
           {table.todayBookings
             .slice()
             .sort((a, b) => a.bookingTime.localeCompare(b.bookingTime))
@@ -518,10 +520,11 @@ function TableCard({
             <Button
               size="sm" variant="ghost"
               className="h-9 w-9 p-0 text-muted-foreground hover:text-foreground"
+              aria-label="View QR code"
               title="View QR code"
               onClick={() => onQR(table)}
             >
-              <QrCode className="h-4 w-4" />
+              <QrCode className="h-4 w-4" aria-hidden="true" />
             </Button>
 
             {canManage && (
@@ -530,10 +533,11 @@ function TableCard({
                   <Button
                     size="sm" variant="ghost"
                     className="h-9 w-9 p-0 text-muted-foreground hover:text-foreground"
+                    aria-label="Edit table"
                     title="Edit table"
                     onClick={() => onEdit(table)}
                   >
-                    <Pencil className="h-4 w-4" />
+                    <Pencil className="h-4 w-4" aria-hidden="true" />
                   </Button>
                 )}
 
@@ -542,28 +546,31 @@ function TableCard({
                     <Button
                       size="sm" variant="ghost"
                       className="h-9 w-9 p-0 text-muted-foreground hover:text-primary"
+                      aria-label="Restore table"
                       title="Restore table" disabled={isRestoring}
                       onClick={() => onRestore(table)}
                     >
-                      {isRestoring ? <Loader2 className="h-4 w-4 animate-spin" /> : <RotateCcw className="h-4 w-4" />}
+                      {isRestoring ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" /> : <RotateCcw className="h-4 w-4" aria-hidden="true" />}
                     </Button>
                     <Button
                       size="sm" variant="ghost"
                       className="h-9 w-9 p-0 text-muted-foreground hover:text-destructive"
+                      aria-label="Permanently delete table"
                       title="Permanently delete" disabled={isCheckingDelete}
                       onClick={() => onPermanentDelete(table)}
                     >
-                      {isCheckingDelete ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
+                      {isCheckingDelete ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" /> : <Trash2 className="h-4 w-4" aria-hidden="true" />}
                     </Button>
                   </>
                 ) : (
                   <Button
                     size="sm" variant="ghost"
                     className="h-9 w-9 p-0 text-muted-foreground hover:text-destructive"
+                    aria-label="Archive table"
                     title="Archive table" disabled={isArchiving}
                     onClick={() => onArchive(table)}
                   >
-                    {isArchiving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Archive className="h-4 w-4" />}
+                    {isArchiving ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" /> : <Archive className="h-4 w-4" aria-hidden="true" />}
                   </Button>
                 )}
               </>
@@ -810,9 +817,10 @@ export function TablesPage() {
       />
 
       {/* ── Stat Cards ─────────────────────────────────────────────────────── */}
-      <div ref={statsGridRef} className={`grid ${statsGridCols} gap-2 mb-6 transition-[grid-template-columns] duration-300`}>
+      <div ref={statsGridRef} className={`grid ${statsGridCols} gap-2 mb-6 transition-[grid-template-columns] duration-300`} role="group" aria-label="Filter tables by status">
         <button
           onClick={() => setActiveFilter(null)}
+          aria-pressed={activeFilter === null}
           className={cn(
             "text-left bg-card border border-border rounded-xl px-4 py-4 shadow-sm transition-all hover:shadow focus:outline-none focus-visible:ring-2 focus-visible:ring-primary",
             activeFilter === null && "ring-2 ring-primary bg-primary/5"
@@ -830,6 +838,7 @@ export function TablesPage() {
             <button
               key={s}
               onClick={() => toggleFilter(s)}
+              aria-pressed={activeFilter === s}
               className={cn(
                 "text-left bg-card border border-border rounded-xl px-4 py-4 shadow-sm transition-all hover:shadow focus:outline-none focus-visible:ring-2 focus-visible:ring-primary",
                 activeFilter === s && cfg.cardActiveCls
@@ -850,10 +859,11 @@ export function TablesPage() {
           <span className="text-sm text-muted-foreground">Showing:</span>
           <button
             onClick={() => setActiveFilter(null)}
-            className={cn("inline-flex items-center gap-1.5 text-xs font-medium px-2.5 py-1 rounded-full border cursor-pointer hover:opacity-80", STATUS_CONFIG[activeFilter].badgeCls)}
+            aria-label={`Clear filter: ${STATUS_CONFIG[activeFilter].label}`}
+            className={cn("inline-flex items-center gap-1.5 text-xs font-medium px-2.5 py-1 rounded-full border cursor-pointer hover:opacity-80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary", STATUS_CONFIG[activeFilter].badgeCls)}
           >
             {STATUS_CONFIG[activeFilter].label}
-            <span className="text-xs opacity-60">✕</span>
+            <span className="text-xs opacity-60" aria-hidden="true">✕</span>
           </button>
         </div>
       )}
