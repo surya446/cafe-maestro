@@ -77,7 +77,7 @@ const STATUS: Record<string, { label: string; bg: string; icon: React.ReactNode 
 // Shows for a minimum of MIN_MS to give a deliberate, premium feel on QR scan.
 const MIN_MS = 1800;
 
-function BrandedLoader() {
+function BrandedLoader({ cafeName, cafeNameLoading }: { cafeName: string | null; cafeNameLoading: boolean }) {
   return (
     <motion.div
       key="loader"
@@ -88,6 +88,17 @@ function BrandedLoader() {
       className="fixed inset-0 flex flex-col items-center justify-center z-50"
       style={{ background: C.bg }}
     >
+      {/* Top-right café branding */}
+      <div className="absolute top-5 right-5">
+        {cafeNameLoading ? (
+          <div className="h-2.5 w-20 rounded-full" style={{ background: C.card, opacity: 0.7 }} />
+        ) : cafeName ? (
+          <span className="text-[11px] tracking-wide" style={{ color: C.text3, ...SERIF }}>
+            {cafeName}
+          </span>
+        ) : null}
+      </div>
+
       <style>{`
         @keyframes qr-steam {
           0%   { transform: translateY(0)    scaleX(1)    opacity: 0; }
@@ -255,8 +266,8 @@ function QROrderCard({ order }: { order: GuestOrder }) {
 
 // ─── Name entry ──────────────────────────────────────────────────────────────────
 function QRNameEntry({
-  cafeName, tableLabel, onStart, error, isSubmitting,
-}: { cafeName: string; tableLabel: string; onStart: (name: string) => Promise<void>; error: string | null; isSubmitting: boolean }) {
+  cafeName, cafeNameLoading, tableLabel, onStart, error, isSubmitting,
+}: { cafeName: string | null; cafeNameLoading: boolean; tableLabel: string; onStart: (name: string) => Promise<void>; error: string | null; isSubmitting: boolean }) {
   const [name, setName] = useState("");
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -264,7 +275,16 @@ function QRNameEntry({
     await onStart(name.trim());
   }
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center px-6" style={{ background: C.bg }}>
+    <div className="min-h-screen flex flex-col items-center justify-center px-6 relative" style={{ background: C.bg }}>
+      {/* Top-right café branding */}
+      <div className="absolute top-5 right-5">
+        {!cafeNameLoading && cafeName && (
+          <span className="text-[10px] tracking-wide" style={{ color: C.text3, ...SERIF }}>
+            {cafeName}
+          </span>
+        )}
+      </div>
+
       <motion.div
         initial={{ opacity: 0, y: 24 }}
         animate={{ opacity: 1, y: 0 }}
@@ -279,9 +299,33 @@ function QRNameEntry({
           >
             <Coffee className="w-7 h-7" style={{ color: C.gold }} />
           </div>
-          <h1 className="text-[2.4rem] font-light leading-none mb-2" style={{ color: C.text, ...SERIF }}>
-            {cafeName}
-          </h1>
+
+          {/* Heading: "Welcome to / {Cafe Name}" or fallback to "Welcome" */}
+          {cafeNameLoading ? (
+            <>
+              <p className="text-[11px] uppercase tracking-[0.22em] font-medium mb-3" style={{ color: C.text3, ...SANS }}>
+                Welcome to
+              </p>
+              <div
+                className="h-9 w-40 rounded-full mx-auto mb-3"
+                style={{ background: C.card, animation: "pulse 2s cubic-bezier(.4,0,.6,1) infinite" }}
+              />
+            </>
+          ) : cafeName ? (
+            <>
+              <p className="text-[11px] uppercase tracking-[0.22em] font-medium mb-3" style={{ color: C.text3, ...SANS }}>
+                Welcome to
+              </p>
+              <h1 className="text-[2.4rem] font-light leading-none mb-3" style={{ color: C.text, ...SERIF }}>
+                {cafeName}
+              </h1>
+            </>
+          ) : (
+            <h1 className="text-[2.4rem] font-light leading-none mb-3" style={{ color: C.text, ...SERIF }}>
+              Welcome
+            </h1>
+          )}
+
           <p className="text-sm" style={{ color: C.text2, ...SANS }}>{tableLabel}</p>
         </div>
 
@@ -1407,6 +1451,28 @@ export function TableSessionPage() {
     isPlacingOrder, isRequestingBill, placeOrderError, requestBillError,
   } = useTableSession(token ?? "");
 
+  // ── Café name: fetched from cafes table via the QR token (anon-safe) ──────
+  // Single source of truth — updates automatically when admin changes café name.
+  const cafeNameQuery = useQuery({
+    queryKey: ["qr_cafe_name", token ?? ""],
+    queryFn: async (): Promise<string | null> => {
+      if (!token) return null;
+      const { data } = await supabase
+        .from("cafe_tables")
+        .select("cafes(name)")
+        .eq("qr_code_token", token)
+        .eq("is_active", true)
+        .maybeSingle();
+      const row = data as { cafes?: { name?: string } | null } | null;
+      return row?.cafes?.name ?? null;
+    },
+    enabled: !!token,
+    staleTime: 5 * 60_000,
+    retry: 1,
+  });
+  const cafeName = cafeNameQuery.data ?? null;
+  const cafeNameLoading = cafeNameQuery.isLoading;
+
   const handleScanNavigate = (path: string) => {
     resetToNameEntry();
     navigate(path);
@@ -1425,16 +1491,22 @@ export function TableSessionPage() {
   if (showLoader) {
     return (
       <AnimatePresence>
-        <BrandedLoader key="loader" />
+        <BrandedLoader key="loader" cafeName={cafeName} cafeNameLoading={cafeNameLoading} />
       </AnimatePresence>
     );
   }
 
   if (sessionState === "entering_name") {
-    const tableLabel = "Scan complete — you're at your table";
     return (
       <motion.div key="name-entry" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.4 }}>
-        <QRNameEntry cafeName="Welcome" tableLabel={tableLabel} onStart={startSession} error={nameEntryError} isSubmitting={isStartingSession} />
+        <QRNameEntry
+          cafeName={cafeName}
+          cafeNameLoading={cafeNameLoading}
+          tableLabel="Please enter your name to continue."
+          onStart={startSession}
+          error={nameEntryError}
+          isSubmitting={isStartingSession}
+        />
       </motion.div>
     );
   }
