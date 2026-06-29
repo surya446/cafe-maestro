@@ -1,5 +1,5 @@
-import { useState, useMemo, useRef, useCallback } from "react";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useState, useEffect, useMemo, useRef, useCallback } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { format, formatDistanceToNow } from "date-fns";
 import {
   ClipboardList,
@@ -1156,35 +1156,59 @@ function QRTab() {
 // ─── Main Page ────────────────────────────────────────────────────────────────
 
 export function OrdersPage() {
-  // useQuery with enabled:false subscribes to the existing cache entries without
-  // triggering independent network requests. This makes the component re-render
-  // reactively whenever the child tabs' realtime hooks invalidate these queries,
-  // keeping the nav badges in sync with live data at zero extra cost.
-  //
-  // TanStack Query v5 requires a queryFn even when enabled:false. The stubs
-  // below are never called — enabled:false prevents any execution.
-  const { data: allOrders = [] } = useQuery<StaffOrder[]>({
-    queryKey: ["staff_orders"],
-    queryFn: () => [] as StaffOrder[],
-    enabled: false,
-    staleTime: Infinity,
-  });
-  const { data: allBills = [] } = useQuery<BillRequest[]>({
-    queryKey: ["staff_bill_requests"],
-    queryFn: () => [] as BillRequest[],
-    enabled: false,
-    staleTime: Infinity,
-  });
-  const { data: allSessions = [] } = useQuery<ActiveSession[]>({
-    queryKey: ["staff_sessions"],
-    queryFn: () => [] as ActiveSession[],
-    enabled: false,
-    staleTime: Infinity,
-  });
+  const qc = useQueryClient();
 
-  const pendingOrders = allOrders.filter((o) => o.status === "pending_approval");
-  const pendingBills  = allBills.filter((b) => b.status === "pending");
-  const sessionCount  = allSessions.length;
+  // Subscribe to the QueryCache event bus — no useQuery observers, no queryFn
+  // registration. Creating fake useQuery stubs with queryFn:()=>[] corrupts the
+  // shared Query object: TanStack Query v5 stores ONE queryFn per cache key, so
+  // any stub queryFn overwrites the real one and causes every realtime-triggered
+  // refetch to return [] (the oscillating-empty-board bug).
+  //
+  // QueryCache.subscribe() is a plain event emitter. It fires on every cache
+  // mutation (update, invalidation, removal) without touching the Query object.
+  // We read badge counts synchronously from getQueryData() after each relevant
+  // event — zero side effects, zero new observers, zero interference.
+  const [pendingOrderCount, setPendingOrderCount] = useState(
+    () =>
+      (qc.getQueryData<StaffOrder[]>(["staff_orders"]) ?? []).filter(
+        (o) => o.status === "pending_approval"
+      ).length
+  );
+  const [pendingBillCount, setPendingBillCount] = useState(
+    () =>
+      (qc.getQueryData<BillRequest[]>(["staff_bill_requests"]) ?? []).filter(
+        (b) => b.status === "pending"
+      ).length
+  );
+  const [sessionCount, setSessionCount] = useState(
+    () => (qc.getQueryData<ActiveSession[]>(["staff_sessions"]) ?? []).length
+  );
+
+  useEffect(() => {
+    const NAV_KEYS = new Set(["staff_orders", "staff_bill_requests", "staff_sessions"]);
+    const unsub = qc.getQueryCache().subscribe((event) => {
+      const key = event?.query?.queryKey?.[0] as string | undefined;
+      if (!key || !NAV_KEYS.has(key)) return;
+      if (key === "staff_orders") {
+        setPendingOrderCount(
+          (qc.getQueryData<StaffOrder[]>(["staff_orders"]) ?? []).filter(
+            (o) => o.status === "pending_approval"
+          ).length
+        );
+      } else if (key === "staff_bill_requests") {
+        setPendingBillCount(
+          (qc.getQueryData<BillRequest[]>(["staff_bill_requests"]) ?? []).filter(
+            (b) => b.status === "pending"
+          ).length
+        );
+      } else if (key === "staff_sessions") {
+        setSessionCount(
+          (qc.getQueryData<ActiveSession[]>(["staff_sessions"]) ?? []).length
+        );
+      }
+    });
+    return unsub;
+  }, [qc]);
 
   return (
     <>
@@ -1200,9 +1224,9 @@ export function OrdersPage() {
             <TabsTrigger value="orders" className="flex items-center gap-1 shrink-0 whitespace-nowrap text-xs px-2 py-1.5 sm:gap-2 sm:text-sm sm:px-3">
               <ChefHat className="h-3.5 w-3.5 hidden sm:inline" />
               Orders
-              {pendingOrders.length > 0 && (
+              {pendingOrderCount > 0 && (
                 <span className="ml-1 flex items-center justify-center rounded-full bg-amber-500 text-white text-[10px] font-bold w-4.5 h-4.5 min-w-[18px] px-1">
-                  {pendingOrders.length}
+                  {pendingOrderCount}
                 </span>
               )}
             </TabsTrigger>
@@ -1220,9 +1244,9 @@ export function OrdersPage() {
             <TabsTrigger value="bills" className="flex items-center gap-1 shrink-0 whitespace-nowrap text-xs px-2 py-1.5 sm:gap-2 sm:text-sm sm:px-3">
               <Receipt className="h-3.5 w-3.5 hidden sm:inline" />
               Bill Requests
-              {pendingBills.length > 0 && (
+              {pendingBillCount > 0 && (
                 <span className="ml-1 flex items-center justify-center rounded-full bg-amber-500 text-white text-[10px] font-bold w-4.5 h-4.5 min-w-[18px] px-1">
-                  {pendingBills.length}
+                  {pendingBillCount}
                 </span>
               )}
             </TabsTrigger>
