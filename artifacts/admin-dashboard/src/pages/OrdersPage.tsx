@@ -1,5 +1,4 @@
 import { useState, useEffect, useMemo, useRef, useCallback } from "react";
-import { useQueryClient } from "@tanstack/react-query";
 import { format, formatDistanceToNow } from "date-fns";
 import {
   ClipboardList,
@@ -44,6 +43,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useOrders, StaffOrder, OrderStatus } from "@/hooks/useOrders";
 import { useTableSessions, ActiveSession, CafeTable } from "@/hooks/useTableSessions";
+import { useNavBadgesContext } from "@/context/NavBadgesContext";
 import { useTableGroups, TableOverview, SessionInGroup } from "@/hooks/useTableGroups";
 import { useBillRequests, BillRequest } from "@/hooks/useBillRequests";
 import { useTableManagement } from "@/hooks/useTableManagement";
@@ -1156,59 +1156,9 @@ function QRTab() {
 // ─── Main Page ────────────────────────────────────────────────────────────────
 
 export function OrdersPage() {
-  const qc = useQueryClient();
-
-  // Subscribe to the QueryCache event bus — no useQuery observers, no queryFn
-  // registration. Creating fake useQuery stubs with queryFn:()=>[] corrupts the
-  // shared Query object: TanStack Query v5 stores ONE queryFn per cache key, so
-  // any stub queryFn overwrites the real one and causes every realtime-triggered
-  // refetch to return [] (the oscillating-empty-board bug).
-  //
-  // QueryCache.subscribe() is a plain event emitter. It fires on every cache
-  // mutation (update, invalidation, removal) without touching the Query object.
-  // We read badge counts synchronously from getQueryData() after each relevant
-  // event — zero side effects, zero new observers, zero interference.
-  const [pendingOrderCount, setPendingOrderCount] = useState(
-    () =>
-      (qc.getQueryData<StaffOrder[]>(["staff_orders"]) ?? []).filter(
-        (o) => o.status === "pending_approval"
-      ).length
-  );
-  const [pendingBillCount, setPendingBillCount] = useState(
-    () =>
-      (qc.getQueryData<BillRequest[]>(["staff_bill_requests"]) ?? []).filter(
-        (b) => b.status === "pending"
-      ).length
-  );
-  const [sessionCount, setSessionCount] = useState(
-    () => (qc.getQueryData<ActiveSession[]>(["staff_sessions"]) ?? []).length
-  );
-
-  useEffect(() => {
-    const NAV_KEYS = new Set(["staff_orders", "staff_bill_requests", "staff_sessions"]);
-    const unsub = qc.getQueryCache().subscribe((event) => {
-      const key = event?.query?.queryKey?.[0] as string | undefined;
-      if (!key || !NAV_KEYS.has(key)) return;
-      if (key === "staff_orders") {
-        setPendingOrderCount(
-          (qc.getQueryData<StaffOrder[]>(["staff_orders"]) ?? []).filter(
-            (o) => o.status === "pending_approval"
-          ).length
-        );
-      } else if (key === "staff_bill_requests") {
-        setPendingBillCount(
-          (qc.getQueryData<BillRequest[]>(["staff_bill_requests"]) ?? []).filter(
-            (b) => b.status === "pending"
-          ).length
-        );
-      } else if (key === "staff_sessions") {
-        setSessionCount(
-          (qc.getQueryData<ActiveSession[]>(["staff_sessions"]) ?? []).length
-        );
-      }
-    });
-    return unsub;
-  }, [qc]);
+  // Badge counts come from NavBadgesProvider (always mounted at AdminShell level).
+  // No local state, no QueryCache.subscribe — the provider owns this entirely.
+  const { pendingOrderCount, pendingBillCount, sessionCount } = useNavBadgesContext();
 
   return (
     <>

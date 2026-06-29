@@ -98,6 +98,12 @@ export function useBillRequests() {
       qc.invalidateQueries({ queryKey: ["staff_bill_requests"] });
       qc.invalidateQueries({ queryKey: ["staff_sessions"] });
       qc.invalidateQueries({ queryKey: ["staff_tables"] });
+      // Nav badge queries use RLS-filtered realtime, but the session UPDATE
+      // (active → ended) fails the RLS check on the new row, so the realtime
+      // event is dropped server-side. Explicit invalidation here guarantees
+      // the counts drop immediately after bill delivery.
+      qc.invalidateQueries({ queryKey: ["nav_badge_sessions"] });
+      qc.invalidateQueries({ queryKey: ["nav_badge_bills"] });
     },
   });
 

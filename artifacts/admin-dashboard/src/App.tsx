@@ -6,6 +6,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { useAuth } from "@/hooks/useAuth";
 import { ScrollToTop } from "@/components/common/ScrollToTop";
 import { AppLayout } from "@/components/layout/AppLayout";
+import { NavBadgesProvider } from "@/context/NavBadgesContext";
 
 import { LoginPage } from "@/pages/LoginPage";
 import { AuthConfirmPage } from "@/pages/AuthConfirmPage";
@@ -63,22 +64,24 @@ function AdminShell() {
   if (user.mustChangePassword) return <Redirect to="/change-password" />;
 
   return (
-    <AppLayout>
-      <Switch>
-        <Route path="/" component={DashboardPage} />
-        <Route path="/orders" component={OrdersPage} />
-        <Route path="/menu" component={MenuPage} />
-        <Route path="/gallery" component={GalleryPage} />
-        <Route path="/offers" component={OffersPage} />
-        <Route path="/bookings" component={BookingsPage} />
-        <Route path="/tables" component={TablesPage} />
-        <Route path="/staff" component={StaffPage} />
-        <Route path="/analytics" component={AnalyticsPage} />
-        <Route path="/settings" component={SettingsPage} />
-        <Route path="/website-settings" component={WebsiteSettingsPage} />
-        <Route><Redirect to="/" /></Route>
-      </Switch>
-    </AppLayout>
+    <NavBadgesProvider>
+      <AppLayout>
+        <Switch>
+          <Route path="/" component={DashboardPage} />
+          <Route path="/orders" component={OrdersPage} />
+          <Route path="/menu" component={MenuPage} />
+          <Route path="/gallery" component={GalleryPage} />
+          <Route path="/offers" component={OffersPage} />
+          <Route path="/bookings" component={BookingsPage} />
+          <Route path="/tables" component={TablesPage} />
+          <Route path="/staff" component={StaffPage} />
+          <Route path="/analytics" component={AnalyticsPage} />
+          <Route path="/settings" component={SettingsPage} />
+          <Route path="/website-settings" component={WebsiteSettingsPage} />
+          <Route><Redirect to="/" /></Route>
+        </Switch>
+      </AppLayout>
+    </NavBadgesProvider>
   );
 }
 

@@ -19,6 +19,7 @@ import {
   TableProperties,
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
+import { useNavBadgesContext } from "@/context/NavBadgesContext";
 
 interface NavItem {
   href: string;
@@ -51,10 +52,15 @@ interface SidebarProps {
 export function Sidebar({ collapsed, mobileOpen, onToggleCollapse, onCloseMobile }: SidebarProps) {
   const [location] = useLocation();
   const { user, signOut, isOwner } = useAuth();
+  const { pendingOrderCount, pendingBillCount, sessionCount } = useNavBadgesContext();
 
   const visibleItems = NAV_ITEMS.filter(
     (item) => !item.ownerOnly || isOwner
   );
+
+  // Total badge shown on the Orders nav item: pending orders + pending bill requests.
+  // Active sessions are tracked in context but displayed separately on the Orders page.
+  const orderNavBadge = pendingOrderCount + pendingBillCount;
 
   return (
     <>
@@ -90,6 +96,8 @@ export function Sidebar({ collapsed, mobileOpen, onToggleCollapse, onCloseMobile
                 ? location === "/" || location === ""
                 : location.startsWith(item.href);
 
+            const badge = item.href === "/orders" ? orderNavBadge : 0;
+
             return (
               <Link
                 key={item.href}
@@ -103,18 +111,30 @@ export function Sidebar({ collapsed, mobileOpen, onToggleCollapse, onCloseMobile
                     : "text-sidebar-foreground/65 hover:bg-sidebar-accent hover:text-sidebar-foreground"
                 )}
               >
-                <item.icon
-                  className={cn(
-                    "w-4 h-4 shrink-0",
-                    isActive
-                      ? "text-sidebar-primary-foreground"
-                      : "text-sidebar-foreground/45 group-hover:text-sidebar-foreground"
+                <div className="relative shrink-0">
+                  <item.icon
+                    className={cn(
+                      "w-4 h-4",
+                      isActive
+                        ? "text-sidebar-primary-foreground"
+                        : "text-sidebar-foreground/45 group-hover:text-sidebar-foreground"
+                    )}
+                  />
+                  {collapsed && badge > 0 && (
+                    <span className="absolute -top-1.5 -right-1.5 flex items-center justify-center rounded-full bg-amber-500 text-white text-[9px] font-bold min-w-[14px] h-[14px] px-0.5 leading-none">
+                      {badge > 99 ? "99+" : badge}
+                    </span>
                   )}
-                />
+                </div>
                 {!collapsed && (
                   <>
                     <span className="flex-1">{item.label}</span>
-                    {isActive && (
+                    {badge > 0 && (
+                      <span className="flex items-center justify-center rounded-full bg-amber-500 text-white text-[10px] font-bold min-w-[18px] h-[18px] px-1 leading-none">
+                        {badge > 99 ? "99+" : badge}
+                      </span>
+                    )}
+                    {isActive && badge === 0 && (
                       <ChevronRight className="w-3 h-3 text-sidebar-primary-foreground/60" />
                     )}
                   </>
@@ -201,6 +221,8 @@ export function Sidebar({ collapsed, mobileOpen, onToggleCollapse, onCloseMobile
                 ? location === "/" || location === ""
                 : location.startsWith(item.href);
 
+            const badge = item.href === "/orders" ? orderNavBadge : 0;
+
             return (
               <Link
                 key={item.href}
@@ -222,7 +244,12 @@ export function Sidebar({ collapsed, mobileOpen, onToggleCollapse, onCloseMobile
                   )}
                 />
                 <span className="flex-1">{item.label}</span>
-                {isActive && (
+                {badge > 0 && (
+                  <span className="flex items-center justify-center rounded-full bg-amber-500 text-white text-[10px] font-bold min-w-[18px] h-[18px] px-1 leading-none">
+                    {badge > 99 ? "99+" : badge}
+                  </span>
+                )}
+                {isActive && badge === 0 && (
                   <ChevronRight className="w-3.5 h-3.5 text-sidebar-primary-foreground/60" />
                 )}
               </Link>

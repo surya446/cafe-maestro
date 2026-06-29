@@ -141,6 +141,10 @@ export function useTableSessions() {
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["staff_sessions"] });
+      // Realtime event for session status → "ended" is dropped server-side
+      // (new row fails the status='active' RLS filter). Explicit invalidation
+      // ensures the nav badge count drops immediately.
+      qc.invalidateQueries({ queryKey: ["nav_badge_sessions"] });
     },
   });
 
@@ -155,6 +159,7 @@ export function useTableSessions() {
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["staff_sessions"] });
+      qc.invalidateQueries({ queryKey: ["nav_badge_sessions"] });
     },
   });
 
