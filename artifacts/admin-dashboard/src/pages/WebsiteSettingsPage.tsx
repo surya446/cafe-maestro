@@ -321,7 +321,7 @@ export function WebsiteSettingsPage() {
 
   if (!isOwner) {
     return (
-      <div className="p-8 max-w-3xl mx-auto">
+      <div className="max-w-3xl mx-auto pb-8">
           <PageHeader title="Website Settings" />
           <div className="flex items-start gap-3 p-4 bg-amber-50 border border-amber-200 rounded-xl">
             <AlertCircle className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
@@ -337,14 +337,15 @@ export function WebsiteSettingsPage() {
   }
 
   return (
-    <div className="p-8 max-w-3xl mx-auto pb-16">
+    <div className="max-w-3xl mx-auto pb-16">
         {/* Header */}
-        <div className="flex items-start justify-between mb-8">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between mb-6">
           <PageHeader
             title="Website Settings"
             subtitle="Control your public website's content and branding"
+            className="mb-0"
           />
-          <div className="flex flex-col items-end gap-2 shrink-0 ml-4">
+          <div className="flex items-center gap-3 sm:flex-col sm:items-end shrink-0">
             <Button
               onClick={handleSave}
               disabled={saving || uploadingLogo || uploadingHero}

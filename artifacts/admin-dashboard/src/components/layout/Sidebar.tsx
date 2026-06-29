@@ -207,7 +207,8 @@ export function Sidebar({ collapsed, mobileOpen, onToggleCollapse, onCloseMobile
           </div>
           <button
             onClick={onCloseMobile}
-            className="absolute right-3 top-1/2 -translate-y-1/2 p-1 rounded-md text-sidebar-foreground/50 hover:text-sidebar-foreground hover:bg-sidebar-accent"
+            aria-label="Close menu"
+            className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center justify-center h-10 w-10 rounded-md text-sidebar-foreground/50 hover:text-sidebar-foreground hover:bg-sidebar-accent transition-colors"
           >
             <X className="w-4 h-4" />
           </button>

@@ -43,25 +43,55 @@ function ImageCard({
           loading="lazy"
         />
       </div>
-      {image.caption && (
-        <div className="px-3 py-2 border-t border-border">
-          <p className="text-sm text-foreground truncate">{image.caption}</p>
-        </div>
-      )}
-      <div className="absolute inset-0 bg-foreground/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
+
+      {/* Desktop: hover overlay (hidden on touch devices) */}
+      <div className="absolute inset-0 bg-foreground/60 opacity-0 group-hover:opacity-100 transition-opacity items-center justify-center gap-2 hidden [@media(hover:hover)]:flex">
         <button
           onClick={() => onEdit(image)}
-          className="flex items-center justify-center w-9 h-9 rounded-full bg-white/90 text-foreground hover:bg-white transition-colors"
+          aria-label="Edit image"
+          className="flex items-center justify-center w-10 h-10 rounded-full bg-white/90 text-foreground hover:bg-white transition-colors"
         >
           <Pencil className="w-4 h-4" />
         </button>
         <button
           onClick={() => onDelete(image.id)}
-          className="flex items-center justify-center w-9 h-9 rounded-full bg-white/90 text-destructive hover:bg-white transition-colors"
+          aria-label="Delete image"
+          className="flex items-center justify-center w-10 h-10 rounded-full bg-white/90 text-destructive hover:bg-white transition-colors"
         >
           <Trash2 className="w-4 h-4" />
         </button>
       </div>
+
+      {/* Mobile: always-visible action strip + optional caption */}
+      <div className="[@media(hover:hover)]:hidden border-t border-border flex items-center justify-between px-3 py-1.5 bg-card">
+        {image.caption
+          ? <p className="text-sm text-foreground truncate mr-2">{image.caption}</p>
+          : <span className="text-xs text-muted-foreground truncate mr-2 italic">{image.url.split("/").pop()?.slice(0, 24)}</span>
+        }
+        <div className="flex items-center gap-1 shrink-0">
+          <button
+            onClick={() => onEdit(image)}
+            aria-label="Edit image"
+            className="flex items-center justify-center h-9 w-9 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+          >
+            <Pencil className="w-4 h-4" />
+          </button>
+          <button
+            onClick={() => onDelete(image.id)}
+            aria-label="Delete image"
+            className="flex items-center justify-center h-9 w-9 rounded-lg text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors"
+          >
+            <Trash2 className="w-4 h-4" />
+          </button>
+        </div>
+      </div>
+
+      {/* Desktop-only caption strip (separate from mobile action strip) */}
+      {image.caption && (
+        <div className="[@media(hover:hover)]:block hidden px-3 py-2 border-t border-border">
+          <p className="text-sm text-foreground truncate">{image.caption}</p>
+        </div>
+      )}
     </div>
   );
 }

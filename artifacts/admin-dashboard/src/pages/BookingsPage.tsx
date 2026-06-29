@@ -589,16 +589,18 @@ function BookingCard({
           <div className="flex items-center gap-1">
             <button
               onClick={onEdit}
-              className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+              className="flex items-center justify-center h-9 w-9 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
               title="Edit"
+              aria-label="Edit booking"
             >
               <Pencil className="w-3.5 h-3.5" />
             </button>
             {canDelete && (
               <button
                 onClick={onDelete}
-                className="p-1.5 rounded-lg text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors"
+                className="flex items-center justify-center h-9 w-9 rounded-lg text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors"
                 title="Delete"
+                aria-label="Delete booking"
               >
                 <Trash2 className="w-3.5 h-3.5" />
               </button>
@@ -695,7 +697,7 @@ export function BookingsPage() {
             <button
               onClick={() => setSelectedDate(addDays(selectedDate, -1))}
               aria-label="Previous day"
-              className="p-1.5 rounded-lg hover:bg-muted transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+              className="flex items-center justify-center h-9 w-9 rounded-lg hover:bg-muted transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
             >
               <ChevronLeft className="w-4 h-4" aria-hidden="true" />
             </button>
@@ -710,7 +712,7 @@ export function BookingsPage() {
             <button
               onClick={() => setSelectedDate(addDays(selectedDate, 1))}
               aria-label="Next day"
-              className="p-1.5 rounded-lg hover:bg-muted transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+              className="flex items-center justify-center h-9 w-9 rounded-lg hover:bg-muted transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
             >
               <ChevronRight className="w-4 h-4" aria-hidden="true" />
             </button>

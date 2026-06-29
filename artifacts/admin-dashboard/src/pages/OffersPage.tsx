@@ -147,7 +147,7 @@ export function OffersPage() {
 
   return (
     <>
-      <div className="p-8 max-w-4xl mx-auto">
+      <div className="max-w-4xl mx-auto pb-8">
         <PageHeader
           title="Offers & Specials"
           subtitle={`${active.length} active, ${inactive.length} inactive`}
