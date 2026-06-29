@@ -672,25 +672,50 @@ function QRFoodDetailModal({
               </div>
             )}
 
-            {/* Add button */}
+            {/* Add button — mobile/tablet only; hidden on desktop (lg+) */}
             {!unavailable && (
-              <motion.button
-                whileTap={{ scale: 0.97 }}
-                onClick={() => { onAdd(); onClose(); }}
-                className="w-full py-4 rounded-2xl text-[15px] font-semibold flex items-center justify-center gap-2 mt-2"
-                style={{
-                  background: C.gold,
-                  color: C.bg,
-                  boxShadow: "0 4px 24px rgba(212,168,83,0.3)",
-                  ...SANS,
-                }}
-              >
-                <Plus className="w-4 h-4" />
-                {qty > 0 ? `Add another · ${fmt(item.price)}` : `Add to order · ${fmt(item.price)}`}
-              </motion.button>
+              <div className="lg:hidden mt-2">
+                <motion.button
+                  whileTap={{ scale: 0.97 }}
+                  onClick={() => { onAdd(); onClose(); }}
+                  className="w-full py-4 rounded-2xl text-[15px] font-semibold flex items-center justify-center gap-2"
+                  style={{
+                    background: C.gold,
+                    color: C.bg,
+                    boxShadow: "0 4px 24px rgba(212,168,83,0.3)",
+                    ...SANS,
+                  }}
+                >
+                  <Plus className="w-4 h-4" />
+                  {qty > 0 ? `Add another · ${fmt(item.price)}` : `Add to order · ${fmt(item.price)}`}
+                </motion.button>
+              </div>
             )}
           </div>
         </div>
+
+        {/* Sticky footer — desktop only (lg+); never scrolls */}
+        {!unavailable && (
+          <div
+            className="hidden lg:block shrink-0 px-6 py-4"
+            style={{ borderTop: `1px solid ${C.border}` }}
+          >
+            <motion.button
+              whileTap={{ scale: 0.97 }}
+              onClick={() => { onAdd(); onClose(); }}
+              className="w-full py-4 rounded-2xl text-[15px] font-semibold flex items-center justify-center gap-2"
+              style={{
+                background: C.gold,
+                color: C.bg,
+                boxShadow: "0 4px 24px rgba(212,168,83,0.3)",
+                ...SANS,
+              }}
+            >
+              <Plus className="w-4 h-4" />
+              {qty > 0 ? `Add another · ${fmt(item.price)}` : `Add to order · ${fmt(item.price)}`}
+            </motion.button>
+          </div>
+        )}
       </motion.div>
     </motion.div>
   );
