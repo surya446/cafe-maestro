@@ -562,7 +562,10 @@ function QRFoodDetailModal({
         </button>
 
         {/* Scrollable content */}
-        <div className="overflow-y-auto overscroll-contain flex-1">
+        <div
+          className="overflow-y-auto overflow-x-hidden overscroll-contain flex-1 [&::-webkit-scrollbar]:w-[5px] [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-[rgba(212,168,83,0.22)] [&::-webkit-scrollbar-thumb:hover]:bg-[rgba(212,168,83,0.45)]"
+          style={{ scrollbarWidth: "thin", scrollbarColor: "rgba(212,168,83,0.22) transparent" }}
+        >
 
           {/* Image */}
           {item.image_url ? (
@@ -594,7 +597,7 @@ function QRFoodDetailModal({
           )}
 
           {/* Body */}
-          <div className="px-6 pt-5 pb-8 space-y-5">
+          <div className="px-6 pt-5 pb-4 space-y-5">
 
             {/* Name */}
             <div>
@@ -672,32 +675,13 @@ function QRFoodDetailModal({
               </div>
             )}
 
-            {/* Add button — mobile/tablet only; hidden on desktop (lg+) */}
-            {!unavailable && (
-              <div className="lg:hidden mt-2">
-                <motion.button
-                  whileTap={{ scale: 0.97 }}
-                  onClick={() => { onAdd(); onClose(); }}
-                  className="w-full py-4 rounded-2xl text-[15px] font-semibold flex items-center justify-center gap-2"
-                  style={{
-                    background: C.gold,
-                    color: C.bg,
-                    boxShadow: "0 4px 24px rgba(212,168,83,0.3)",
-                    ...SANS,
-                  }}
-                >
-                  <Plus className="w-4 h-4" />
-                  {qty > 0 ? `Add another · ${fmt(item.price)}` : `Add to order · ${fmt(item.price)}`}
-                </motion.button>
-              </div>
-            )}
           </div>
         </div>
 
-        {/* Sticky footer — desktop only (lg+); never scrolls */}
+        {/* Sticky footer — all sizes; never scrolls */}
         {!unavailable && (
           <div
-            className="hidden lg:block shrink-0 px-6 py-4"
+            className="shrink-0 px-6 py-4"
             style={{ borderTop: `1px solid ${C.border}` }}
           >
             <motion.button
