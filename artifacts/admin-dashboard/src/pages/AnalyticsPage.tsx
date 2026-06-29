@@ -1,4 +1,3 @@
-import { AppLayout } from "@/components/layout/AppLayout";
 import { PageHeader } from "@/components/common/PageHeader";
 import { useDashboard } from "@/hooks/useDashboard";
 import { formatCurrency } from "@/lib/utils";
@@ -45,8 +44,7 @@ export function AnalyticsPage() {
   const { data: stats, isLoading } = useDashboard();
 
   return (
-    <AppLayout>
-      <div className="p-8 max-w-5xl mx-auto">
+    <div className="p-8 max-w-5xl mx-auto">
         <PageHeader
           title="Analytics"
           subtitle="Revenue, orders, and performance insights"
@@ -202,6 +200,5 @@ export function AnalyticsPage() {
           </div>
         )}
       </div>
-    </AppLayout>
   );
 }

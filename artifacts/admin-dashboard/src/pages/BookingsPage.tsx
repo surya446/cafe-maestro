@@ -3,7 +3,6 @@ import {
   Plus, Pencil, Trash2, CalendarDays, ChevronLeft, ChevronRight,
   StickyNote, CheckCircle2, XCircle, Armchair, UserX, Wifi, AlertCircle,
 } from "lucide-react";
-import { AppLayout } from "@/components/layout/AppLayout";
 import { PageHeader } from "@/components/common/PageHeader";
 import { EmptyState } from "@/components/common/EmptyState";
 import { ConfirmDialog } from "@/components/common/ConfirmDialog";
@@ -673,7 +672,7 @@ export function BookingsPage() {
   }
 
   return (
-    <AppLayout>
+    <>
       <div className="p-6 lg:p-8 max-w-4xl mx-auto">
         <PageHeader
           title="Bookings"
@@ -838,6 +837,6 @@ export function BookingsPage() {
           }}
         />
       </div>
-    </AppLayout>
+    </>
   );
 }

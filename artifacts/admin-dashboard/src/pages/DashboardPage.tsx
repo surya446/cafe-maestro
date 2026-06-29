@@ -6,7 +6,6 @@ import {
   Clock,
   TrendingUp,
 } from "lucide-react";
-import { AppLayout } from "@/components/layout/AppLayout";
 import { PageHeader } from "@/components/common/PageHeader";
 import { StatusBadge, orderStatusVariant } from "@/components/common/StatusBadge";
 import { useDashboard } from "@/hooks/useDashboard";
@@ -64,8 +63,7 @@ function StatCard({
 
 function LoadingSkeleton() {
   return (
-    <AppLayout>
-      <div className="p-8 max-w-6xl mx-auto">
+    <div className="p-8 max-w-6xl mx-auto">
         <div className="h-8 w-48 bg-muted rounded-lg animate-pulse mb-8" />
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
           {Array.from({ length: 4 }).map((_, i) => (
@@ -77,7 +75,6 @@ function LoadingSkeleton() {
           <div className="h-72 bg-muted rounded-xl animate-pulse" />
         </div>
       </div>
-    </AppLayout>
   );
 }
 
@@ -93,8 +90,7 @@ export function DashboardPage() {
   });
 
   return (
-    <AppLayout>
-      <div className="p-8 max-w-6xl mx-auto">
+    <div className="p-8 max-w-6xl mx-auto">
         <PageHeader
           title="Dashboard"
           subtitle={today}
@@ -219,6 +215,5 @@ export function DashboardPage() {
           </div>
         </div>
       </div>
-    </AppLayout>
   );
 }

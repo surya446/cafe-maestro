@@ -1,6 +1,5 @@
 import { useState, useRef } from "react";
 import { Plus, Trash2, Pencil, Images, Upload, Link as LinkIcon, AlertCircle } from "lucide-react";
-import { AppLayout } from "@/components/layout/AppLayout";
 import { PageHeader } from "@/components/common/PageHeader";
 import { EmptyState } from "@/components/common/EmptyState";
 import { ConfirmDialog } from "@/components/common/ConfirmDialog";
@@ -253,7 +252,7 @@ export function GalleryPage() {
   const [deleteId, setDeleteId] = useState<string | null>(null);
 
   return (
-    <AppLayout>
+    <>
       <div className="p-8 max-w-5xl mx-auto">
         <PageHeader
           title="Gallery"
@@ -367,6 +366,6 @@ export function GalleryPage() {
           }}
         />
       </div>
-    </AppLayout>
+    </>
   );
 }

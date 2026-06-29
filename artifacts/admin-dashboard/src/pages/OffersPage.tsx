@@ -1,6 +1,5 @@
 import { useState } from "react";
 import { Plus, Pencil, Trash2, Tag, ToggleLeft, ToggleRight } from "lucide-react";
-import { AppLayout } from "@/components/layout/AppLayout";
 import { PageHeader } from "@/components/common/PageHeader";
 import { EmptyState } from "@/components/common/EmptyState";
 import { ConfirmDialog } from "@/components/common/ConfirmDialog";
@@ -147,7 +146,7 @@ export function OffersPage() {
   const inactive = offers.filter((o) => !o.is_active);
 
   return (
-    <AppLayout>
+    <>
       <div className="p-8 max-w-4xl mx-auto">
         <PageHeader
           title="Offers & Specials"
@@ -289,6 +288,6 @@ export function OffersPage() {
           }}
         />
       </div>
-    </AppLayout>
+    </>
   );
 }

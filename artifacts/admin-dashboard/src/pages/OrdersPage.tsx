@@ -30,7 +30,6 @@ import QRCode from "react-qr-code";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { AppLayout } from "@/components/layout/AppLayout";
 import { PageHeader } from "@/components/common/PageHeader";
 import { EmptyState } from "@/components/common/EmptyState";
 import {
@@ -1166,7 +1165,7 @@ export function OrdersPage() {
   );
 
   return (
-    <AppLayout>
+    <>
       <PageHeader
         title="Orders & Sessions"
         icon={ClipboardList}
@@ -1224,6 +1223,6 @@ export function OrdersPage() {
           <QRTab />
         </TabsContent>
       </Tabs>
-    </AppLayout>
+    </>
   );
 }

@@ -5,7 +5,6 @@ import {
   Mail,
   Trash2,
 } from "lucide-react";
-import { AppLayout } from "@/components/layout/AppLayout";
 import { PageHeader } from "@/components/common/PageHeader";
 import { EmptyState } from "@/components/common/EmptyState";
 import { Button } from "@/components/ui/button";
@@ -381,7 +380,7 @@ export function StaffPage() {
   }
 
   return (
-    <AppLayout>
+    <>
       <div className="p-8 max-w-4xl mx-auto">
         <PageHeader
           title="Staff"
@@ -547,6 +546,6 @@ export function StaffPage() {
           isPending={deleteUser.isPending}
         />
       </div>
-    </AppLayout>
+    </>
   );
 }

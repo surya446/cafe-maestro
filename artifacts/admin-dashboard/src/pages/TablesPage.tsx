@@ -24,7 +24,6 @@ import {
   AlertTriangle,
 } from "lucide-react";
 import QRCode from "react-qr-code";
-import { AppLayout } from "@/components/layout/AppLayout";
 import { PageHeader } from "@/components/common/PageHeader";
 import { EmptyState } from "@/components/common/EmptyState";
 import { Button } from "@/components/ui/button";
@@ -795,7 +794,7 @@ export function TablesPage() {
 
   // ── Render ────────────────────────────────────────────────────────────────
   return (
-    <AppLayout>
+    <>
       <PageHeader
         icon={TableProperties}
         title="Tables"
@@ -1142,6 +1141,6 @@ export function TablesPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </AppLayout>
+    </>
   );
 }
