@@ -53,14 +53,24 @@ export function useBillRequests() {
   });
 
   useEffect(() => {
+    const channelName = `staff_bill_requests_rt_${crypto.randomUUID()}`;
+
     const channel = supabase
-      .channel(`staff_bill_requests_rt_${Math.random().toString(36).slice(2)}`)
+      .channel(channelName)
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "bill_requests" },
         () => qc.invalidateQueries({ queryKey: ["staff_bill_requests"] })
       )
-      .subscribe();
+      .subscribe((status) => {
+        if (status === "SUBSCRIBED") {
+          // Catch-up: pick up any bill requests that arrived during the
+          // WebSocket establishment window (~100–1000ms). Without this,
+          // a request_bill RPC that commits before SUBSCRIBED is confirmed
+          // would be silently dropped and only caught by the 10s poll.
+          qc.invalidateQueries({ queryKey: ["staff_bill_requests"] });
+        }
+      });
 
     channelRef.current = channel;
     return () => {
@@ -69,19 +79,26 @@ export function useBillRequests() {
     };
   }, [qc]);
 
-  const acknowledgeMutation = useMutation({
-    mutationFn: async (billRequestId: string) => {
-      const { error } = await supabase
-        .from("bill_requests")
-        .update({
-          status: "acknowledged",
-          acknowledged_at: new Date().toISOString(),
-        })
-        .eq("id", billRequestId);
-
+  // Delivering the bill calls clear_table(), which atomically:
+  //   1. Ends all active sessions on the table
+  //   2. Deactivates all session devices (guests see "Session Ended" instantly)
+  //   3. Acknowledges any pending bill request for the table
+  //   4. Marks the table_group as cleared
+  //
+  // This reuses the same RPC the admin "Clear Table" button uses,
+  // so there is no duplicated session-ending logic.
+  const deliverBillMutation = useMutation({
+    mutationFn: async (tableId: string) => {
+      const { error } = await supabase.rpc("clear_table", {
+        p_table_id: tableId,
+      });
       if (error) throw error;
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["staff_bill_requests"] }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["staff_bill_requests"] });
+      qc.invalidateQueries({ queryKey: ["staff_sessions"] });
+      qc.invalidateQueries({ queryKey: ["staff_tables"] });
+    },
   });
 
   const pendingBills = billRequests.filter((b) => b.status === "pending");
@@ -94,8 +111,8 @@ export function useBillRequests() {
     pendingBills,
     acknowledgedBills,
     isLoading,
-    acknowledge: acknowledgeMutation.mutateAsync,
-    isAcknowledging: acknowledgeMutation.isPending,
-    acknowledgingId: acknowledgeMutation.variables as string | undefined,
+    deliverBill: deliverBillMutation.mutateAsync,
+    isDelivering: deliverBillMutation.isPending,
+    deliveringTableId: deliverBillMutation.variables as string | undefined,
   };
 }

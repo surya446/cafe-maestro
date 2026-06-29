@@ -782,12 +782,12 @@ function TablesTab() {
 
 function BillCard({
   bill,
-  onAcknowledge,
-  isAcknowledging,
+  onDeliver,
+  isDelivering,
 }: {
   bill: BillRequest;
-  onAcknowledge: (id: string) => Promise<void>;
-  isAcknowledging: boolean;
+  onDeliver: (tableId: string) => Promise<void>;
+  isDelivering: boolean;
 }) {
   const [busy, setBusy] = useState(false);
   const label = tableLabel(bill.tableNumber, bill.tableName);
@@ -795,7 +795,7 @@ function BillCard({
   async function handle() {
     setBusy(true);
     try {
-      await onAcknowledge(bill.id);
+      await onDeliver(bill.tableId);
     } finally {
       setBusy(false);
     }
@@ -836,10 +836,10 @@ function BillCard({
         <Button
           size="sm"
           className="shrink-0 bg-amber-600 hover:bg-amber-700 text-white"
-          disabled={busy}
+          disabled={busy || isDelivering}
           onClick={handle}
         >
-          {busy ? <Loader2 className="h-3.5 w-3.5 animate-spin mr-1" /> : <CheckCircle2 className="h-3.5 w-3.5 mr-1" />}
+          {busy || isDelivering ? <Loader2 className="h-3.5 w-3.5 animate-spin mr-1" /> : <CheckCircle2 className="h-3.5 w-3.5 mr-1" />}
           Mark Delivered
         </Button>
       )}
@@ -852,7 +852,7 @@ function BillCard({
 }
 
 function BillsTab() {
-  const { pendingBills, acknowledgedBills, isLoading, acknowledge, isAcknowledging } =
+  const { pendingBills, acknowledgedBills, isLoading, deliverBill, isDelivering } =
     useBillRequests();
 
   if (isLoading) {
@@ -884,7 +884,7 @@ function BillsTab() {
           </h3>
           <div className="space-y-2">
             {pendingBills.map((b) => (
-              <BillCard key={b.id} bill={b} onAcknowledge={acknowledge} isAcknowledging={isAcknowledging} />
+              <BillCard key={b.id} bill={b} onDeliver={deliverBill} isDelivering={isDelivering} />
             ))}
           </div>
         </div>
@@ -897,7 +897,7 @@ function BillsTab() {
           </h3>
           <div className="space-y-2">
             {acknowledgedBills.map((b) => (
-              <BillCard key={b.id} bill={b} onAcknowledge={acknowledge} isAcknowledging={isAcknowledging} />
+              <BillCard key={b.id} bill={b} onDeliver={deliverBill} isDelivering={isDelivering} />
             ))}
           </div>
         </div>
@@ -1160,17 +1160,26 @@ export function OrdersPage() {
   // triggering independent network requests. This makes the component re-render
   // reactively whenever the child tabs' realtime hooks invalidate these queries,
   // keeping the nav badges in sync with live data at zero extra cost.
+  //
+  // TanStack Query v5 requires a queryFn even when enabled:false. The stubs
+  // below are never called — enabled:false prevents any execution.
   const { data: allOrders = [] } = useQuery<StaffOrder[]>({
     queryKey: ["staff_orders"],
+    queryFn: () => [] as StaffOrder[],
     enabled: false,
+    staleTime: Infinity,
   });
   const { data: allBills = [] } = useQuery<BillRequest[]>({
     queryKey: ["staff_bill_requests"],
+    queryFn: () => [] as BillRequest[],
     enabled: false,
+    staleTime: Infinity,
   });
   const { data: allSessions = [] } = useQuery<ActiveSession[]>({
     queryKey: ["staff_sessions"],
+    queryFn: () => [] as ActiveSession[],
     enabled: false,
+    staleTime: Infinity,
   });
 
   const pendingOrders = allOrders.filter((o) => o.status === "pending_approval");
