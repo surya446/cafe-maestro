@@ -89,7 +89,7 @@ export function Sidebar({ collapsed, mobileOpen, onToggleCollapse, onCloseMobile
         </div>
 
         {/* Navigation */}
-        <nav className="flex-1 py-4 px-2 space-y-0.5 overflow-hidden">
+        <nav className="flex-1 py-4 px-2 space-y-0.5 overflow-y-auto sidebar-nav">
           {visibleItems.map((item) => {
             const isActive =
               item.href === "/"
@@ -214,7 +214,7 @@ export function Sidebar({ collapsed, mobileOpen, onToggleCollapse, onCloseMobile
         </div>
 
         {/* Navigation */}
-        <nav className="flex-1 py-4 px-3 space-y-0.5 overflow-hidden">
+        <nav className="flex-1 py-4 px-3 space-y-0.5 overflow-y-auto sidebar-nav">
           {visibleItems.map((item) => {
             const isActive =
               item.href === "/"

@@ -282,4 +282,33 @@
   .scrollbar-thin::-webkit-scrollbar { width: 5px; }
   .scrollbar-thin::-webkit-scrollbar-track { background: transparent; }
   .scrollbar-thin::-webkit-scrollbar-thumb { @apply bg-border rounded-full; }
+
+  /* Sidebar nav scrollbar — premium dark/gold theme */
+  .sidebar-nav {
+    scrollbar-width: thin;
+    scrollbar-color: transparent transparent;
+    scroll-behavior: smooth;
+    transition: scrollbar-color 0.3s ease;
+  }
+  .sidebar-nav:hover {
+    scrollbar-color: rgba(212, 168, 83, 0.35) transparent;
+  }
+  .sidebar-nav::-webkit-scrollbar {
+    width: 6px;
+  }
+  .sidebar-nav::-webkit-scrollbar-track {
+    background: transparent;
+    border-radius: 99px;
+  }
+  .sidebar-nav::-webkit-scrollbar-thumb {
+    background: transparent;
+    border-radius: 99px;
+    transition: background 0.3s ease;
+  }
+  .sidebar-nav:hover::-webkit-scrollbar-thumb {
+    background: rgba(212, 168, 83, 0.35);
+  }
+  .sidebar-nav:hover::-webkit-scrollbar-thumb:hover {
+    background: rgba(212, 168, 83, 0.55);
+  }
 }
