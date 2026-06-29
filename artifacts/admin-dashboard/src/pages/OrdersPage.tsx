@@ -1,5 +1,5 @@
 import { useState, useMemo, useRef, useCallback } from "react";
-import { useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { format, formatDistanceToNow } from "date-fns";
 import {
   ClipboardList,
@@ -43,7 +43,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useOrders, StaffOrder, OrderStatus } from "@/hooks/useOrders";
-import { useTableSessions, CafeTable } from "@/hooks/useTableSessions";
+import { useTableSessions, ActiveSession, CafeTable } from "@/hooks/useTableSessions";
 import { useTableGroups, TableOverview, SessionInGroup } from "@/hooks/useTableGroups";
 import { useBillRequests, BillRequest } from "@/hooks/useBillRequests";
 import { useTableManagement } from "@/hooks/useTableManagement";
@@ -1156,13 +1156,26 @@ function QRTab() {
 // ─── Main Page ────────────────────────────────────────────────────────────────
 
 export function OrdersPage() {
-  const qc = useQueryClient();
-  const pendingOrders = (qc.getQueryData<StaffOrder[]>(["staff_orders"]) ?? []).filter(
-    (o) => o.status === "pending_approval"
-  );
-  const pendingBills = (qc.getQueryData<BillRequest[]>(["staff_bill_requests"]) ?? []).filter(
-    (b) => b.status === "pending"
-  );
+  // useQuery with enabled:false subscribes to the existing cache entries without
+  // triggering independent network requests. This makes the component re-render
+  // reactively whenever the child tabs' realtime hooks invalidate these queries,
+  // keeping the nav badges in sync with live data at zero extra cost.
+  const { data: allOrders = [] } = useQuery<StaffOrder[]>({
+    queryKey: ["staff_orders"],
+    enabled: false,
+  });
+  const { data: allBills = [] } = useQuery<BillRequest[]>({
+    queryKey: ["staff_bill_requests"],
+    enabled: false,
+  });
+  const { data: allSessions = [] } = useQuery<ActiveSession[]>({
+    queryKey: ["staff_sessions"],
+    enabled: false,
+  });
+
+  const pendingOrders = allOrders.filter((o) => o.status === "pending_approval");
+  const pendingBills  = allBills.filter((b) => b.status === "pending");
+  const sessionCount  = allSessions.length;
 
   return (
     <>
@@ -1188,6 +1201,11 @@ export function OrdersPage() {
             <TabsTrigger value="tables" className="flex items-center gap-1 shrink-0 whitespace-nowrap text-xs px-2 py-1.5 sm:gap-2 sm:text-sm sm:px-3">
               <TableProperties className="h-3.5 w-3.5 hidden sm:inline" />
               Sessions
+              {sessionCount > 0 && (
+                <span className="ml-1 flex items-center justify-center rounded-full bg-amber-500 text-white text-[10px] font-bold w-4.5 h-4.5 min-w-[18px] px-1">
+                  {sessionCount}
+                </span>
+              )}
             </TabsTrigger>
 
             <TabsTrigger value="bills" className="flex items-center gap-1 shrink-0 whitespace-nowrap text-xs px-2 py-1.5 sm:gap-2 sm:text-sm sm:px-3">
