@@ -43,6 +43,12 @@ const ACTIVE_STATUSES: OrderStatus[] = [
   "ready",
 ];
 
+// ─── Tracing helper ───────────────────────────────────────────────────────────
+
+function trace(msg: string) {
+  console.log(`[ORDER TRACE] ${performance.now().toFixed(1)} ms — ${msg}`);
+}
+
 export function useOrders() {
   const qc = useQueryClient();
   const channelRef = useRef<RealtimeChannel | null>(null);
@@ -50,6 +56,9 @@ export function useOrders() {
   const { data: orders = [], isLoading } = useQuery<StaffOrder[]>({
     queryKey: ["staff_orders"],
     queryFn: async () => {
+      const t0 = performance.now();
+      trace("React Query refetch started");
+
       const { data, error } = await supabase
         .from("orders")
         .select(
@@ -67,7 +76,7 @@ export function useOrders() {
 
       if (error) throw error;
 
-      return (data ?? []).map((o: any) => {
+      const rows = (data ?? []).map((o: any) => {
         const items: StaffOrderItem[] = (o.order_items ?? []).map((oi: any) => ({
           id:          oi.id,
           menuItemId:  oi.menu_item_id,
@@ -93,6 +102,9 @@ export function useOrders() {
           total: items.reduce((s, i) => s + i.unitPrice * i.quantity, 0),
         };
       });
+
+      trace(`React Query refetch completed — ${rows.length} rows (${(performance.now() - t0).toFixed(1)} ms)`);
+      return rows;
     },
     refetchInterval: 12_000,
     refetchIntervalInBackground: false,
@@ -103,22 +115,66 @@ export function useOrders() {
       supabase.removeChannel(channelRef.current);
       channelRef.current = null;
     }
+
+    trace("Realtime channel subscribing");
+
     const channel = supabase
       .channel(`staff_orders_rt_${Math.random().toString(36).slice(2)}`)
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "orders" },
-        () => qc.invalidateQueries({ queryKey: ["staff_orders"] })
+        (payload) => {
+          trace(`Realtime event received (orders) — event=${payload.eventType} order_id=${(payload.new as any)?.id ?? (payload.old as any)?.id ?? "?"}`);
+          trace("invalidateQueries called");
+          qc.invalidateQueries({ queryKey: ["staff_orders"] });
+        }
       )
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "order_items" },
-        () => qc.invalidateQueries({ queryKey: ["staff_orders"] })
+        (payload) => {
+          trace(`Realtime event received (order_items) — event=${payload.eventType} order_id=${(payload.new as any)?.order_id ?? "?"}`);
+          trace("invalidateQueries called");
+          qc.invalidateQueries({ queryKey: ["staff_orders"] });
+        }
       )
-      .subscribe();
+      .subscribe((status, err) => {
+        // ── Status callback: the critical missing piece ────────────────────
+        //
+        // This callback fires on every channel state transition:
+        //   SUBSCRIBING  → initial handshake in progress
+        //   SUBSCRIBED   → channel is live and receiving events
+        //                  also fires after every WebSocket RECONNECT
+        //   CHANNEL_ERROR → server-side problem (auth, overload, etc.)
+        //   TIMED_OUT    → heartbeat missed; client will attempt to reconnect
+        //   CLOSED       → channel was explicitly removed
+        //
+        // ROOT CAUSE FIX:
+        //   Previously .subscribe() had no callback, so when the WebSocket
+        //   reconnected after any disruption the channel silently re-entered
+        //   SUBSCRIBING → SUBSCRIBED with no code reacting. Any INSERT that
+        //   occurred during that reconnection window was permanently missed.
+        //
+        //   By invalidating on every SUBSCRIBED transition we fill the gap:
+        //   the first refetch after reconnect fetches everything committed
+        //   while the channel was dark, making the eventual-consistency
+        //   window as short as a single round-trip.
+
+        if (status === "SUBSCRIBED") {
+          trace("Realtime channel SUBSCRIBED — invalidating to fill reconnect gap");
+          qc.invalidateQueries({ queryKey: ["staff_orders"] });
+        } else if (status === "CHANNEL_ERROR") {
+          trace(`Realtime channel CHANNEL_ERROR — ${String(err ?? "unknown")}`);
+        } else if (status === "TIMED_OUT") {
+          trace("Realtime channel TIMED_OUT — Supabase client will reconnect");
+        } else {
+          trace(`Realtime channel status: ${status}`);
+        }
+      });
 
     channelRef.current = channel;
     return () => {
+      trace("Realtime channel cleanup");
       supabase.removeChannel(channel);
       channelRef.current = null;
     };
