@@ -71,12 +71,64 @@ function expiresIn(iso: string) {
   return `${formatDistanceToNow(d)}`;
 }
 
+function tableDisplayLine(num: number | null, name: string | null) {
+  if (num !== null && name) return `Table ${num} · ${name}`;
+  if (num !== null) return `Table ${num}`;
+  if (name) return name;
+  return "Unknown table";
+}
+
+// ─── Live Waiting Timer ────────────────────────────────────────────────────────
+
+function WaitingTimer({ createdAt }: { createdAt: string }) {
+  const [elapsed, setElapsed] = useState(() =>
+    Math.max(0, Math.floor((Date.now() - new Date(createdAt).getTime()) / 1000))
+  );
+
+  useEffect(() => {
+    const id = setInterval(() => {
+      setElapsed(
+        Math.max(0, Math.floor((Date.now() - new Date(createdAt).getTime()) / 1000))
+      );
+    }, 1000);
+    return () => clearInterval(id);
+  }, [createdAt]);
+
+  const mins = Math.floor(elapsed / 60);
+  const secs = elapsed % 60;
+  const formatted = `${String(mins).padStart(2, "0")}:${String(secs).padStart(2, "0")}`;
+
+  const colorClass =
+    mins < 10  ? "bg-emerald-100 text-emerald-700"
+    : mins < 20 ? "bg-yellow-100 text-yellow-800"
+    : mins < 30 ? "bg-orange-100 text-orange-800"
+    : "bg-red-100 text-red-700";
+
+  const dotClass =
+    mins < 10  ? "bg-emerald-500"
+    : mins < 20 ? "bg-yellow-500"
+    : mins < 30 ? "bg-orange-500"
+    : "bg-red-500";
+
+  return (
+    <span
+      className={cn(
+        "inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-mono font-semibold shrink-0 transition-colors duration-[2000ms]",
+        colorClass
+      )}
+    >
+      <span className={cn("h-1.5 w-1.5 rounded-full shrink-0 transition-colors duration-[2000ms]", dotClass)} />
+      {formatted}
+    </span>
+  );
+}
+
 // ─── Order Card ───────────────────────────────────────────────────────────────
 
 const STATUS_NEXT: Partial<Record<OrderStatus, { label: string; next: OrderStatus }>> = {
-  approved:   { label: "Start Preparing", next: "in_kitchen" },
-  in_kitchen: { label: "Mark Ready",      next: "ready"      },
-  ready:      { label: "Mark Served",     next: "served"      },
+  approved:   { label: "Start Cooking",  next: "in_kitchen" },
+  in_kitchen: { label: "Mark Ready",     next: "ready"      },
+  ready:      { label: "Mark as Served", next: "served"     },
 };
 
 function OrderCard({
@@ -92,7 +144,7 @@ function OrderCard({
   const [rejectNote, setRejectNote] = useState("");
   const [busy, setBusy] = useState(false);
 
-  const label = tableLabel(order.tableNumber, order.tableName);
+  const label = tableDisplayLine(order.tableNumber, order.tableName);
   const advance = STATUS_NEXT[order.status];
 
   async function handleAction(status: OrderStatus, note?: string | null) {
@@ -107,23 +159,23 @@ function OrderCard({
   }
 
   return (
-    <div className="rounded-lg border bg-card shadow-sm flex flex-col">
-      {/* Header */}
-      <div className="flex items-center justify-between px-3 py-2 border-b">
-        <div className="min-w-0">
-          <span className="font-semibold text-sm">{label}</span>
+    <div className="rounded-xl border bg-card shadow-sm flex flex-col">
+      {/* Header — two-row hierarchy + live timer */}
+      <div className="flex items-start justify-between gap-2 px-4 pt-3.5 pb-3 border-b">
+        <div className="min-w-0 flex-1">
+          <p className="font-bold text-sm text-foreground leading-tight truncate">{label}</p>
           {order.customerName && (
-            <span className="ml-2 inline-flex items-center gap-1 text-xs text-muted-foreground">
-              <User className="h-3 w-3" />
-              {order.customerName}
-            </span>
+            <div className="flex items-center gap-1 mt-1">
+              <User className="h-3 w-3 text-muted-foreground shrink-0" />
+              <span className="text-xs text-muted-foreground truncate">{order.customerName}</span>
+            </div>
           )}
         </div>
-        <span className="text-xs text-muted-foreground shrink-0 ml-2">{timeAgo(order.createdAt)}</span>
+        <WaitingTimer createdAt={order.createdAt} />
       </div>
 
       {/* Items */}
-      <div className="px-3 py-2 space-y-1 flex-1">
+      <div className="px-4 py-3 space-y-1.5 flex-1">
         {order.items.map((item) => (
           <div key={item.id} className="flex items-start gap-2 text-sm">
             <span className="shrink-0 font-medium text-primary w-5 text-right">{item.quantity}×</span>
@@ -140,41 +192,44 @@ function OrderCard({
         ))}
       </div>
 
-      {/* Total */}
-      <div className="flex items-center justify-between px-3 py-1.5 border-t bg-muted/30">
-        <span className="text-xs text-muted-foreground">Total</span>
-        <span className="text-sm font-semibold">{formatCurrency(order.total)}</span>
+      {/* Total — single row, prominent amount */}
+      <div className="flex items-center gap-2 px-4 py-2.5 border-t bg-muted/30">
+        <span className="text-xs font-medium text-muted-foreground">Total</span>
+        <span className="text-base font-bold text-foreground">{formatCurrency(order.total)}</span>
       </div>
 
-      {/* Staff note display */}
+      {/* Staff note */}
       {order.staffNote && (
-        <div className="px-3 py-1.5 bg-amber-50 border-t border-amber-100">
+        <div className="px-4 py-2 bg-amber-50 border-t border-amber-100">
           <p className="text-xs text-amber-800">{order.staffNote}</p>
         </div>
       )}
 
       {/* Actions */}
-      <div className="px-3 py-2.5 border-t space-y-2">
+      <div className="px-4 py-3.5 border-t space-y-2">
         {order.status === "pending_approval" && !rejecting && (
           <div className="flex gap-2">
             <Button
               size="sm"
-              className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white"
+              className="flex-1 h-9 bg-emerald-600 hover:bg-emerald-700 text-white font-medium"
               disabled={busy}
               onClick={() => handleAction("approved")}
             >
-              {busy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <CheckCircle2 className="h-3.5 w-3.5 mr-1" />}
-              Approve
+              {busy
+                ? <Loader2 className="h-3.5 w-3.5 animate-spin mr-1.5" />
+                : <CheckCircle2 className="h-3.5 w-3.5 mr-1.5" />
+              }
+              Approve Order
             </Button>
             <Button
               size="sm"
               variant="outline"
-              className="flex-1 text-destructive border-destructive/40 hover:bg-destructive/10"
+              className="flex-1 h-9 text-destructive border-destructive/40 hover:bg-destructive/10 font-medium"
               disabled={busy}
               onClick={() => setRejecting(true)}
             >
-              <XCircle className="h-3.5 w-3.5 mr-1" />
-              Reject
+              <XCircle className="h-3.5 w-3.5 mr-1.5" />
+              Reject Order
             </Button>
           </div>
         )}
@@ -192,17 +247,17 @@ function OrderCard({
               <Button
                 size="sm"
                 variant="destructive"
-                className="flex-1"
+                className="flex-1 h-9"
                 disabled={busy}
                 onClick={() => handleAction("cancelled", rejectNote || null)}
               >
-                {busy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : null}
-                Confirm Reject
+                {busy ? <Loader2 className="h-3.5 w-3.5 animate-spin mr-1" /> : null}
+                Confirm Rejection
               </Button>
               <Button
                 size="sm"
                 variant="ghost"
-                className="flex-1"
+                className="flex-1 h-9"
                 onClick={() => { setRejecting(false); setRejectNote(""); }}
               >
                 Cancel
@@ -214,11 +269,17 @@ function OrderCard({
         {advance && (
           <Button
             size="sm"
-            className="w-full"
+            className="w-full h-9 font-medium"
             disabled={busy}
             onClick={() => handleAction(advance.next)}
           >
-            {busy ? <Loader2 className="h-3.5 w-3.5 animate-spin mr-1.5" /> : null}
+            {busy ? (
+              <Loader2 className="h-3.5 w-3.5 animate-spin mr-1.5" />
+            ) : order.status === "approved" ? (
+              <ChefHat className="h-3.5 w-3.5 mr-1.5" />
+            ) : (
+              <CheckCircle2 className="h-3.5 w-3.5 mr-1.5" />
+            )}
             {advance.label}
           </Button>
         )}
@@ -246,13 +307,18 @@ function KitchenColumn({
 }) {
   return (
     <div className="flex flex-col gap-3 min-w-0">
-      <div className={cn("flex items-center justify-between px-3 py-2 rounded-lg font-medium text-sm", color)}>
+      {/* Sticky on mobile only — md:static keeps desktop as-is */}
+      <div className={cn(
+        "flex items-center justify-between px-3 py-2.5 rounded-lg font-semibold text-sm",
+        "sticky top-0 z-10 md:static md:rounded-lg",
+        color
+      )}>
         <span>{title}</span>
         <span className="ml-2 bg-white/30 rounded-full px-2 py-0.5 text-xs font-bold">{orders.length}</span>
       </div>
-      <div className="space-y-2">
+      <div className="space-y-3">
         {orders.length === 0 ? (
-          <div className="rounded-lg border border-dashed bg-muted/30 px-4 py-5 text-center text-sm text-muted-foreground">
+          <div className="rounded-xl border border-dashed bg-muted/30 px-4 py-6 text-center text-sm text-muted-foreground">
             {emptyText}
           </div>
         ) : (
