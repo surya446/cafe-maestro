@@ -31,6 +31,7 @@ import { CafeAboutPage } from "@/pages/CafeAboutPage";
 import { CafeContactPage } from "@/pages/CafeContactPage";
 import { ChangePasswordPage } from "@/pages/ChangePasswordPage";
 import { TablesPage } from "@/pages/TablesPage";
+import { DownloadsPage } from "@/pages/DownloadsPage";
 
 function LoadingScreen() {
   return (
@@ -78,6 +79,7 @@ function AdminShell() {
           <Route path="/analytics" component={AnalyticsPage} />
           <Route path="/settings" component={SettingsPage} />
           <Route path="/website-settings" component={WebsiteSettingsPage} />
+          <Route path="/downloads" component={DownloadsPage} />
           <Route><Redirect to="/" /></Route>
         </Switch>
       </AppLayout>
