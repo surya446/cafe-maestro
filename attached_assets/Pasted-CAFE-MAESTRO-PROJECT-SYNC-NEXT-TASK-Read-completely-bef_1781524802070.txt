@@ -1,0 +1,265 @@
+CAFE MAESTRO PROJECT SYNC + NEXT TASK
+
+Read completely before making any changes.
+
+Project:
+Cafe Maestro
+
+Architecture:
+
+* Public Website
+* QR Ordering
+* Kitchen Dashboard
+* Staff Dashboard
+* Admin Dashboard
+
+Single backend.
+Single database.
+Single source of truth.
+
+Completed:
+
+* QR ordering
+* Multi-session tables
+* Table groups
+* Bill requests
+* Table clearing
+* Kitchen dashboard
+* Staff dashboard
+* Admin dashboard
+* Menu management
+* Offers management
+* Reviews management
+* Gallery management
+* Booking management
+* Website settings
+* Staff account creation
+* Gmail SMTP email delivery
+* Forced password change
+* Public website routes
+* Booking modal system
+
+Public Website Routes:
+
+* /admin/cafe
+* /admin/cafe/menu
+* /admin/cafe/gallery
+* /admin/cafe/offers
+* /admin/cafe/reviews
+* /admin/cafe/about
+* /admin/cafe/contact
+
+Menu System:
+
+* Uses menu_items
+* Uses menu_categories
+* No duplicate tables
+* Public website and QR ordering share same menu source
+
+Booking CTAs:
+Audit completed.
+All booking buttons now open BookingModalContext.
+CafeMenuPage CTA fixed.
+No more /book navigation from menu CTA.
+
+---
+
+## CURRENT OPEN ISSUES
+
+1. MENU DELETE BUG
+
+Admin → Menu
+
+Deleting a menu item shows:
+
+[plugin:runtime-error-plugin]
+(unknown runtime error)
+
+Required:
+
+Trace:
+Delete Button
+→ Hook
+→ Mutation
+→ Supabase Query/RPC
+→ Database
+
+Capture:
+
+* console error
+* network error
+* database error
+* RLS error
+* foreign key error
+
+Do not guess.
+
+Find exact root cause.
+Fix it.
+
+---
+
+2. MENU AVAILABILITY SYSTEM
+
+Admin:
+is_available toggle
+
+Public Website:
+
+* show item
+* show price
+* NO unavailable badge
+
+QR Ordering:
+
+* show unavailable badge
+* disable ordering
+
+---
+
+3. REALTIME AVAILABILITY
+
+Current:
+Admin toggles OFF
+Customer must refresh
+
+Required:
+Realtime updates using Supabase Realtime.
+
+Affected:
+
+* menu list
+* cart
+
+---
+
+4. CART RECONCILIATION
+
+Scenario:
+
+Cart:
+Coffee
+Burger
+
+Admin:
+Coffee OFF
+
+Required:
+
+Coffee:
+Out of Stock
+
+Burger:
+Normal
+
+Order:
+Burger only
+
+Coffee excluded.
+
+---
+
+5. SINGLE ITEM CART
+
+Cart:
+Coffee
+
+Admin:
+Coffee OFF
+
+Required:
+
+Out of Stock
+
+Total:
+₹0
+
+Place Order:
+Disabled
+
+---
+
+6. SERVER VALIDATION
+
+Order creation must validate:
+
+menu_items.is_available = true
+
+Server-side.
+
+---
+
+7. QR MENU IMAGES
+
+Current:
+Website images visible.
+QR images missing.
+
+Required:
+
+80x80 image
+square
+object-cover
+rounded
+lazy loaded
+
+---
+
+8. SESSION PERSISTENCE
+
+Current:
+Refresh asks name again.
+
+Required:
+
+sessionStorage
+
+Same tab:
+continue session
+
+New tab:
+new session
+
+No localStorage.
+
+---
+
+9. EXPIRED SESSIONS
+
+Current:
+Expired session still shows End Session button.
+
+Required:
+
+ACTIVE
+→ End Session
+
+EXPIRED
+→ no button
+
+ENDED
+→ no button
+
+---
+
+START WITH ISSUE #1 ONLY.
+
+Do not implement other issues yet.
+
+Investigate the Menu Delete bug.
+
+Before coding:
+
+1. Audit implementation.
+2. Find actual error.
+3. Find root cause.
+4. Produce plan.
+
+Then implement.
+
+After completion provide:
+
+* root cause
+* files modified
+* build status
+* verification

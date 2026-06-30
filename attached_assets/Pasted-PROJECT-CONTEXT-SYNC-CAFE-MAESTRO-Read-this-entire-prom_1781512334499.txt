@@ -1,0 +1,196 @@
+PROJECT CONTEXT SYNC – CAFE MAESTRO
+
+Read this entire prompt before making any changes.
+
+## Project Overview
+
+This is a Cafe Management Platform called Cafe Maestro.
+
+Architecture:
+
+1. Public Website
+2. QR Ordering System
+3. Staff Dashboard
+4. Kitchen Dashboard
+5. Admin Dashboard
+
+Single database and single source of truth.
+
+## Current Tech Stack
+
+* React
+* TypeScript
+* Vite
+* TailwindCSS
+* Supabase
+* Framer Motion
+* GSAP
+* React Three Fiber (planned for premium public website)
+
+## Current Features Already Implemented
+
+* QR ordering
+* Multi-session tables
+* Table groups
+* Bill requests
+* Table clearing workflow
+* Kitchen dashboard
+* Staff dashboard
+* Admin dashboard
+* Menu management
+* Offer management
+* Booking management
+* Reviews management
+* Staff account creation
+* Gmail SMTP email delivery
+* Role-based access control
+* Audit infrastructure
+
+## Staff Account System
+
+Invite flow was removed.
+
+Current flow:
+
+* Owner creates account
+* Temporary password generated
+* Gmail SMTP sends credentials
+* User logs in
+* User forced to change password
+* must_change_password column exists
+
+## Known Fixes Already Done
+
+* create-staff-member edge function exists and works
+* Gmail SMTP works
+* Staff listing bug fixed
+* deleted_at filter issue identified
+* staff_users uses is_active
+* Website Settings feature implemented
+* Public menu uses same menu_items table as QR ordering
+* No duplicate menu tables
+
+## Public Website Status
+
+Already implemented:
+
+Routes:
+
+* /admin/cafe
+* /admin/cafe/menu
+
+Files already created:
+
+* usePublicMenu.ts
+* usePublicWebsiteSettings.ts
+* CafeLayout.tsx
+* CafePage.tsx
+* CafeMenuPage.tsx
+
+Menu Requirements Already Implemented:
+
+* Uses menu_items and menu_categories
+* Out-of-stock items visible
+* Out-of-stock badge shown
+* No duplicate menu system
+
+## Website Settings
+
+website_settings exists and drives branding:
+
+* cafe_name
+* tagline
+* hero_title
+* hero_subtitle
+* logo_url
+* hero_image_url
+* about_content
+* address
+* phone
+* email
+* social links
+* opening_hours
+* theme colors
+
+## Current Product Direction
+
+Goal is NOT a simple QR ordering system.
+
+Goal is:
+
+Luxury Cafe Website
++
+QR Ordering
++
+Kitchen Operations
++
+Staff Management
++
+Admin Management
+
+## Design Requirements
+
+Luxury cafe feel
+Minimal design
+Premium experience
+Smooth animations
+High performance
+
+Animation Stack:
+
+* Framer Motion
+* GSAP
+* ScrollTrigger
+* Lenis
+* React Three Fiber
+
+Rules:
+
+* React Three Fiber only in hero section
+* GSAP for scroll animations
+* Framer Motion for UI animations
+* Mobile-first
+* Tablet responsive
+* Desktop responsive
+* Performance-first
+
+## Next Features To Build (Priority Order)
+
+1. Public Website Completion
+
+   * Home
+   * Gallery
+   * Offers
+   * Reviews
+   * Book Table
+   * About
+   * Contact
+
+2. Staff Activity Logs
+
+3. Review Popup After Table Clear
+   Flow:
+   Clear Table
+   → Review Popup
+   → Session Closed Screen
+
+4. Out Of Stock Toggle
+
+5. Kitchen Notification Sound
+
+## Important Architectural Rules
+
+* One menu system only
+* One source of truth
+* Public website menu and QR menu use same tables
+* Out-of-stock items remain visible
+* Website settings drive branding
+* No duplicate data structures
+
+Before writing any code:
+
+1. Read existing implementation.
+2. Verify actual current state.
+3. Report findings.
+4. Produce implementation plan.
+5. Only then start coding.

@@ -1,0 +1,234 @@
+Feature: Advanced Table Management Dashboard
+
+Goal:
+
+Upgrade the Tables page into a real operational dashboard with live table status tracking and consistent state management.
+
+IMPORTANT:
+
+Before implementing UI changes, audit the existing data model and ensure there is a single source of truth for table state.
+
+A table must never simultaneously appear as:
+
+* Free
+* Busy
+* Booked
+* Under Maintenance
+* Archived
+
+Only one state may be active at a time.
+
+Create a status model:
+
+ACTIVE STATES:
+
+* free
+* busy
+* booked
+* maintenance
+
+SEPARATE FLAG:
+
+* archived
+
+Archived tables must never appear in operational views.
+
+---
+
+TABLE DASHBOARD CARDS
+
+Replace:
+
+* Total Tables
+* Active
+* Archived
+
+With:
+
+* Total Tables
+* Free Tables
+* Busy Tables
+* Booked Tables
+* Under Maintenance
+* Archived Tables
+
+All counts must update in real time.
+
+Definitions:
+
+FREE:
+
+* active table
+* no active session
+* no active booking occupying it now
+* not under maintenance
+
+BUSY:
+
+* active table
+* active table session exists
+
+BOOKED:
+
+* confirmed booking exists for current date/time window
+
+UNDER MAINTENANCE:
+
+* maintenance toggle enabled
+
+ARCHIVED:
+
+* archived flag enabled
+
+---
+
+TABLE LIST FILTERS
+
+Clicking each dashboard card should filter the table list.
+
+Examples:
+
+Free Tables:
+→ show only free tables
+
+Busy Tables:
+→ show only busy tables
+
+Booked Tables:
+→ show only booked tables
+
+Maintenance:
+→ show only maintenance tables
+
+Archived:
+→ show only archived tables
+
+---
+
+UNDER MAINTENANCE
+
+Add maintenance toggle to each table.
+
+ON:
+
+* table hidden from booking assignment
+* table hidden from available seating
+* QR ordering blocked
+* status = maintenance
+
+OFF:
+
+* normal status calculation resumes
+
+---
+
+ARCHIVED TABLES
+
+Archived tables section should contain:
+
+* Restore
+* Permanently Delete
+
+Before permanent delete:
+
+Check:
+
+* orders
+* sessions
+* bookings
+
+If historical records exist:
+
+Block deletion and show explanation.
+
+Only allow permanent deletion when no references exist.
+
+---
+
+BOOKING VISIBILITY
+
+When viewing a table:
+
+Show today's bookings.
+
+Example:
+
+Table 3
+
+Today:
+12:00 PM - Confirmed
+2 guests
+
+7:00 PM - Confirmed
+4 guests
+
+Display:
+
+* guest name
+* booking time
+* party size
+* booking status
+
+---
+
+REAL-TIME CONSISTENCY
+
+Changes must update everywhere immediately:
+
+Table archive
+Table restore
+Maintenance toggle
+Booking confirmation
+Booking cancellation
+Session start
+Session end
+
+Affected pages:
+
+* Tables dashboard
+* Orders
+* Sessions
+* Bookings
+* QR ordering
+* Analytics
+
+No manual refreshes.
+
+---
+
+UI IMPROVEMENTS
+
+Current issues:
+
+* spacing inconsistent
+* card alignment inconsistent
+* table rows feel crowded
+
+Improve:
+
+* spacing
+* card hierarchy
+* status badges
+* responsive layout
+* visual consistency
+
+Keep current design language.
+
+Do not redesign the entire admin panel.
+
+---
+
+DELIVERABLES
+
+1. Data model audit
+2. Status calculation logic
+3. Files modified
+4. Database changes
+5. Real-time flow verification
+6. Mobile verification
+7. Desktop verification
+8. Edge-case testing results
+
+Do not implement shortcuts.
+
+Ensure every table status is derived consistently from the same source of truth.

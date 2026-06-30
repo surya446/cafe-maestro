@@ -1,0 +1,180 @@
+Update the architecture based on the following final project decisions.
+
+Project Name: Cafe Maestro
+
+Note:
+"Cafe Maestro" is the platform/product name.
+The actual cafe using the platform is named "Cup & Cozy".
+
+Apply the following architecture changes and regenerate the architecture document where necessary.
+
+1. Multi-Cafe First Architecture
+
+The platform must be designed as a multi-cafe SaaS from day one.
+
+Create a root cafes table.
+
+All major entities must contain cafe_id.
+
+This includes:
+
+* tables
+* table_sessions
+* menu_categories
+* menu_items
+* orders
+* order_items
+* bookings
+* gallery_items
+* reviews
+* offers
+* staff_profiles
+
+The architecture must support multiple cafes without requiring future database redesign.
+
+2. Session Architecture
+
+Remove the concept that the first device creates the session.
+
+Instead:
+
+* Every QR scan creates or joins a table session.
+* Multiple devices can participate in the same table session.
+* Sessions are the core unit.
+* Devices belong to sessions.
+* Orders belong to sessions.
+
+Design around active device participation rather than "first device ownership".
+
+3. Active Device Tracking
+
+Remove:
+
+device_count integer
+
+from table_sessions.
+
+Device counts must be calculated from session_devices.
+
+Staff dashboard should display:
+
+Table 5
+Active Devices: 5
+
+based on realtime session_devices records.
+
+4. Session Management
+
+There must be no table open/close workflow.
+
+Only:
+
+* Active Session
+* Expired Session
+* Ended Session
+
+Staff and admins can click:
+
+End Session
+
+When End Session is triggered:
+
+* All active devices are invalidated immediately.
+* All connected customers receive:
+
+"Session ended. Please scan the QR code again."
+
+* Ordering becomes impossible until a new session is established.
+
+5. Bill Request Feature
+
+Add a complete Request Bill workflow.
+
+Customer:
+
+* Request Bill button
+
+Staff Dashboard:
+
+* Bill Request Queue
+* Table number
+* Request timestamp
+
+Design database schema, realtime events and API architecture for this feature.
+
+6. Owner Settings
+
+Remove website theme customization.
+
+Owner should NOT be able to change:
+
+* animations
+* layouts
+* branding system
+* 3D effects
+* design system
+
+Owner settings should only contain:
+
+* Cafe Name
+* Business Phone
+* Address
+* Opening Hours
+* Social Media Links
+
+7. Frontend Data Layer
+
+Use:
+
+TanStack Query
+
+only.
+
+Remove SWR entirely.
+
+8. Data Consistency Requirement
+
+This is a non-negotiable requirement.
+
+The platform must maintain a single source of truth.
+
+Future:
+
+* Staff App
+* Owner App
+* Kitchen App
+* Tablet App
+
+must all use:
+
+* same backend
+* same APIs
+* same database
+
+No duplicated data models.
+No migration-based redesigns.
+
+9. Cup & Cozy Example
+
+When giving examples throughout the architecture document:
+
+Use:
+
+Cafe Maestro = Platform Name
+
+Cup & Cozy = Example Cafe
+
+For example:
+
+Cafe Maestro Platform
+└── Cup & Cozy Cafe
+
+10. Final Review
+
+After applying all changes:
+
+Review the architecture critically.
+
+Identify any remaining scalability, consistency, session management, security or mobile-upgrade issues.
+
+Then provide the final revised architecture before proceeding to database implementation.

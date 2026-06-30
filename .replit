@@ -1,0 +1,46 @@
+modules = ["nodejs-20", "web"]
+
+[deployment]
+router = "application"
+deploymentTarget = "autoscale"
+
+[deployment.postBuild]
+args = ["pnpm", "store", "prune"]
+env = { "CI" = "true" }
+
+[workflows]
+
+[agent]
+stack = "PNPM_WORKSPACE"
+expertMode = true
+
+[postMerge]
+path = "scripts/post-merge.sh"
+timeoutMs = 20000
+
+[[ports]]
+localPort = 8080
+externalPort = 80
+
+[[ports]]
+localPort = 8081
+externalPort = 8081
+
+[[ports]]
+localPort = 8082
+externalPort = 3001
+
+[[ports]]
+localPort = 22133
+externalPort = 3000
+
+[userenv]
+
+[userenv.shared]
+VITE_SUPABASE_ANON_KEY = "sb_publishable_Wo9WRTgiL6wMdZ_TqoewxA_hgYZ142O"
+VITE_SUPABASE_URL = "https://usllfqogcdskfeszntwf.supabase.co"
+SUPABASE_ACCESS_TOKEN = "sbp_a96279ee8c99189acaf7f2ef5bfae3a89d6c9b4a"
+
+[nix]
+channel = "stable-25_05"
+packages = ["supabase-cli"]

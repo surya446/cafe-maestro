@@ -1,0 +1,133 @@
+PROJECT CONTEXT
+
+This is a Cafe Management Platform with:
+
+* Public customer website
+* QR table ordering
+* Staff dashboard
+* Kitchen dashboard
+* Admin dashboard
+* Supabase backend
+
+CURRENT STATUS
+
+QR ordering system works.
+
+Architecture:
+
+* Each customer scans the same table QR.
+* Each scan creates a separate session.
+* Customer enters their name before ordering.
+* Multiple customers at the same table can order independently.
+* Customers can see all orders placed by the current table group.
+* Orders are attributed to customer names.
+* Bill is table-scoped.
+* Staff can end individual sessions.
+* Table groups were implemented to separate different customer groups across the day.
+* Staff clears a table after customers leave.
+* Next customers become a new table group.
+* Old orders must never appear in a new group.
+
+Database already contains:
+
+* table_groups
+* table_sessions.group_id
+* create_session()
+* get_table_orders()
+* clear_table()
+* staff_request_bill()
+
+STAFF MANAGEMENT STATUS
+
+Current system uses invitation-based onboarding.
+
+Problems encountered:
+
+* Supabase invite rate limits
+* Broken invite links
+* Redirect issues
+* Expired invitation issues
+* User cleanup issues
+
+DECISION
+
+Invitation-based onboarding must be completely removed.
+
+NEW REQUIREMENTS
+
+Replace invitation onboarding with direct account creation.
+
+NEW FLOW
+
+Owner/Admin
+↓
+Create Staff Account
+↓
+Enter:
+
+* Full Name
+* Email
+* Role
+  ↓
+  System generates secure temporary password
+  ↓
+  Create Supabase Auth user immediately
+  ↓
+  Create/update staff_users record
+  ↓
+  Send email containing:
+* Email
+* Temporary password
+* Login URL
+  ↓
+  Staff logs in
+  ↓
+  Forced password change
+  ↓
+  Normal access
+
+REQUIREMENTS
+
+1. Remove invite workflow completely.
+2. Remove invite acceptance flow completely.
+3. Remove dependency on Supabase invitation emails.
+4. Generate strong random temporary password.
+5. Create Supabase Auth user directly.
+6. Create/update staff_users record.
+7. Add must_change_password boolean field.
+8. Send email containing credentials.
+9. First login must force password change.
+10. After password change:
+    must_change_password = false
+11. Keep existing owner/manager/staff roles.
+12. Keep audit logging.
+13. Keep permissions system.
+14. Keep existing staff management UI.
+15. Add delete staff functionality.
+16. Add deactivate/reactivate staff functionality.
+17. Do NOT add role promotion/demotion yet.
+
+IMPLEMENTATION APPROACH
+
+Before making changes:
+
+1. Read current staff management pages.
+2. Read current staff_users schema.
+3. Read current Supabase edge functions.
+4. Read current auth flow.
+5. Produce a migration plan.
+6. Then implement.
+
+IMPORTANT
+
+Do not redesign unrelated parts of the project.
+
+Focus only on replacing invitation onboarding with direct account creation + temporary password + forced password reset.
+
+After implementation:
+
+* List every modified file.
+* List every new file.
+* List every migration.
+* List every removed invite-related component.
+* Verify build passes.

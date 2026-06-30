@@ -1,0 +1,287 @@
+# Generate a Complete Local Setup Guide
+
+I want this project to be runnable entirely on my own Windows PC without Replit.
+
+Create a complete step-by-step guide in a new file named:
+
+`LOCAL_SETUP.md`
+
+The guide should assume the reader is a beginner and explain everything from scratch.
+
+Include the following sections in order.
+
+## 1. Prerequisites
+
+Explain what needs to be installed.
+
+Include official download links for:
+
+* Git
+* Node.js (LTS)
+* npm
+* VS Code
+* Docker Desktop (if required)
+* Supabase CLI (if required)
+
+Mention the recommended versions.
+
+---
+
+## 2. Downloading the Project
+
+Explain both methods.
+
+### Option A
+
+Clone from GitHub.
+
+Include every command.
+
+### Option B
+
+Download the ZIP from GitHub.
+
+Explain how to extract it.
+
+Explain how to open it in VS Code.
+
+---
+
+## 3. Opening the Project
+
+Explain:
+
+* opening the project folder
+* opening the integrated terminal
+* checking Node version
+* checking npm version
+* checking Git version
+
+---
+
+## 4. Installing Dependencies
+
+Explain every command.
+
+For example:
+
+npm install
+
+If there are multiple packages or workspaces, explain exactly where each command must be run.
+
+---
+
+## 5. Environment Variables
+
+This is extremely important.
+
+Create a table listing EVERY required environment variable.
+
+For each variable include:
+
+* Variable name
+* Description
+* Example format
+* Where to obtain it
+* Which file it belongs in
+
+Example:
+
+SUPABASE_URL
+
+SUPABASE_ANON_KEY
+
+SUPABASE_SERVICE_ROLE_KEY
+
+DATABASE_URL
+
+VITE_SUPABASE_URL
+
+VITE_SUPABASE_ANON_KEY
+
+etc.
+
+Also explain:
+
+How to create:
+
+.env
+
+.env.local
+
+.env.production
+
+Which secrets should NEVER be committed to Git.
+
+---
+
+## 6. Database Setup
+
+Explain:
+
+How to connect the project to Supabase.
+
+How to link the project.
+
+How to apply migrations.
+
+How to seed sample data.
+
+How to verify everything worked.
+
+---
+
+## 7. Storage Buckets
+
+Explain how to create:
+
+* gallery
+* website-assets
+
+Explain required permissions.
+
+Explain RLS policies.
+
+Explain how to verify uploads work.
+
+---
+
+## 8. Running the Project
+
+Explain every command required.
+
+For example:
+
+Frontend
+
+Backend
+
+API server
+
+Supabase
+
+Include which terminal each command should run in.
+
+Explain what URL each service will open.
+
+---
+
+## 9. First Login
+
+Explain:
+
+Default admin account (if seeded)
+
+Or how to create the first owner account.
+
+---
+
+## 10. Troubleshooting
+
+Create a table with common problems.
+
+Examples:
+
+Node version mismatch
+
+npm install fails
+
+Supabase not connected
+
+Realtime not working
+
+Images not uploading
+
+QR scanner not opening
+
+Storage bucket missing
+
+Port already in use
+
+Migration failed
+
+Git authentication failed
+
+---
+
+## 11. Updating the Project
+
+Explain how to pull the latest code.
+
+Explain how to install new dependencies.
+
+Explain how to apply new migrations.
+
+---
+
+## 12. Deploying
+
+Explain how to deploy the project after local testing.
+
+Include:
+
+Frontend
+
+Backend
+
+Database
+
+Supabase
+
+Environment variables
+
+---
+
+## 13. Project Structure
+
+Explain every major folder.
+
+For example:
+
+admin-dashboard/
+
+api-server/
+
+supabase/
+
+migrations/
+
+functions/
+
+shared/
+
+docs/
+
+assets/
+
+Explain what each folder is responsible for.
+
+---
+
+## 14. Backup Strategy
+
+Explain how to safely back up:
+
+Database
+
+Storage
+
+Environment variables
+
+Git repository
+
+---
+
+## 15. Production Checklist
+
+Create a checklist that confirms everything is correctly configured before deployment.
+
+---
+
+The guide should be extremely detailed.
+
+Do not skip any steps.
+
+Assume the user has never run this project outside Replit before.
+
+Verify every command against the current project so there are no missing steps or incorrect instructions.

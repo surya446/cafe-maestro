@@ -1,0 +1,166 @@
+Implement user deletion and deactivation in the Staff Management module.
+
+Requirements:
+
+Current system:
+
+* Owner can add Managers and Staff.
+* Users have roles: owner, manager, staff.
+* Users already have an active/inactive state.
+
+Do NOT implement role promotion/demotion.
+
+Implement only:
+
+1. Delete User
+2. Disable/Enable User
+
+Business Rules
+
+Owner:
+
+* Can disable/enable staff
+* Can disable/enable managers
+* Can delete staff
+* Can delete managers
+* Cannot delete owner
+* Cannot disable owner
+
+Manager:
+
+* Can disable/enable staff
+* Can delete staff
+* Cannot delete managers
+* Cannot delete owner
+* Cannot disable owner
+
+Staff:
+
+* Cannot manage users
+
+Deletion Strategy
+
+Do NOT physically remove records.
+
+Use soft delete:
+
+Add columns if missing:
+
+deleted_at timestamptz
+deleted_by uuid
+
+When deleting:
+
+is_active = false
+deleted_at = now()
+deleted_by = auth.uid()
+
+Deleted users should be hidden from the default staff list.
+
+Historical data must remain intact.
+
+Orders, audits, sessions, analytics, and historical records must continue to reference the deleted user safely.
+
+Database
+
+Create migration:
+
+027_staff_deletion.sql
+
+Include:
+
+* deleted_at column
+* deleted_by column
+* RLS rules
+* delete_user(user_id uuid) SECURITY DEFINER RPC
+* restore_user(user_id uuid) SECURITY DEFINER RPC (optional but recommended)
+* role checks
+* ownership checks
+
+UI Changes
+
+Staff Management Page
+
+For each user row:
+
+Staff:
+[Disable/Enable]
+[Delete]
+
+Manager:
+[Disable/Enable]
+[Delete] (Owner only)
+
+Owner:
+No Delete button
+No Disable button
+
+Delete Flow
+
+When Delete is clicked:
+
+Modal:
+
+Delete <name>?
+
+This action will remove the user from active staff lists.
+Historical records will remain.
+
+[Cancel]
+[Delete]
+
+After confirmation:
+
+Call delete_user RPC
+Refresh list
+Show success toast
+
+Disable Flow
+
+Current toggle should continue working.
+
+If user is disabled:
+
+Show badge:
+Disabled
+
+Realtime / Refresh
+
+After delete or disable:
+
+* refresh users list
+* update counts
+* no page reload
+
+Security
+
+Server-side validation is mandatory.
+
+Do NOT rely on frontend role checks.
+
+RPC must verify:
+
+* caller role
+* target role
+* same cafe ownership
+
+Prevent:
+
+* deleting owner
+* disabling owner
+* manager deleting manager
+* manager deleting owner
+* staff managing anyone
+
+Deliverables
+
+1. Migration 027_staff_deletion.sql
+2. Updated Staff Management UI
+3. Delete confirmation modal
+4. Soft-delete RPC
+5. Optional restore RPC
+6. No TypeScript errors
+7. No breaking changes to existing staff functionality
+
+Before editing code:
+read existing staff schema, RLS, hooks, and staff management page completely and reuse existing architecture.

@@ -1,0 +1,217 @@
+Redesign the "Add Menu Item" dialog for mobile and tablet.
+
+Current problems:
+- Keyboard covers the form.
+- User cannot comfortably scroll while typing.
+- Dialog feels cramped.
+- Currency still shows AUD instead of ₹.
+- Not touch friendly.
+
+Requirements
+
+1. Currency
+
+Replace every AUD reference with INR.
+
+Examples:
+Price (₹)
+Placeholder:
+99
+Show ₹ throughout the admin dashboard.
+
+Do not affect database storage—only UI labels and formatting.
+
+------------------------------------------------
+
+2. Mobile dialog
+
+Do NOT use a centered popup.
+
+On screens below 768px:
+
+Open the dialog as a full-screen bottom sheet.
+
+Style:
+- height: 100dvh
+- width: 100%
+- rounded top corners only
+- safe-area support
+- premium white background
+- sticky header
+- sticky footer
+
+Header:
+
+← Back
+
+New Menu Item
+
+Close (X)
+
+------------------------------------------------
+
+3. Keyboard handling
+
+When the keyboard opens:
+
+- Dialog must resize properly.
+- Form must remain scrollable.
+- Focused input should automatically scroll into view.
+- Buttons should never be hidden.
+
+Use:
+100dvh
+overflow-y-auto
+overscroll-contain
+scroll-padding-bottom
+env(safe-area-inset-bottom)
+
+Do NOT lock scrolling while editing.
+
+------------------------------------------------
+
+4. Sticky footer
+
+Always visible.
+
+Contains:
+
+Cancel
+
+Create Item
+
+Even with keyboard open.
+
+------------------------------------------------
+
+5. Better spacing
+
+Increase spacing.
+
+Use approximately:
+
+24px page padding
+
+20px between sections
+
+16px between fields
+
+Inputs:
+height around 52px
+
+Textarea:
+minimum 120px
+
+Large touch targets.
+
+------------------------------------------------
+
+6. Better field grouping
+
+Basic Information
+
+Item Name
+
+Category
+
+Price (₹)
+
+Description
+
+-------------------------
+
+Media
+
+Image Upload
+
+OR
+
+Image URL
+
+Preview image immediately after selecting.
+
+-------------------------
+
+Additional Details
+
+Tags
+
+Allergens
+
+Availability Toggle
+
+------------------------------------------------
+
+7. Replace Image URL with upload
+
+Preferred flow:
+
+Upload Image
+
+Camera (mobile)
+
+Gallery
+
+Drag & Drop (desktop)
+
+Only keep Image URL inside an "Advanced" collapsible section.
+
+------------------------------------------------
+
+8. Tablet
+
+Use a centered dialog.
+
+Maximum width:
+700px
+
+Maximum height:
+90vh
+
+Scrollable body
+
+Sticky footer
+
+------------------------------------------------
+
+9. Desktop
+
+Keep current dialog style.
+
+Improve spacing only.
+
+------------------------------------------------
+
+10. Animations
+
+Slide up from bottom (mobile)
+
+Fade overlay
+
+Close smoothly
+
+150–200ms duration
+
+------------------------------------------------
+
+11. Accessibility
+
+Large tap targets
+
+Visible focus states
+
+Prevent accidental dismissal while uploading.
+
+------------------------------------------------
+
+12. Preserve all existing functionality.
+
+Do not modify:
+- API
+- mutations
+- validation
+- database
+- upload logic
+- realtime
+
+Only improve the UI and responsive behavior.
