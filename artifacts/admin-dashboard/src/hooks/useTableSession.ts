@@ -85,6 +85,7 @@ interface StoredSession {
   sessionId: string;
   customerName: string;
   terminated?: "ended" | "expired"; // present when session was terminated
+  billRequested?: boolean;           // persisted so refresh doesn't reset the flag
 }
 
 function storageKey(qrToken: string) {
@@ -111,13 +112,32 @@ function saveStored(
   qrToken: string,
   deviceToken: string,
   sessionId: string,
-  customerName: string
+  customerName: string,
+  billRequested?: boolean,
 ) {
-  // Saves/updates a clean active-session record (no terminated marker).
-  localStorage.setItem(
-    storageKey(qrToken),
-    JSON.stringify({ deviceToken, sessionId, customerName })
-  );
+  // Saves/updates an active-session record (no terminated marker).
+  // billRequested is carried through so subsequent page refreshes continue to
+  // see the persisted flag and don't re-enable the "Request the Bill" button.
+  const record: StoredSession = { deviceToken, sessionId, customerName };
+  if (billRequested) record.billRequested = true;
+  localStorage.setItem(storageKey(qrToken), JSON.stringify(record));
+}
+
+// Writes a billRequested marker to the stored session record.
+// Persisted so that a page refresh doesn't reset the UI flag, which would
+// otherwise allow a guest to tap "Request the Bill" a second time and create
+// a duplicate bill_requests row on the admin side.
+function markBillRequested(qrToken: string) {
+  try {
+    const raw = localStorage.getItem(storageKey(qrToken));
+    if (raw) {
+      const existing = JSON.parse(raw) as Partial<StoredSession>;
+      localStorage.setItem(
+        storageKey(qrToken),
+        JSON.stringify({ ...existing, billRequested: true })
+      );
+    }
+  } catch { /* ignore */ }
 }
 
 // Writes a terminated marker without clearing the deviceToken.
@@ -349,9 +369,10 @@ export function useTableSession(qrToken: string) {
               expiresAt:    result.expires_at,
               customerName: result.customer_name,
             };
-            saveStored(qrToken, stored.deviceToken, stored.sessionId, result.customer_name);
+            saveStored(qrToken, stored.deviceToken, stored.sessionId, result.customer_name, stored.billRequested);
             setSessionInfo(info);
             setSessionState("active");
+            if (stored.billRequested) setBillRequested(true);
             return;
           }
 
@@ -380,10 +401,16 @@ export function useTableSession(qrToken: string) {
             expiresAt:    result.expires_at,
             customerName: result.customer_name,
           };
-          saveStored(qrToken, stored.deviceToken, stored.sessionId, result.customer_name);
+          // Pass billRequested through so saveStored doesn't silently drop it.
+          // Without this, every restore cycle overwrites the record with a clean
+          // object and the flag is lost on the *second* page refresh.
+          saveStored(qrToken, stored.deviceToken, stored.sessionId, result.customer_name, stored.billRequested);
           sessionStorage.setItem("qr-tab-seen", qrToken);
           setSessionInfo(info);
           setSessionState("active");
+          // Restore the billRequested flag so a page refresh doesn't re-enable
+          // the "Request the Bill" button for a bill already submitted.
+          if (stored.billRequested) setBillRequested(true);
           return;
         }
 
@@ -583,6 +610,10 @@ export function useTableSession(qrToken: string) {
 
   const resetToNameEntry = useCallback(() => {
     clearStored(qrToken);
+    // Also clear the sessionStorage rescan guard so the new session the user
+    // is about to start (via name-entry) is not immediately blocked again on
+    // the next page refresh or same-tab QR-scanner navigation.
+    try { sessionStorage.removeItem(RESCAN_KEY); } catch { /* ignore */ }
     setSessionInfo(null);
     setNameEntryError(null);
     setBillRequested(false);
@@ -623,7 +654,13 @@ export function useTableSession(qrToken: string) {
       });
       if (error) throw new Error(mapRpcError(error.message));
     },
-    onSuccess: () => setBillRequested(true),
+    onSuccess: () => {
+      setBillRequested(true);
+      // Persist the flag so a subsequent page refresh doesn't reset it and
+      // re-enable the "Request the Bill" button, which would create duplicate
+      // bill_requests rows visible to admin staff.
+      markBillRequested(qrToken);
+    },
   });
 
   const placeOrder = useCallback(

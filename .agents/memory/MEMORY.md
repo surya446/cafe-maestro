@@ -6,3 +6,6 @@
 - [Env var restart required](env-var-restart.md) — after setting env vars, always restart the affected workflow so Vite picks them up.
 - [Realtime RLS anon suppression](realtime-rls-anon.md) — never put visibility-changing columns in anon SELECT RLS policies on tables with realtime; Supabase drops the event server-side when the new row fails RLS for the subscriber.
 - [Table status model](table-status-model.md) — status derived client-side: archived>maintenance>busy>booked>free; migration 035 adds is_under_maintenance; anon SELECT on cafe_tables added for guest maintenance check.
+- [Guest session localStorage contract](guest-session-localstorage.md) — saveStored() must always carry optional flags (billRequested, etc.) through or they are silently erased on every restore cycle; mark functions write individual fields via spread.
+- [Nav badge invalidation gaps](nav-badge-invalidation.md) — useTableGroups mutations (clearTable, endSession, staffRequestBill) must explicitly invalidate nav_badge_sessions/nav_badge_bills; realtime drops these events server-side due to RLS.
+- [QR rescan guard sessionStorage](qr-rescan-guard.md) — RESCAN_KEY ("qr-rescan-required") lives in sessionStorage; any reset-to-name-entry path must also clear it or subsequent refreshes re-show the terminal screen.

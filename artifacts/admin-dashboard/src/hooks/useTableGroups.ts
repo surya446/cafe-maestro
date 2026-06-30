@@ -259,6 +259,11 @@ export function useTableGroups() {
       qc.invalidateQueries({ queryKey: ["table_pending_bills"] });
       qc.invalidateQueries({ queryKey: ["staff_sessions"] });
       qc.invalidateQueries({ queryKey: ["staff_bill_requests"] });
+      // The session UPDATE (active → ended) fails the anon RLS check on the
+      // new row, so Supabase drops the realtime event server-side. Explicit
+      // invalidation here guarantees the nav badge counts drop immediately.
+      qc.invalidateQueries({ queryKey: ["nav_badge_sessions"] });
+      qc.invalidateQueries({ queryKey: ["nav_badge_bills"] });
     },
   });
 
@@ -273,6 +278,8 @@ export function useTableGroups() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["table_pending_bills"] });
       qc.invalidateQueries({ queryKey: ["staff_bill_requests"] });
+      // Immediately reflect the new pending bill in the nav badge.
+      qc.invalidateQueries({ queryKey: ["nav_badge_bills"] });
     },
   });
 
@@ -286,6 +293,10 @@ export function useTableGroups() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["table_groups_active"] });
       qc.invalidateQueries({ queryKey: ["staff_sessions"] });
+      // Session status changes to "ended" — realtime event is dropped
+      // server-side (new row fails the active-status RLS filter). Explicit
+      // invalidation ensures the Sessions nav badge decrements immediately.
+      qc.invalidateQueries({ queryKey: ["nav_badge_sessions"] });
     },
   });
 
