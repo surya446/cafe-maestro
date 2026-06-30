@@ -27,6 +27,7 @@ interface NavItem {
   label: string;
   icon: React.ComponentType<{ className?: string }>;
   ownerOnly?: boolean;
+  managerOrAbove?: boolean;
 }
 
 const NAV_ITEMS: NavItem[] = [
@@ -40,7 +41,7 @@ const NAV_ITEMS: NavItem[] = [
   { href: "/staff", label: "Staff", icon: Users, ownerOnly: false },
   { href: "/analytics", label: "Analytics", icon: BarChart3 },
   { href: "/website-settings", label: "Website", icon: Globe, ownerOnly: true },
-  { href: "/downloads", label: "Downloads", icon: PackageOpen, ownerOnly: true },
+  { href: "/downloads", label: "App Releases", icon: PackageOpen, managerOrAbove: true },
   { href: "/settings", label: "Settings", icon: Settings, ownerOnly: true },
 ];
 
@@ -53,12 +54,14 @@ interface SidebarProps {
 
 export function Sidebar({ collapsed, mobileOpen, onToggleCollapse, onCloseMobile }: SidebarProps) {
   const [location] = useLocation();
-  const { user, signOut, isOwner } = useAuth();
+  const { user, signOut, isOwner, isManagerOrAbove } = useAuth();
   const { pendingOrderCount, pendingBillCount, sessionCount } = useNavBadgesContext();
 
-  const visibleItems = NAV_ITEMS.filter(
-    (item) => !item.ownerOnly || isOwner
-  );
+  const visibleItems = NAV_ITEMS.filter((item) => {
+    if (item.ownerOnly) return isOwner;
+    if (item.managerOrAbove) return isManagerOrAbove;
+    return true;
+  });
 
   // Total badge shown on the Orders nav item: pending orders + pending bill requests.
   // Active sessions are tracked in context but displayed separately on the Orders page.

@@ -271,3 +271,29 @@ export interface AuthUser {
   cafeName: string;
   mustChangePassword: boolean;
 }
+
+export type AppReleasePlatform =
+  | "android"
+  | "android-tv"
+  | "windows"
+  | "macos"
+  | "linux"
+  | "ios";
+
+export interface AppRelease {
+  id: string;
+  platform: AppReleasePlatform;
+  version: string;
+  build_number: number;
+  release_notes: string | null;
+  min_android_version: string | null;
+  file_size: string | null;
+  download_url: string | null;
+  storage_path: string | null;
+  is_latest: boolean;
+  is_force_update: boolean;
+  published_at: string;
+  created_by: string | null;
+  created_at: string;
+  updated_at: string;
+}
