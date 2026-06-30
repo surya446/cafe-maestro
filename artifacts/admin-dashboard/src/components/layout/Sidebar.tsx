@@ -17,6 +17,7 @@ import {
   ChevronLeft,
   X,
   TableProperties,
+  PackageOpen,
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useNavBadgesContext } from "@/context/NavBadgesContext";
@@ -39,6 +40,7 @@ const NAV_ITEMS: NavItem[] = [
   { href: "/staff", label: "Staff", icon: Users, ownerOnly: false },
   { href: "/analytics", label: "Analytics", icon: BarChart3 },
   { href: "/website-settings", label: "Website", icon: Globe, ownerOnly: true },
+  { href: "/downloads", label: "Downloads", icon: PackageOpen, ownerOnly: true },
   { href: "/settings", label: "Settings", icon: Settings, ownerOnly: true },
 ];
 
