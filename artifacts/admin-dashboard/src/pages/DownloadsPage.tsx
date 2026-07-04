@@ -19,6 +19,11 @@ import {
   Zap,
   ChevronRight,
   FileText,
+  Hash,
+  Loader2,
+  XCircle,
+  Package,
+  RefreshCw,
 } from "lucide-react";
 import QRCode from "react-qr-code";
 import { PageHeader } from "@/components/common/PageHeader";
@@ -32,16 +37,18 @@ import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { cn } from "@/lib/utils";
 import { COMING_SOON_PLATFORMS } from "@/config/downloads";
-import type { AppReleasePlatform } from "@/services/releaseService";
+import { compareVersions, formatFileSize, type AppReleasePlatform } from "@/services/releaseService";
 import {
   useLatestRelease,
   useReleaseHistory,
   usePublishRelease,
   useRollbackRelease,
   useDeleteRelease,
+  findReleaseBySha256,
   type AppRelease,
 } from "@/hooks/useAppReleases";
 import { useStaffDevices, type StaffDeviceRow } from "@/hooks/useStaffDevices";
+import { parseApkFile, formatAndroidVersion, type ParsedApkMetadata } from "@/services/apkParser";
 
 const WEB_APP_URL = typeof window !== "undefined" ? window.location.origin : "";
 
@@ -156,6 +163,16 @@ function LiveReleaseCard({
         {release.file_size && (
           <MetaCell label="APK Size" value={release.file_size} />
         )}
+        {release.package_name && (
+          <MetaCell label="Package Name" value={release.package_name} />
+        )}
+        {release.target_android_version && (
+          <MetaCell label="Target Android" value={release.target_android_version} />
+        )}
+        {release.apk_sha256 && <ShaCell label="SHA256" value={release.apk_sha256} />}
+        {release.apk_signature && (
+          <MetaCell label="Signature" value="Verified ✓" />
+        )}
       </div>
 
       {release.release_notes && (
@@ -225,47 +242,138 @@ function NoReleaseCard({ platform }: { platform: ActivePlatform }) {
   );
 }
 
-function UploadForm({ platform }: { platform: ActivePlatform }) {
+function ShaCell({ label, value }: { label: string; value: string | null }) {
+  const { toast } = useToast();
+  if (!value) return <MetaCell label={label} value="—" />;
+  const short = `${value.slice(0, 12)}…`;
+  return (
+    <div className="bg-muted/50 rounded-lg p-3">
+      <p className="text-[10px] font-medium text-muted-foreground uppercase tracking-wide mb-1">{label}</p>
+      <button
+        type="button"
+        className="text-sm font-mono font-semibold text-foreground hover:text-primary transition-colors"
+        onClick={async () => {
+          await navigator.clipboard.writeText(value);
+          toast({ title: "Copied!", description: `${label} copied to clipboard` });
+        }}
+        title={value}
+      >
+        {short}
+      </button>
+    </div>
+  );
+}
+
+type BuildNumberChoice = "unresolved" | "keep" | "increment";
+
+function UploadForm({
+  platform,
+  latestRelease,
+}: {
+  platform: ActivePlatform;
+  latestRelease: AppRelease | null;
+}) {
   const { toast } = useToast();
   const publishRelease = usePublishRelease();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [file, setFile] = useState<File | null>(null);
+  const [parsing, setParsing] = useState(false);
+  const [parseError, setParseError] = useState<string | null>(null);
+  const [metadata, setMetadata] = useState<ParsedApkMetadata | null>(null);
+
   const [version, setVersion] = useState("");
   const [buildNumber, setBuildNumber] = useState("");
+  const [minAndroid, setMinAndroid] = useState("");
   const [releaseNotes, setReleaseNotes] = useState("");
-  const [minAndroid, setMinAndroid] = useState("Android 9.0 (API 28)");
   const [isForceUpdate, setIsForceUpdate] = useState(false);
+
+  const [duplicateRelease, setDuplicateRelease] = useState<AppRelease | null>(null);
+  const [replaceMode, setReplaceMode] = useState(false);
+  const [checkingDuplicate, setCheckingDuplicate] = useState(false);
+
+  const [buildChoice, setBuildChoice] = useState<BuildNumberChoice>("unresolved");
+  const [versionDowngradeConfirmed, setVersionDowngradeConfirmed] = useState(false);
 
   const reset = () => {
     setFile(null);
+    setParsing(false);
+    setParseError(null);
+    setMetadata(null);
     setVersion("");
     setBuildNumber("");
+    setMinAndroid("");
     setReleaseNotes("");
-    setMinAndroid("Android 9.0 (API 28)");
     setIsForceUpdate(false);
+    setDuplicateRelease(null);
+    setReplaceMode(false);
+    setBuildChoice("unresolved");
+    setVersionDowngradeConfirmed(false);
     if (fileInputRef.current) fileInputRef.current.value = "";
   };
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const selected = e.target.files?.[0];
     if (!selected) return;
+
+    reset();
     setFile(selected);
+    setParsing(true);
+
+    try {
+      const parsed = await parseApkFile(selected);
+      setMetadata(parsed);
+      setVersion(parsed.versionName ?? "");
+      setBuildNumber(parsed.versionCode ? String(parsed.versionCode) : "");
+      setMinAndroid(formatAndroidVersion(parsed.minSdkVersion));
+
+      setCheckingDuplicate(true);
+      const existing = await findReleaseBySha256(platform, parsed.sha256);
+      setDuplicateRelease(existing);
+    } catch (err: any) {
+      setParseError(
+        err?.message ?? "Could not read this APK. Make sure it's a valid, unmodified .apk file."
+      );
+      setFile(null);
+    } finally {
+      setParsing(false);
+      setCheckingDuplicate(false);
+    }
   };
+
+  const buildNum = parseInt(buildNumber, 10) || 0;
+  const needsBuildDecision =
+    !!latestRelease && buildNum > 0 && buildNum <= latestRelease.build_number;
+  const isVersionDowngrade =
+    !!latestRelease && !!version.trim() && compareVersions(version.trim(), latestRelease.version) < 0;
+
+  const effectiveBuildNumber =
+    needsBuildDecision && buildChoice === "increment"
+      ? (latestRelease?.build_number ?? 0) + 1
+      : buildNum;
+
+  const blockedByDuplicate = !!duplicateRelease && !replaceMode;
+  const blockedByBuildChoice = needsBuildDecision && buildChoice === "unresolved";
+  const blockedByVersionDowngrade = isVersionDowngrade && !versionDowngradeConfirmed;
+
+  const canPublish =
+    !!file &&
+    !!metadata &&
+    !!version.trim() &&
+    effectiveBuildNumber > 0 &&
+    !blockedByDuplicate &&
+    !blockedByBuildChoice &&
+    !blockedByVersionDowngrade;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!file) {
-      toast({ title: "No file selected", description: "Please choose an APK file.", variant: "destructive" });
-      return;
-    }
-    if (!version.trim()) {
-      toast({ title: "Version required", description: "Enter a version number, e.g. 1.0.0", variant: "destructive" });
-      return;
-    }
-    const build = parseInt(buildNumber, 10);
-    if (!build || build < 1) {
-      toast({ title: "Build number required", description: "Enter a positive integer build number.", variant: "destructive" });
+    if (!file || !metadata) return;
+    if (!canPublish) {
+      toast({
+        title: "Resolve the warnings above",
+        description: "Please address the highlighted issues before publishing.",
+        variant: "destructive",
+      });
       return;
     }
 
@@ -273,11 +381,17 @@ function UploadForm({ platform }: { platform: ActivePlatform }) {
       await publishRelease.mutateAsync({
         platform,
         version: version.trim(),
-        build_number: build,
+        build_number: effectiveBuildNumber,
         release_notes: releaseNotes,
         min_android_version: minAndroid,
         is_force_update: isForceUpdate,
         file,
+        package_name: metadata.packageName,
+        target_android_version: formatAndroidVersion(metadata.targetSdkVersion),
+        apk_sha256: metadata.sha256,
+        apk_signature: metadata.signatureFingerprint,
+        build_timestamp: metadata.buildTimestamp,
+        replaceReleaseId: replaceMode ? duplicateRelease?.id : undefined,
       });
       toast({ title: "Release published!", description: `v${version.trim()} is now the live release.` });
       reset();
@@ -297,7 +411,7 @@ function UploadForm({ platform }: { platform: ActivePlatform }) {
         <div>
           <h3 className="font-semibold text-foreground">Upload New Release</h3>
           <p className="text-xs text-muted-foreground">
-            Publishing will make this the live release immediately.
+            Choose an APK — version, package, and SDK details are read automatically.
           </p>
         </div>
       </div>
@@ -319,7 +433,13 @@ function UploadForm({ platform }: { platform: ActivePlatform }) {
             className="hidden"
             onChange={handleFileChange}
           />
-          {file ? (
+          {parsing ? (
+            <>
+              <Loader2 className="w-8 h-8 text-primary animate-spin" />
+              <p className="text-sm font-medium text-foreground">Reading APK…</p>
+              <p className="text-xs text-muted-foreground">Extracting version, package, and SDK info</p>
+            </>
+          ) : file && metadata ? (
             <>
               <CheckCircle2 className="w-8 h-8 text-primary" />
               <p className="text-sm font-medium text-foreground">{file.name}</p>
@@ -335,73 +455,223 @@ function UploadForm({ platform }: { platform: ActivePlatform }) {
             </>
           )}
         </div>
+        {parseError && (
+          <div className="flex items-start gap-2 p-3 bg-destructive/10 border border-destructive/20 rounded-lg text-sm text-destructive">
+            <XCircle className="w-4 h-4 shrink-0 mt-0.5" />
+            {parseError}
+          </div>
+        )}
       </div>
 
-      {/* Version + Build */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        <div className="space-y-1.5">
-          <Label>Version *</Label>
-          <Input
-            placeholder="1.0.0"
-            value={version}
-            onChange={(e) => setVersion(e.target.value)}
-            disabled={isPending}
-          />
-        </div>
-        <div className="space-y-1.5">
-          <Label>Build Number *</Label>
-          <Input
-            type="number"
-            min={1}
-            placeholder="100"
-            value={buildNumber}
-            onChange={(e) => setBuildNumber(e.target.value)}
-            disabled={isPending}
-          />
-        </div>
-      </div>
+      {metadata && (
+        <>
+          {/* APK Information preview */}
+          <div className="space-y-2">
+            <Label>APK Information</Label>
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+              <MetaCell label="Package Name" value={metadata.packageName ?? "Unknown"} />
+              <MetaCell
+                label="Target Android"
+                value={formatAndroidVersion(metadata.targetSdkVersion)}
+              />
+              <MetaCell
+                label="APK Size"
+                value={formatFileSize(metadata.fileSizeBytes)}
+              />
+              <ShaCell label="SHA256" value={metadata.sha256} />
+              <MetaCell
+                label="Signature"
+                value={metadata.signatureFingerprint ? "Verified ✓" : "Unavailable"}
+              />
+              <MetaCell
+                label="Build Timestamp"
+                value={
+                  metadata.buildTimestamp
+                    ? new Date(metadata.buildTimestamp).toLocaleDateString("en-AU", {
+                        day: "numeric",
+                        month: "short",
+                        year: "numeric",
+                      })
+                    : "Unavailable"
+                }
+              />
+            </div>
+            {metadata.signatureUnavailableReason && !metadata.signatureFingerprint && (
+              <p className="text-xs text-muted-foreground">{metadata.signatureUnavailableReason}</p>
+            )}
+          </div>
 
-      {/* Min Android */}
-      <div className="space-y-1.5">
-        <Label>Minimum Android Version</Label>
-        <Input
-          placeholder="Android 9.0 (API 28)"
-          value={minAndroid}
-          onChange={(e) => setMinAndroid(e.target.value)}
-          disabled={isPending}
-        />
-      </div>
+          {/* Duplicate detection */}
+          {checkingDuplicate && (
+            <div className="flex items-center gap-2 text-xs text-muted-foreground">
+              <Loader2 className="w-3.5 h-3.5 animate-spin" />
+              Checking for duplicate uploads…
+            </div>
+          )}
+          {duplicateRelease && (
+            <div className="flex flex-col gap-3 p-4 bg-amber-50 border border-amber-200 rounded-xl">
+              <div className="flex items-start gap-2.5">
+                <AlertCircle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+                <div className="text-sm">
+                  <p className="font-medium text-amber-800">This APK has already been uploaded.</p>
+                  <p className="text-xs text-amber-700 mt-0.5">
+                    Identical to v{duplicateRelease.version} (build #{duplicateRelease.build_number}),
+                    uploaded {new Date(duplicateRelease.created_at).toLocaleDateString("en-AU")}.
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                <Button
+                  type="button"
+                  size="sm"
+                  variant={replaceMode ? "default" : "outline"}
+                  onClick={() => setReplaceMode(true)}
+                  className="gap-1.5"
+                >
+                  <RefreshCw className="w-3.5 h-3.5" />
+                  Replace Existing Release
+                </Button>
+                {replaceMode && (
+                  <Button type="button" size="sm" variant="ghost" onClick={() => setReplaceMode(false)}>
+                    Cancel
+                  </Button>
+                )}
+              </div>
+            </div>
+          )}
 
-      {/* Release notes */}
-      <div className="space-y-1.5">
-        <Label>Release Notes</Label>
-        <Textarea
-          placeholder={"- Fixed order refresh bug\n- Improved table status display\n- Added force-update support"}
-          rows={4}
-          value={releaseNotes}
-          onChange={(e) => setReleaseNotes(e.target.value)}
-          disabled={isPending}
-        />
-      </div>
+          {/* Version + Build (editable) */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="space-y-1.5">
+              <Label>Version *</Label>
+              <Input
+                placeholder="1.0.0"
+                value={version}
+                onChange={(e) => {
+                  setVersion(e.target.value);
+                  setVersionDowngradeConfirmed(false);
+                }}
+                disabled={isPending}
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label>Build Number *</Label>
+              <Input
+                type="number"
+                min={1}
+                placeholder="100"
+                value={buildNumber}
+                onChange={(e) => {
+                  setBuildNumber(e.target.value);
+                  setBuildChoice("unresolved");
+                }}
+                disabled={isPending}
+              />
+            </div>
+          </div>
 
-      {/* Force update toggle */}
-      <div className="flex items-center justify-between p-3 bg-muted/40 rounded-xl border border-border">
-        <div>
-          <p className="text-sm font-medium text-foreground">Force Update</p>
-          <p className="text-xs text-muted-foreground">
-            Employees must update before they can use the app.
-          </p>
-        </div>
-        <Switch
-          checked={isForceUpdate}
-          onCheckedChange={setIsForceUpdate}
-          disabled={isPending}
-        />
-      </div>
+          {/* Build number conflict */}
+          {needsBuildDecision && (
+            <div className="flex flex-col gap-3 p-4 bg-amber-50 border border-amber-200 rounded-xl">
+              <div className="flex items-start gap-2.5">
+                <AlertCircle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+                <p className="text-sm text-amber-800">
+                  Build number already exists. Latest live build is #{latestRelease?.build_number}.
+                  Automatically change to #{(latestRelease?.build_number ?? 0) + 1}?
+                </p>
+              </div>
+              <div className="flex items-center gap-2">
+                <Button
+                  type="button"
+                  size="sm"
+                  variant={buildChoice === "increment" ? "default" : "outline"}
+                  onClick={() => setBuildChoice("increment")}
+                >
+                  Auto Increment
+                </Button>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant={buildChoice === "keep" ? "default" : "outline"}
+                  onClick={() => setBuildChoice("keep")}
+                >
+                  Keep Existing
+                </Button>
+              </div>
+            </div>
+          )}
+          {needsBuildDecision && buildChoice === "increment" && (
+            <p className="text-xs text-muted-foreground -mt-2">
+              Will publish as build #{effectiveBuildNumber}.
+            </p>
+          )}
+
+          {/* Version regression warning */}
+          {isVersionDowngrade && (
+            <div className="flex flex-col gap-2.5 p-4 bg-red-50 border border-red-200 rounded-xl">
+              <div className="flex items-start gap-2.5">
+                <ShieldAlert className="w-4 h-4 text-red-600 shrink-0 mt-0.5" />
+                <p className="text-sm text-red-800">
+                  Version {version.trim()} is older than the current live release (v
+                  {latestRelease?.version}). Use Rollback instead if you want to return to a previous
+                  release.
+                </p>
+              </div>
+              <label className="flex items-center gap-2 text-xs text-red-700 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={versionDowngradeConfirmed}
+                  onChange={(e) => setVersionDowngradeConfirmed(e.target.checked)}
+                  className="rounded border-red-300"
+                />
+                Publish this older version anyway
+              </label>
+            </div>
+          )}
+
+          {/* Min Android (editable) */}
+          <div className="space-y-1.5">
+            <Label>Minimum Android Version</Label>
+            <Input
+              placeholder="Android 9.0 (API 28)"
+              value={minAndroid}
+              onChange={(e) => setMinAndroid(e.target.value)}
+              disabled={isPending}
+            />
+          </div>
+
+          {/* Release notes (manual, never generated) */}
+          <div className="space-y-1.5">
+            <Label>Release Notes</Label>
+            <Textarea
+              placeholder={"- Fixed order refresh bug\n- Improved table status display\n- Added force-update support"}
+              rows={4}
+              value={releaseNotes}
+              onChange={(e) => setReleaseNotes(e.target.value)}
+              disabled={isPending}
+            />
+          </div>
+
+          {/* Force update toggle */}
+          <div className="flex items-center justify-between p-3 bg-muted/40 rounded-xl border border-border">
+            <div>
+              <p className="text-sm font-medium text-foreground">Force Update</p>
+              <p className="text-xs text-muted-foreground">
+                Employees must update before they can use the app.
+              </p>
+            </div>
+            <Switch
+              checked={isForceUpdate}
+              onCheckedChange={setIsForceUpdate}
+              disabled={isPending}
+            />
+          </div>
+        </>
+      )}
 
       {/* Actions */}
       <div className="flex items-center gap-3 pt-1 border-t border-border">
-        <Button type="submit" disabled={isPending || !file} className="gap-1.5">
+        <Button type="submit" disabled={isPending || !canPublish} className="gap-1.5">
           <Upload className="w-3.5 h-3.5" />
           {isPending ? "Publishing…" : "Publish Release"}
         </Button>
@@ -485,8 +755,12 @@ function ReleaseHistoryItem({
           {release.is_force_update && <ForceUpdateBadge />}
           <span className="text-xs text-muted-foreground ml-auto">{publishDate}</span>
         </div>
-        {release.file_size && (
-          <p className="text-xs text-muted-foreground">{release.file_size}</p>
+        {(release.file_size || release.package_name || release.target_android_version) && (
+          <p className="text-xs text-muted-foreground">
+            {[release.file_size, release.package_name, release.target_android_version]
+              .filter(Boolean)
+              .join(" · ")}
+          </p>
         )}
         {release.release_notes && (
           <p className="text-xs text-muted-foreground mt-1 line-clamp-2 whitespace-pre-line">
@@ -922,7 +1196,7 @@ export function DownloadsPage() {
           <h2 className="text-xs font-semibold text-muted-foreground uppercase tracking-widest mb-4">
             Upload New Release
           </h2>
-          <UploadForm platform={activePlatform} />
+          <UploadForm platform={activePlatform} latestRelease={latestRelease ?? null} />
         </section>
       )}
 

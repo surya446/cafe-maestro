@@ -110,3 +110,21 @@ export function buildStoragePath(
 ): string {
   return `${platform}/${version}-${buildNumber}-${Date.now()}.apk`;
 }
+
+/**
+ * Compares two dotted version strings numerically, segment by segment.
+ * Returns negative if a < b, 0 if equal, positive if a > b.
+ * Missing/non-numeric segments are treated as 0, so "1.0" == "1.0.0".
+ */
+export function compareVersions(a: string, b: string): number {
+  const partsA = a.trim().split(".");
+  const partsB = b.trim().split(".");
+  const len = Math.max(partsA.length, partsB.length);
+
+  for (let i = 0; i < len; i++) {
+    const numA = parseInt(partsA[i] ?? "0", 10) || 0;
+    const numB = parseInt(partsB[i] ?? "0", 10) || 0;
+    if (numA !== numB) return numA - numB;
+  }
+  return 0;
+}

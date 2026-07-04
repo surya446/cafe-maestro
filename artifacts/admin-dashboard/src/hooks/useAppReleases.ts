@@ -23,6 +23,11 @@ export interface AppRelease {
   created_by: string | null;
   created_at: string;
   updated_at: string;
+  package_name: string | null;
+  target_android_version: string | null;
+  apk_sha256: string | null;
+  apk_signature: string | null;
+  build_timestamp: string | null;
 }
 
 export interface PublishReleaseInput {
@@ -33,6 +38,13 @@ export interface PublishReleaseInput {
   min_android_version: string;
   is_force_update: boolean;
   file: File;
+  package_name: string | null;
+  target_android_version: string | null;
+  apk_sha256: string;
+  apk_signature: string | null;
+  build_timestamp: string | null;
+  /** When replacing a previously-uploaded release with the same SHA256. */
+  replaceReleaseId?: string;
 }
 
 export interface UpdateReleaseInput {
@@ -101,6 +113,29 @@ export function usePublishRelease() {
 
   return useMutation({
     mutationFn: async (input: PublishReleaseInput): Promise<AppRelease> => {
+      // If replacing a previous upload of the exact same APK (same
+      // SHA256), remove it first so we never end up with duplicates.
+      if (input.replaceReleaseId) {
+        const { data: existing } = await supabase
+          .from("app_releases")
+          .select("storage_path")
+          .eq("id", input.replaceReleaseId)
+          .single();
+
+        if (existing?.storage_path) {
+          await supabase.storage.from(RELEASES_BUCKET).remove([existing.storage_path]);
+        }
+
+        const { error: deleteError } = await supabase
+          .from("app_releases")
+          .delete()
+          .eq("id", input.replaceReleaseId);
+
+        if (deleteError) {
+          throw new Error(`Could not replace existing release: ${deleteError.message}`);
+        }
+      }
+
       const storagePath = buildStoragePath(
         input.platform,
         input.version,
@@ -142,6 +177,11 @@ export function usePublishRelease() {
           is_force_update: input.is_force_update,
           published_at: new Date().toISOString(),
           created_by: user?.id ?? null,
+          package_name: input.package_name,
+          target_android_version: input.target_android_version,
+          apk_sha256: input.apk_sha256,
+          apk_signature: input.apk_signature,
+          build_timestamp: input.build_timestamp,
         })
         .select()
         .single();
@@ -160,6 +200,29 @@ export function usePublishRelease() {
       qc.invalidateQueries({ queryKey: releaseKeys(variables.platform).history });
     },
   });
+}
+
+/**
+ * Looks up an existing release for a platform with the exact same
+ * APK SHA256. Used to block accidental duplicate uploads before
+ * publishing.
+ */
+export async function findReleaseBySha256(
+  platform: AppReleasePlatform,
+  sha256: string
+): Promise<AppRelease | null> {
+  const { data, error } = await supabase
+    .from("app_releases")
+    .select("*")
+    .eq("platform", platform)
+    .eq("apk_sha256", sha256)
+    .maybeSingle();
+
+  if (error) {
+    console.error("[useAppReleases] duplicate check error:", error);
+    return null;
+  }
+  return (data as AppRelease) ?? null;
 }
 
 /**
