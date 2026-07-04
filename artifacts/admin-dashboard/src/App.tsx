@@ -7,6 +7,8 @@ import { useAuth } from "@/hooks/useAuth";
 import { ScrollToTop } from "@/components/common/ScrollToTop";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { NavBadgesProvider } from "@/context/NavBadgesContext";
+import { AppUpdateGate } from "@/components/updates/AppUpdateGate";
+import { useDeviceTracking } from "@/hooks/useDeviceTracking";
 
 import { LoginPage } from "@/pages/LoginPage";
 import { AuthConfirmPage } from "@/pages/AuthConfirmPage";
@@ -59,6 +61,7 @@ function LoadingScreen() {
  */
 function AdminShell() {
   const { user, loading } = useAuth();
+  useDeviceTracking();
 
   if (loading) return <LoadingScreen />;
   if (!user) return <Redirect to="/login" />;
@@ -66,6 +69,7 @@ function AdminShell() {
 
   return (
     <NavBadgesProvider>
+      <AppUpdateGate />
       <AppLayout>
         <Switch>
           <Route path="/" component={DashboardPage} />
