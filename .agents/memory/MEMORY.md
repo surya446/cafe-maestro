@@ -13,3 +13,4 @@
 - [App release management](app-releases.md) — app_releases table (migration 040) is source of truth; single is_latest per platform enforced by DB trigger; downloads bucket in Supabase Storage; sidebar item is managerOrAbove not ownerOnly.
 - [Android native-shell patterns](android-native-shell.md) — back/exit, pull-to-refresh, external links, resume, offline all gated by isNativeAndroid() in src/native/, zero-touch on web build.
 - [Mandatory app update gate](mandatory-app-update.md) — force-update screen sits above auth (root-mounted, blocks login too); back button silenced via ref; retry distinguishes download-fail vs install-fail.
+- [Android launcher icon source](android-app-icon.md) — icon built from one flattened logo image; fg/bg split via background-color fuzz-transparent extraction for adaptive icon layers.
