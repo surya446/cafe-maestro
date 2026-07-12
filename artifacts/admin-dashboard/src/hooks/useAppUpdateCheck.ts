@@ -41,16 +41,30 @@ export function useAppUpdateCheck() {
   const [state, setState] = useState<AppUpdateState>(initialState);
   const hasRun = useRef(false);
 
-  const runCheck = useCallback(async () => {
+  const runCheck = useCallback(async (trigger: "launch" | "resume" = "launch") => {
     // Update checks are meaningful only on the native Android app.
     if (!Capacitor.isNativePlatform() || Capacitor.getPlatform() !== "android") {
       setState((s) => ({ ...s, checked: true }));
       return;
     }
 
+    // DIAGNOSTIC — record what triggered this check so logs are unambiguous.
+    console.log(`[useAppUpdateCheck] ── check triggered by: ${trigger} ──`);
+
     try {
       const installed = await getInstalledAppVersion();
       const result = await checkForUpdate(ANDROID_PLATFORM, installed.buildNumber);
+
+      // DIAGNOSTIC — final state that will be written to context.
+      console.log(`[useAppUpdateCheck] result (${trigger}) →`, JSON.stringify({
+        trigger,
+        installedVersion: installed.version,
+        installedBuild: installed.buildNumber,
+        latestBuild: result.latestRelease?.build_number ?? null,
+        hasUpdate: result.hasUpdate,
+        isForceUpdate: result.isForceUpdate,
+        latestReleaseId: result.latestRelease?.id ?? null,
+      }));
 
       setState({
         checked: true,
@@ -69,7 +83,7 @@ export function useAppUpdateCheck() {
   useEffect(() => {
     if (hasRun.current) return;
     hasRun.current = true;
-    void runCheck();
+    void runCheck("launch");
   }, [runCheck]);
 
   return { ...state, recheck: runCheck };

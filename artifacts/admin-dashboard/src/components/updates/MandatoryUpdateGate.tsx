@@ -25,7 +25,7 @@ function UpdateCheckSplash() {
 }
 
 export function MandatoryUpdateGate({ children }: { children: ReactNode }) {
-  const { checked, hasUpdate, isForceUpdate, latestRelease, installedVersion } =
+  const { checked, hasUpdate, isForceUpdate, latestRelease, installedVersion, installedBuild } =
     useAppUpdateContext();
 
   const blocked = checked && hasUpdate && isForceUpdate && !!latestRelease;
@@ -42,7 +42,11 @@ export function MandatoryUpdateGate({ children }: { children: ReactNode }) {
       {awaitingFirstCheck ? (
         <UpdateCheckSplash />
       ) : blocked ? (
-        <MandatoryUpdateScreen installedVersion={installedVersion} release={latestRelease!} />
+        <MandatoryUpdateScreen
+          installedVersion={installedVersion}
+          installedBuild={installedBuild}
+          release={latestRelease!}
+        />
       ) : (
         children
       )}

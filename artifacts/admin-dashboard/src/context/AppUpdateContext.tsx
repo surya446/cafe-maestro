@@ -21,7 +21,7 @@ import { useAppUpdateCheck, type AppUpdateState } from "@/hooks/useAppUpdateChec
 import { isNativeAndroid } from "@/native/platform";
 
 interface AppUpdateContextValue extends AppUpdateState {
-  recheck: () => Promise<void>;
+  recheck: (trigger?: "launch" | "resume") => Promise<void>;
 }
 
 const AppUpdateContext = createContext<AppUpdateContextValue | null>(null);
@@ -37,7 +37,9 @@ export function AppUpdateProvider({ children }: { children: ReactNode }) {
     let cancelled = false;
 
     void App.addListener("appStateChange", ({ isActive }) => {
-      if (isActive) void recheck();
+      // DIAGNOSTIC — log every resume event so we can see when recheck fires.
+      console.log(`[AppUpdateContext] appStateChange isActive=${isActive}`);
+      if (isActive) void recheck("resume");
     }).then((h) => {
       if (cancelled) {
         void h.remove();

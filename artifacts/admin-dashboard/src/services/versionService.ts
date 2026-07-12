@@ -34,9 +34,19 @@ export async function getInstalledAppVersion(): Promise<InstalledAppVersion> {
   if (Capacitor.isNativePlatform() && Capacitor.getPlatform() === "android") {
     try {
       const info = await App.getInfo();
+      const buildNumber = parseInt(info.build, 10) || 0;
+
+      // DIAGNOSTIC — every call is fresh (no cache).
+      console.log("[versionService] App.getInfo() raw →", JSON.stringify({
+        appId: info.id,
+        version: info.version,
+        build: info.build,
+        parsedBuildNumber: buildNumber,
+      }));
+
       return {
         version: info.version,
-        buildNumber: parseInt(info.build, 10) || 0,
+        buildNumber,
         platform: "android",
       };
     } catch (err) {
@@ -44,6 +54,7 @@ export async function getInstalledAppVersion(): Promise<InstalledAppVersion> {
     }
   }
 
+  console.log("[versionService] non-native platform — returning web placeholder");
   return { version: "web", buildNumber: 0, platform: "web" };
 }
 

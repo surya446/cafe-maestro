@@ -46,6 +46,9 @@ export interface UpdateCheckResult {
 export async function getLatestRelease(
   platform: AppReleasePlatform
 ): Promise<LatestReleaseInfo | null> {
+  // DIAGNOSTIC — always a fresh network call; no client-side cache.
+  console.log(`[releaseService] calling get_latest_release RPC — platform="${platform}" — network fetch (no cache)`);
+
   const { data, error } = await supabase.rpc("get_latest_release", {
     p_platform: platform,
   });
@@ -55,9 +58,24 @@ export async function getLatestRelease(
     return null;
   }
 
+  // DIAGNOSTIC — log the raw rows returned by the RPC before any filtering.
+  console.log(`[releaseService] RPC returned ${(data ?? []).length} row(s) →`, JSON.stringify(data));
+
   if (!data || data.length === 0) return null;
 
   const row = data[0] as LatestReleaseInfo;
+
+  // DIAGNOSTIC — log the row that will be used as the "latest" release.
+  console.log("[releaseService] using row →", JSON.stringify({
+    id: row.id,
+    platform: row.platform,
+    version: row.version,
+    build_number: row.build_number,
+    is_force_update: row.is_force_update,
+    published_at: row.published_at,
+    download_url: row.download_url,
+  }));
+
   return row;
 }
 
@@ -81,10 +99,23 @@ export async function checkForUpdate(
   }
 
   const hasUpdate = latest.build_number > currentBuildNumber;
+  const isForceUpdate = hasUpdate && latest.is_force_update;
+
+  // DIAGNOSTIC — log the exact values used in the comparison so the
+  // source of any mismatch is unambiguous.
+  console.log("[releaseService] update comparison →", JSON.stringify({
+    installedBuild: currentBuildNumber,
+    latestBuild: latest.build_number,
+    "latestBuild > installedBuild": hasUpdate,
+    hasUpdate,
+    is_force_update_flag_in_db: latest.is_force_update,
+    isForceUpdate,
+    dataSource: "fresh network fetch (no client cache)",
+  }));
 
   return {
     hasUpdate,
-    isForceUpdate: hasUpdate && latest.is_force_update,
+    isForceUpdate,
     latestRelease: latest,
   };
 }
