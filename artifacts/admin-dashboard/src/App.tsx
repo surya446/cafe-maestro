@@ -11,9 +11,10 @@ import { NavBadgesProvider } from "@/context/NavBadgesContext";
 import { AppUpdateGate } from "@/components/updates/AppUpdateGate";
 import { useDeviceTracking } from "@/hooks/useDeviceTracking";
 import { useAppResume } from "@/hooks/useAppResume";
-import { AndroidBackHandler } from "@/components/native/AndroidBackHandler";
 import { OfflineBanner } from "@/components/native/OfflineBanner";
 import { installExternalLinkHandler } from "@/native/externalLinks";
+import { AppUpdateProvider } from "@/context/AppUpdateContext";
+import { MandatoryUpdateGate } from "@/components/updates/MandatoryUpdateGate";
 
 import { LoginPage } from "@/pages/LoginPage";
 import { AuthConfirmPage } from "@/pages/AuthConfirmPage";
@@ -130,11 +131,14 @@ function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
-        <OfflineBanner />
-        <AndroidBackHandler />
-        <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, "")}>
-          <Router />
-        </WouterRouter>
+        <AppUpdateProvider>
+          <OfflineBanner />
+          <MandatoryUpdateGate>
+            <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, "")}>
+              <Router />
+            </WouterRouter>
+          </MandatoryUpdateGate>
+        </AppUpdateProvider>
         <Toaster />
       </TooltipProvider>
     </QueryClientProvider>
