@@ -264,7 +264,7 @@ function ShaCell({ label, value }: { label: string; value: string | null }) {
   );
 }
 
-type BuildNumberChoice = "unresolved" | "keep" | "increment";
+type BuildNumberChoice = "unresolved" | "keep";
 
 function UploadForm({
   platform,
@@ -342,18 +342,25 @@ function UploadForm({
   };
 
   const buildNum = parseInt(buildNumber, 10) || 0;
-  const needsBuildDecision =
-    !!latestRelease && buildNum > 0 && buildNum <= latestRelease.build_number;
+  // Build number conflict cases — kept separate so each gets its own UI.
+  // "Too low" (buildNum < latest) is a hard block: the APK must be rebuilt.
+  // "Same as current" (buildNum === latest) requires explicit confirmation to
+  // republish the same build number (safe, but won't trigger updates on existing
+  // installs). "Auto Increment" has been removed: storing a build_number in the
+  // database that is higher than the APK's actual versionCode causes the
+  // mandatory-update screen to reappear infinitely after installation.
+  const isBuildTooLow =
+    !!latestRelease && buildNum > 0 && buildNum < latestRelease.build_number;
+  const isBuildSameAsCurrent =
+    !!latestRelease && buildNum > 0 && buildNum === latestRelease.build_number;
   const isVersionDowngrade =
     !!latestRelease && !!version.trim() && compareVersions(version.trim(), latestRelease.version) < 0;
 
-  const effectiveBuildNumber =
-    needsBuildDecision && buildChoice === "increment"
-      ? (latestRelease?.build_number ?? 0) + 1
-      : buildNum;
+  const effectiveBuildNumber = buildNum;
 
   const blockedByDuplicate = !!duplicateRelease && !replaceMode;
-  const blockedByBuildChoice = needsBuildDecision && buildChoice === "unresolved";
+  const blockedByBuildChoice =
+    isBuildTooLow || (isBuildSameAsCurrent && buildChoice === "unresolved");
   const blockedByVersionDowngrade = isVersionDowngrade && !versionDowngradeConfirmed;
 
   const canPublish =
@@ -570,40 +577,55 @@ function UploadForm({
             </div>
           </div>
 
-          {/* Build number conflict */}
-          {needsBuildDecision && (
-            <div className="flex flex-col gap-3 p-4 bg-amber-50 border border-amber-200 rounded-xl">
-              <div className="flex items-start gap-2.5">
-                <AlertCircle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
-                <p className="text-sm text-amber-800">
-                  Build number already exists. Latest live build is #{latestRelease?.build_number}.
-                  Automatically change to #{(latestRelease?.build_number ?? 0) + 1}?
+          {/* Build number too low — hard block */}
+          {isBuildTooLow && (
+            <div className="flex items-start gap-2.5 p-4 bg-destructive/10 border border-destructive/20 rounded-xl">
+              <AlertCircle className="w-4 h-4 text-destructive shrink-0 mt-0.5" />
+              <div className="text-sm text-destructive">
+                <p className="font-medium">APK build number is too low.</p>
+                <p className="mt-1">
+                  This APK has <strong>versionCode {buildNum}</strong>, but the current live release
+                  is build <strong>#{latestRelease?.build_number}</strong>. The build number in the
+                  APK must be higher than the current live build — otherwise installed devices will
+                  never see it as an update.
                 </p>
-              </div>
-              <div className="flex items-center gap-2">
-                <Button
-                  type="button"
-                  size="sm"
-                  variant={buildChoice === "increment" ? "default" : "outline"}
-                  onClick={() => setBuildChoice("increment")}
-                >
-                  Auto Increment
-                </Button>
-                <Button
-                  type="button"
-                  size="sm"
-                  variant={buildChoice === "keep" ? "default" : "outline"}
-                  onClick={() => setBuildChoice("keep")}
-                >
-                  Keep Existing
-                </Button>
+                <p className="mt-1.5 font-medium">
+                  Open <code className="font-mono">android/app/build.gradle</code>, set{" "}
+                  <code className="font-mono">versionCode</code> to at least{" "}
+                  {(latestRelease?.build_number ?? 0) + 1}, rebuild the APK, then upload again.
+                </p>
               </div>
             </div>
           )}
-          {needsBuildDecision && buildChoice === "increment" && (
-            <p className="text-xs text-muted-foreground -mt-2">
-              Will publish as build #{effectiveBuildNumber}.
-            </p>
+
+          {/* Build number same as current — offer republish with confirmation */}
+          {isBuildSameAsCurrent && (
+            <div className="flex flex-col gap-3 p-4 bg-amber-50 border border-amber-200 rounded-xl">
+              <div className="flex items-start gap-2.5">
+                <AlertCircle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+                <div className="text-sm text-amber-800">
+                  <p className="font-medium">
+                    This APK has the same versionCode ({buildNum}) as the current live release
+                    (build #{latestRelease?.build_number}).
+                  </p>
+                  <p className="mt-1">
+                    Republishing replaces the existing release file but will{" "}
+                    <strong>not prompt devices that already have build #{buildNum} to update</strong>.
+                    If you want existing users to receive this update, rebuild the APK with a higher{" "}
+                    <code className="font-mono">versionCode</code> in{" "}
+                    <code className="font-mono">android/app/build.gradle</code>.
+                  </p>
+                </div>
+              </div>
+              <Button
+                type="button"
+                size="sm"
+                variant={buildChoice === "keep" ? "default" : "outline"}
+                onClick={() => setBuildChoice("keep")}
+              >
+                Republish as build #{buildNum} anyway
+              </Button>
+            </div>
           )}
 
           {/* Version regression warning */}

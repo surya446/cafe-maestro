@@ -1,29 +1,35 @@
 ---
-name: Mandatory (force) in-app update gate
-description: How the TRUE mandatory full-screen Android update block is wired, and why it sits above auth.
+name: Mandatory app update gate
+description: Force-update screen, infinite update loop root cause, and what was fixed.
 ---
 
-The mandatory update gate (`MandatoryUpdateGate` + `AppUpdateContext`) is mounted at the very
-root of `App.tsx`, wrapping the router *including the login/public routes* — not just the
-authenticated `AdminShell` area.
+## Architecture
+- `MandatoryUpdateGate` (root-mounted, wraps everything including login) blocks the app when `checked && hasUpdate && isForceUpdate`.
+- `AppUpdateContext` runs `useAppUpdateCheck` once on mount and re-runs it (`recheck()`) on every `appStateChange: isActive` resume event.
+- `useApkDownload` / `ApkUpdaterPlugin.java`: downloads APK with progress events, then fires a `startActivity(ACTION_VIEW)` intent to the system package installer and resolves immediately. The old app process goes to background.
 
-**Why:** "block every screen until updated" must include the login screen too, since a
-logged-out device on an old build should never reach the app at all. The pre-existing optional
-(non-force) update dialog stayed scoped inside `AdminShell` (post-login) since that one is
-dismissible and lower-stakes; only the force-update path needed to move to the root.
+## Root causes of the infinite update loop (both fixed)
 
-**How to apply:** `AppUpdateProvider` runs `useAppUpdateCheck` exactly once (root-mounted) and
-is the single source of truth shared by both the root-level mandatory gate and the in-app
-optional-dialog gate — do not call `useAppUpdateCheck` directly in more than one place, or the
-update RPC fires twice per launch/resume.
+### 1 — Auto Increment in upload form (primary cause)
+`DownloadsPage.tsx` previously offered an "Auto Increment" button when the uploaded APK's `versionCode` ≤ current DB `build_number`. Clicking it stored `build_number = N+1` in the DB while the APK binary retained `versionCode = N`. After installation, `App.getInfo()` returns `N` (the real versionCode), but DB has `N+1 > N` → mandatory update screen appears again → infinite loop.
 
-Android back button must go fully silent (no back-nav, no exit-confirm dialog) while the
-mandatory screen is showing — implemented via a `disabled` prop threaded into
-`useAndroidBackButton`/`AndroidBackHandler`, checked inside the `backButton` listener closure via
-a ref (the listener itself is registered once, so a plain closure variable would go stale).
+**Fix**: Removed "Auto Increment" option entirely. `isBuildTooLow` (APK versionCode < DB build) is now a hard block with an error directing the owner to bump `versionCode` in `build.gradle`. `isBuildSameAsCurrent` (versionCode == DB build) requires explicit confirmation to republish the same build number (safe, won't retrigger updates).
 
-The native `ApkUpdaterPlugin` (Java) has no resume/partial-download support — "resume after
-connectivity loss" is implemented as a full restart of the download once `useNetworkStatus`
-reports back online, not a byte-range resume. Distinguish "download failed, no file yet" (full
-retry) from "install failed, file already on disk" (`apkPath` still set — retry only `install()`,
-don't re-download) to avoid needless re-downloads on install-only failures.
+### 2 — Module-level cache in versionService.ts (secondary cause)
+`let cached` was set on the first call to `getInstalledAppVersion()`. If `recheck()` was triggered (e.g., via `appStateChange`) before the old process was killed, the stale pre-install build number was returned from cache → update still appeared.
+
+**Fix**: Removed the module-level cache entirely. `App.getInfo()` is called fresh on every invocation. `__resetVersionCache()` kept as a no-op for test compatibility.
+
+## Key rule
+The database `build_number` must always equal the APK's actual `versionCode` (as reported by `App.getInfo().build`). Any mismatch where DB > installed versionCode creates an infinite mandatory update loop.
+
+## Files
+- `src/services/versionService.ts` — reads `App.getInfo()`, no caching
+- `src/hooks/useAppUpdateCheck.ts` — runs check, exposes `recheck`
+- `src/context/AppUpdateContext.tsx` — mounts listener for `appStateChange`
+- `src/components/updates/MandatoryUpdateGate.tsx` — gate, root-mounted
+- `src/components/updates/MandatoryUpdateScreen.tsx` — download + install UI
+- `src/native/apkUpdater.ts` + `android/.../ApkUpdaterPlugin.java` — native download/install plugin
+- `src/pages/DownloadsPage.tsx` — APK upload form (UploadForm component)
+
+**Why:** Without strict invariant enforcement at upload time, an owner can accidentally push a DB record whose `build_number` no longer maps to any real APK versionCode, trapping every device in an update loop.

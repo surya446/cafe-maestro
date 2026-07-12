@@ -13,6 +13,12 @@
  *   installed "app" to version-check, so this resolves to a web
  *   placeholder. Update checks are always skipped outside of the
  *   native Android platform — see useAppUpdateCheck.
+ *
+ * NOTE: No module-level caching. App.getInfo() is a cheap synchronous
+ * native call; caching it caused an infinite update loop because
+ * recheck() (triggered on appStateChange after installation) would
+ * read the old build number from cache instead of the freshly
+ * installed one.
  */
 
 import { Capacitor } from "@capacitor/core";
@@ -24,30 +30,24 @@ export interface InstalledAppVersion {
   platform: "android" | "web";
 }
 
-let cached: InstalledAppVersion | null = null;
-
 export async function getInstalledAppVersion(): Promise<InstalledAppVersion> {
-  if (cached) return cached;
-
   if (Capacitor.isNativePlatform() && Capacitor.getPlatform() === "android") {
     try {
       const info = await App.getInfo();
-      cached = {
+      return {
         version: info.version,
         buildNumber: parseInt(info.build, 10) || 0,
         platform: "android",
       };
-      return cached;
     } catch (err) {
       console.error("[versionService] App.getInfo() failed:", err);
     }
   }
 
-  cached = { version: "web", buildNumber: 0, platform: "web" };
-  return cached;
+  return { version: "web", buildNumber: 0, platform: "web" };
 }
 
-/** Clears the cached version — mainly useful for tests. */
+/** No-op kept for test compatibility. */
 export function __resetVersionCache(): void {
-  cached = null;
+  // Cache removed — App.getInfo() is always called fresh.
 }
