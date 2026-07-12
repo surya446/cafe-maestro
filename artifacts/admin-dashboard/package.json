@@ -83,7 +83,9 @@
   },
   "dependencies": {
     "@capacitor/app": "^8.1.0",
+    "@capacitor/browser": "^8.0.3",
     "@capacitor/device": "^8.0.2",
+    "@capacitor/network": "^8.0.1",
     "@gsap/react": "^2.1.2",
     "@supabase/supabase-js": "^2.108.1",
     "app-info-parser": "^1.1.6",

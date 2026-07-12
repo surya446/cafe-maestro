@@ -1,0 +1,332 @@
+Continue working on the existing Café Maestro project.
+
+DO NOT redesign the UI.
+
+DO NOT modify Orders, Sessions, Kitchen, Billing, QR Ordering, Authentication, Realtime, App Releases, or any business logic.
+
+This task is ONLY to make the Android app behave like a polished native application.
+
+First audit the current Capacitor configuration, MainActivity, App.tsx, routing, and native plugins before making changes.
+
+=========================================================
+GOAL
+=========================================================
+
+Make the Android application behave like a professional native Android app instead of a wrapped website.
+
+Do NOT affect the web version.
+
+All changes must apply ONLY to the native Android app.
+
+=========================================================
+1. BACK BUTTON BEHAVIOUR
+=========================================================
+
+Currently pressing the Android back button closes the application from every screen.
+
+Fix this completely.
+
+Required behaviour:
+
+• If the user can navigate back inside the React Router history,
+  go back one page.
+
+Example:
+
+Dashboard
+↓
+
+Orders
+↓
+
+Order Details
+
+Press Back
+
+↓
+
+Orders
+
+Press Back
+
+↓
+
+Dashboard
+
+Press Back
+
+↓
+
+Exit confirmation.
+
+Never immediately close the app while there is navigation history.
+
+=========================================================
+2. EXIT CONFIRMATION
+=========================================================
+
+When the user is already on the root page (Dashboard or Login depending on auth),
+
+Pressing Back should NOT immediately exit.
+
+Instead show a native-looking confirmation:
+
+--------------------------------
+
+Exit Cafe Maestro?
+
+[Cancel]
+
+[Exit]
+
+--------------------------------
+
+If cancelled
+
+Stay in app.
+
+If Exit
+
+Close app.
+
+=========================================================
+3. PULL TO REFRESH
+=========================================================
+
+Implement native pull-to-refresh.
+
+Only on Android.
+
+Do NOT affect desktop or web.
+
+Behaviour:
+
+User pulls down from the top.
+
+↓
+
+Nice refresh animation.
+
+↓
+
+Invalidate React Query cache.
+
+↓
+
+Refetch every active query.
+
+↓
+
+Realtime subscriptions remain intact.
+
+↓
+
+Refresh finishes.
+
+Do NOT reload the entire WebView.
+
+Do NOT reload the page.
+
+Refresh data only.
+
+=========================================================
+4. LIVE DATA REFRESH
+=========================================================
+
+Pull-to-refresh should update:
+
+Orders
+
+Sessions
+
+Bill Requests
+
+Analytics
+
+Tables
+
+Menu
+
+Offers
+
+Gallery
+
+Bookings
+
+Staff
+
+Settings
+
+Dashboard
+
+App Releases
+
+Anything using React Query.
+
+=========================================================
+5. OPEN WEBSITE
+=========================================================
+
+Currently
+
+"Visit Website"
+
+opens inside the Capacitor WebView.
+
+This is incorrect.
+
+Required:
+
+Any external website
+
+must open
+
+using
+
+Android default browser
+
+(Custom Tabs or ACTION_VIEW).
+
+Never inside the app.
+
+Examples:
+
+Restaurant Website
+
+Instagram
+
+Facebook
+
+WhatsApp links
+
+Google Maps
+
+Documentation
+
+Privacy Policy
+
+Terms
+
+Everything external
+
+must leave the app.
+
+=========================================================
+6. INTERNAL LINKS
+=========================================================
+
+Internal links
+
+must remain inside the app.
+
+Example
+
+/orders
+
+/settings
+
+/menu
+
+remain inside React Router.
+
+Only external URLs open the browser.
+
+=========================================================
+7. APP RESUME
+=========================================================
+
+When the app comes back from the background
+
+Automatically:
+
+Reconnect realtime.
+
+Refresh stale queries.
+
+Check App Updates.
+
+Update device last_seen.
+
+Do NOT reload the app.
+
+=========================================================
+8. OFFLINE HANDLING
+=========================================================
+
+If the internet disappears
+
+Show
+
+Offline
+
+banner.
+
+Do not spam toasts.
+
+When internet returns
+
+Hide banner.
+
+Reconnect.
+
+Refetch stale data.
+
+=========================================================
+9. LOADING STATES
+=========================================================
+
+Do not show blank screens.
+
+During refresh
+
+Use skeletons.
+
+Keep old data visible while fetching.
+
+=========================================================
+10. SAFE AREA
+=========================================================
+
+Respect Android status bar.
+
+Respect gesture navigation.
+
+Nothing should overlap system UI.
+
+=========================================================
+11. VERIFY
+=========================================================
+
+Verify:
+
+✓ Back button navigation
+
+✓ Exit confirmation
+
+✓ Pull-to-refresh
+
+✓ React Query refresh
+
+✓ External browser opening
+
+✓ Internal routing
+
+✓ Resume behaviour
+
+✓ Offline recovery
+
+✓ No regressions
+
+Do not stop until the Android app behaves like a polished native application.
+
+=========================================================
+IMPORTANT
+=========================================================
+
+Do NOT implement browser hacks.
+
+Use Capacitor Android APIs wherever appropriate.
+
+Prefer native behaviour over web workarounds.
+
+Keep the web version completely unchanged.

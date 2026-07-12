@@ -11,3 +11,4 @@
 - [QR rescan guard sessionStorage](qr-rescan-guard.md) — RESCAN_KEY ("qr-rescan-required") lives in sessionStorage; any reset-to-name-entry path must also clear it or subsequent refreshes re-show the terminal screen.
 - [Capacitor Android setup](capacitor-android.md) — Capacitor 8 requires Node.js ≥22; use build:cap script (PORT=3000 BASE_PATH=/); webDir=dist/public; run cap add android then cap sync android.
 - [App release management](app-releases.md) — app_releases table (migration 040) is source of truth; single is_latest per platform enforced by DB trigger; downloads bucket in Supabase Storage; sidebar item is managerOrAbove not ownerOnly.
+- [Android native-shell patterns](android-native-shell.md) — back/exit, pull-to-refresh, external links, resume, offline all gated by isNativeAndroid() in src/native/, zero-touch on web build.

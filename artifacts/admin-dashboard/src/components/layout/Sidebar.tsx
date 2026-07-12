@@ -200,8 +200,12 @@ export function Sidebar({ collapsed, mobileOpen, onToggleCollapse, onCloseMobile
           mobileOpen ? "translate-x-0" : "-translate-x-full"
         )}
       >
-        {/* Brand */}
-        <div className="flex items-center gap-3 px-5 h-16 border-b border-sidebar-border shrink-0 relative">
+        {/* Brand — top padding accounts for the Android status bar via
+            env(safe-area-inset-top); 0 on web/desktop. */}
+        <div
+          className="flex items-center gap-3 px-5 h-16 border-b border-sidebar-border shrink-0 relative"
+          style={{ paddingTop: "env(safe-area-inset-top)", height: "calc(4rem + env(safe-area-inset-top))" }}
+        >
           <div className="flex items-center justify-center w-9 h-9 rounded-lg bg-sidebar-primary/20 text-sidebar-primary shrink-0">
             <Coffee className="w-5 h-5" />
           </div>
@@ -213,7 +217,7 @@ export function Sidebar({ collapsed, mobileOpen, onToggleCollapse, onCloseMobile
           <button
             onClick={onCloseMobile}
             aria-label="Close menu"
-            className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center justify-center h-10 w-10 rounded-md text-sidebar-foreground/50 hover:text-sidebar-foreground hover:bg-sidebar-accent transition-colors"
+            className="absolute right-2 bottom-2 flex items-center justify-center h-10 w-10 rounded-md text-sidebar-foreground/50 hover:text-sidebar-foreground hover:bg-sidebar-accent transition-colors"
           >
             <X className="w-4 h-4" />
           </button>
@@ -263,8 +267,12 @@ export function Sidebar({ collapsed, mobileOpen, onToggleCollapse, onCloseMobile
           })}
         </nav>
 
-        {/* User footer */}
-        <div className="border-t border-sidebar-border p-3">
+        {/* User footer — bottom padding accounts for gesture-nav insets
+            via env(safe-area-inset-bottom); 0 on web/desktop. */}
+        <div
+          className="border-t border-sidebar-border p-3"
+          style={{ paddingBottom: "calc(0.75rem + env(safe-area-inset-bottom))" }}
+        >
           <div className="flex items-center gap-3 px-2 py-2 rounded-lg mb-1">
             <div className="flex items-center justify-center w-8 h-8 rounded-full bg-sidebar-primary/25 text-sidebar-primary text-xs font-bold shrink-0">
               {user?.displayName?.charAt(0).toUpperCase() ?? "?"}

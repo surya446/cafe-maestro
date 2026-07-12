@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import { Switch, Route, Router as WouterRouter, Redirect } from "wouter";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { queryClient } from "@/lib/queryClient";
@@ -9,6 +10,10 @@ import { AppLayout } from "@/components/layout/AppLayout";
 import { NavBadgesProvider } from "@/context/NavBadgesContext";
 import { AppUpdateGate } from "@/components/updates/AppUpdateGate";
 import { useDeviceTracking } from "@/hooks/useDeviceTracking";
+import { useAppResume } from "@/hooks/useAppResume";
+import { AndroidBackHandler } from "@/components/native/AndroidBackHandler";
+import { OfflineBanner } from "@/components/native/OfflineBanner";
+import { installExternalLinkHandler } from "@/native/externalLinks";
 
 import { LoginPage } from "@/pages/LoginPage";
 import { AuthConfirmPage } from "@/pages/AuthConfirmPage";
@@ -62,6 +67,7 @@ function LoadingScreen() {
 function AdminShell() {
   const { user, loading } = useAuth();
   useDeviceTracking();
+  useAppResume(user?.id);
 
   if (loading) return <LoadingScreen />;
   if (!user) return <Redirect to="/login" />;
@@ -117,9 +123,15 @@ function Router() {
 }
 
 function App() {
+  useEffect(() => {
+    installExternalLinkHandler();
+  }, []);
+
   return (
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
+        <OfflineBanner />
+        <AndroidBackHandler />
         <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, "")}>
           <Router />
         </WouterRouter>
