@@ -1,0 +1,147 @@
+The architecture has been finalized.
+
+Do NOT perform another audit.
+
+Do NOT redesign anything.
+
+Proceed directly with implementation.
+
+==========================================================
+
+IMPLEMENTATION PHASE 1
+
+Create the Android TV foundation only.
+
+Do not build the complete TV application yet.
+
+==========================================================
+
+Architecture (already decided)
+
+- One React codebase
+- One Supabase project
+- One authentication system
+- One business logic layer
+- One Kitchen backend
+- Two Android projects
+
+Existing:
+
+android/
+applicationId:
+com.cafemaestro.app
+
+Create:
+
+android-tv/
+applicationId:
+com.cafemaestro.tv
+
+==========================================================
+
+Implement
+
+1. Create the android-tv project.
+
+2. Configure it correctly for Android TV.
+
+3. Create all required build scripts.
+
+Examples:
+
+build:tv
+
+cap:sync:tv
+
+cap:open:tv
+
+build:mobile
+
+cap:sync:mobile
+
+cap:open:mobile
+
+4. Implement the build-time variant.
+
+VITE_APP_VARIANT=mobile
+
+VITE_APP_VARIANT=tv
+
+5. Create the TV application shell.
+
+src/tv/
+
+TvApp.tsx
+
+This should only contain placeholder content for now.
+
+Do NOT implement the Kitchen UI yet.
+
+6. Update the application entry so:
+
+Mobile build
+
+↓
+
+Loads App.tsx
+
+TV build
+
+↓
+
+Loads TvApp.tsx
+
+7. Extend the platform helper so shared code can detect:
+
+Mobile build
+
+TV build
+
+Web build
+
+without runtime guessing.
+
+8. Prepare the update system for two platforms.
+
+Do NOT duplicate update logic.
+
+Simply make the platform configurable so later:
+
+Mobile checks:
+
+android
+
+TV checks:
+
+android-tv
+
+9. Keep all existing mobile functionality working exactly as it is.
+
+==========================================================
+
+Do NOT implement yet
+
+- Kitchen UI
+- TV Login UI
+- Order cards
+- D-pad navigation
+- Sounds
+- Wake lock
+- Hidden settings
+- TV animations
+
+Those will be implemented in Phase 2.
+
+==========================================================
+
+At the end:
+
+1. Build the mobile project.
+
+2. Build the TV project.
+
+3. Verify both compile successfully.
+
+4. Verify the mobile app is completely unaffected.
+
+Only after Phase 1 is fully verified should we move to Phase 2.

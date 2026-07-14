@@ -1,20 +1,25 @@
 /**
  * useAppUpdateCheck
  *
- * Runs once when the native Android app launches (mounted from
- * AdminShell after login). Compares the installed build number
- * against the latest published Android release. Never checks or
- * compares against Android TV releases, and never runs in the
- * browser admin dashboard.
+ * Runs once when the native Android app launches and re-runs on every
+ * resume from background.  Compares the installed build number against
+ * the latest published release for this APK's platform:
  *
- * Failure-safe: if the check fails for any reason (offline, RPC
- * error, missing table), the app continues normally — it never
- * blocks usage.
+ *   Mobile APK  →  checks "android"
+ *   TV APK      →  checks "android-tv"
+ *
+ * The platform is derived at build time from VITE_APP_VARIANT via
+ * getAppVariant() in src/native/platform.ts — no runtime guessing.
+ *
+ * Never runs in the browser admin dashboard.
+ *
+ * Failure-safe: if the check fails for any reason (offline, RPC error,
+ * missing table) the app continues normally — it never blocks usage.
  */
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Capacitor } from "@capacitor/core";
-import { checkForUpdate, type LatestReleaseInfo } from "@/services/releaseService";
+import { isNativeAndroid, isTvApp } from "@/native/platform";
+import { checkForUpdate, type AppReleasePlatform, type LatestReleaseInfo } from "@/services/releaseService";
 import { getInstalledAppVersion } from "@/services/versionService";
 
 export interface AppUpdateState {
@@ -26,7 +31,8 @@ export interface AppUpdateState {
   installedBuild: number;
 }
 
-const ANDROID_PLATFORM = "android" as const;
+/** The platform this build checks against — resolved once at module load. */
+const RELEASE_PLATFORM: AppReleasePlatform = isTvApp() ? "android-tv" : "android";
 
 const initialState: AppUpdateState = {
   checked: false,
@@ -43,21 +49,23 @@ export function useAppUpdateCheck() {
 
   const runCheck = useCallback(async (trigger: "launch" | "resume" = "launch") => {
     // Update checks are meaningful only on the native Android app.
-    if (!Capacitor.isNativePlatform() || Capacitor.getPlatform() !== "android") {
+    // isNativeAndroid() is true for both the Mobile and TV APKs.
+    if (!isNativeAndroid()) {
       setState((s) => ({ ...s, checked: true }));
       return;
     }
 
     // DIAGNOSTIC — record what triggered this check so logs are unambiguous.
-    console.log(`[useAppUpdateCheck] ── check triggered by: ${trigger} ──`);
+    console.log(`[useAppUpdateCheck] ── check triggered by: ${trigger} (platform: ${RELEASE_PLATFORM}) ──`);
 
     try {
       const installed = await getInstalledAppVersion();
-      const result = await checkForUpdate(ANDROID_PLATFORM, installed.buildNumber);
+      const result = await checkForUpdate(RELEASE_PLATFORM, installed.buildNumber);
 
       // DIAGNOSTIC — final state that will be written to context.
       console.log(`[useAppUpdateCheck] result (${trigger}) →`, JSON.stringify({
         trigger,
+        platform: RELEASE_PLATFORM,
         installedVersion: installed.version,
         installedBuild: installed.buildNumber,
         latestBuild: result.latestRelease?.build_number ?? null,
