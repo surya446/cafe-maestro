@@ -4,21 +4,22 @@
  *
  * Opens the android-tv/ Gradle project in Android Studio.
  *
- * This is the Capacitor 8-compatible replacement for:
+ * Capacitor 8.4.1 replacement for:
  *   npx cap open android --config capacitor-tv.config.ts
+ * (that flag does not exist in Capacitor 8.4.1's `cap open`.)
  *
- * Capacitor 8.4.1's `cap open` does not support a --config flag.
- * This script replicates exactly what `cap open android` does internally:
- * it resolves the Android project path from the TV Capacitor config and
- * opens it with Android Studio using the platform-appropriate mechanism.
+ * Replicates the exact studio-path resolution and launch logic from
+ * @capacitor/cli@8.4.1 dist/android/open.js + dist/config.js:
  *
- * Usage: node scripts/open-tv.js   (via pnpm cap:open:tv)
- *
- * Platform behaviour:
- *   macOS   — open -a "Android Studio" <path>
- *   Windows — start "" "<path>"  (Windows shell opens with the registered handler)
- *   Linux   — tries ANDROID_STUDIO env var, then common install locations,
- *              then falls back to xdg-open, then prints manual instructions.
+ *   macOS   — open -a "Android Studio" <projectDir>
+ *   Windows — resolves studio64.exe via:
+ *               1. CAPACITOR_ANDROID_STUDIO_PATH env var
+ *               2. C:\Program Files\Android\Android Studio\bin\studio64.exe
+ *               3. REG QUERY HKEY_LOCAL_MACHINE\SOFTWARE\Android Studio /v Path
+ *             then spawns studio64.exe <projectDir> directly.
+ *             (Using `start ""` is wrong — it opens File Explorer, not Android Studio.)
+ *   Linux   — tries CAPACITOR_ANDROID_STUDIO_PATH, then common studio.sh
+ *             locations, then xdg-open, then prints manual instructions.
  */
 
 import { execSync, spawn } from "node:child_process";
@@ -29,84 +30,147 @@ import { fileURLToPath } from "node:url";
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const projectDir = path.resolve(__dirname, "../android-tv");
 
+// ── Pre-flight checks ─────────────────────────────────────────────────────────
+
 if (!fs.existsSync(projectDir)) {
-  console.error(`[open-tv] ERROR: android-tv/ project not found at:\n  ${projectDir}`);
-  console.error(`  Make sure you are running this from the workspace root.`);
+  console.error(`[open-tv] ERROR: android-tv/ not found at:\n  ${projectDir}`);
   process.exit(1);
 }
-
-// Verify settings.gradle is present — minimum check that this is a Gradle project.
 if (!fs.existsSync(path.join(projectDir, "settings.gradle"))) {
-  console.error(`[open-tv] ERROR: android-tv/settings.gradle not found.`);
-  console.error(`  The android-tv project may be incomplete. Run: pnpm cap:sync:tv`);
+  console.error(`[open-tv] ERROR: android-tv/settings.gradle missing.`);
+  console.error(`  Run: pnpm cap:sync:tv`);
   process.exit(1);
 }
 
 console.log(`[open-tv] Opening Android Studio with project:\n  ${projectDir}\n`);
 
+// ── Platform dispatch ─────────────────────────────────────────────────────────
+
 const platform = process.platform;
 
 if (platform === "darwin") {
-  // macOS — standard open -a command. Identical to what `cap open android` does.
-  try {
-    execSync(`open -a "Android Studio" "${projectDir}"`, { stdio: "inherit" });
-  } catch (_) {
-    console.error(`[open-tv] Could not open Android Studio automatically.`);
-    console.error(`  Open Android Studio manually and choose: File → Open`);
-    console.error(`  Then navigate to: ${projectDir}`);
-    process.exit(1);
-  }
+  openMac();
 } else if (platform === "win32") {
-  // Windows — open the directory via the shell; Android Studio registers as
-  // the handler for Android Gradle projects.
-  try {
-    spawn("cmd.exe", ["/c", "start", "", projectDir], {
-      stdio: "inherit",
-      detached: true,
-      shell: false,
-    }).unref();
-  } catch (_) {
-    console.error(`[open-tv] Could not open the project automatically on Windows.`);
-    console.error(`  Open Android Studio manually and choose: File → Open`);
-    console.error(`  Then navigate to: ${projectDir}`);
-    process.exit(1);
-  }
+  openWindows();
 } else {
-  // Linux — try candidate studio.sh locations in order.
+  openLinux();
+}
+
+// ── macOS ─────────────────────────────────────────────────────────────────────
+
+function openMac() {
+  // Identical to what `cap open android` does on macOS.
+  const studioPath =
+    process.env.CAPACITOR_ANDROID_STUDIO_PATH ?? "/Applications/Android Studio.app";
+
+  try {
+    execSync(`open -a "${studioPath}" "${projectDir}"`, { stdio: "inherit" });
+  } catch {
+    fatal(
+      `Could not launch Android Studio at: ${studioPath}`,
+      `Set CAPACITOR_ANDROID_STUDIO_PATH if it is installed elsewhere.`,
+      `Or open Android Studio manually: File → Open → ${projectDir}`,
+    );
+  }
+}
+
+// ── Windows ───────────────────────────────────────────────────────────────────
+
+async function openWindows() {
+  const studioExe = await resolveWindowsStudioPath();
+
+  if (!studioExe || !fs.existsSync(studioExe)) {
+    fatal(
+      `Cannot find Android Studio executable${studioExe ? ` at:\n  ${studioExe}` : "."}`,
+      `Set the CAPACITOR_ANDROID_STUDIO_PATH environment variable to the full path`,
+      `of studio64.exe, e.g.:`,
+      `  set CAPACITOR_ANDROID_STUDIO_PATH=C:\\Program Files\\Android\\Android Studio\\bin\\studio64.exe`,
+      `Or open Android Studio manually: File → Open → ${projectDir}`,
+    );
+    return;
+  }
+
+  console.log(`[open-tv] Launching: ${studioExe}`);
+  // Spawn studio64.exe with the project directory — this is the correct Windows
+  // launch method. Do NOT use `start ""` which opens File Explorer, not Android Studio.
+  spawn(`"${studioExe}"`, [`"${projectDir}"`], {
+    stdio: "ignore",
+    detached: true,
+    shell: true,   // shell:true so quoted paths with spaces resolve correctly on Windows
+  }).unref();
+}
+
+async function resolveWindowsStudioPath() {
+  // 1. Explicit env var (same as Capacitor).
+  if (process.env.CAPACITOR_ANDROID_STUDIO_PATH) {
+    return process.env.CAPACITOR_ANDROID_STUDIO_PATH;
+  }
+
+  // 2. Default install location.
+  const defaultPath =
+    "C:\\Program Files\\Android\\Android Studio\\bin\\studio64.exe";
+  if (fs.existsSync(defaultPath)) {
+    return defaultPath;
+  }
+
+  // 3. Registry query — same query Capacitor 8.4.1 uses.
+  try {
+    let result = execSync(
+      "REG QUERY HKEY_LOCAL_MACHINE\\SOFTWARE\\Android Studio /v Path",
+      { encoding: "utf8", stdio: ["pipe", "pipe", "ignore"] },
+    );
+    result = result.replace(/(\r\n|\n|\r)/gm, "");
+    const i = result.indexOf("REG_SZ");
+    if (i > 0) {
+      return result.substring(i + 6).trim() + "\\bin\\studio64.exe";
+    }
+  } catch {
+    // Registry key not present — fall through.
+  }
+
+  return null;
+}
+
+// ── Linux ─────────────────────────────────────────────────────────────────────
+
+function openLinux() {
   const candidates = [
-    process.env.ANDROID_STUDIO
-      ? path.join(process.env.ANDROID_STUDIO, "bin/studio.sh")
-      : null,
-    "/opt/android-studio/bin/studio.sh",
+    process.env.CAPACITOR_ANDROID_STUDIO_PATH ?? null,
     "/usr/local/android-studio/bin/studio.sh",
-    `${process.env.HOME}/android-studio/bin/studio.sh`,
-    `${process.env.HOME}/.local/share/JetBrains/Toolbox/apps/AndroidStudio/ch-0/default/bin/studio.sh`,
+    "/usr/local/android-studio/bin/studio",
+    "/opt/android-studio/bin/studio.sh",
+    "/opt/android-studio/bin/studio",
+    process.env.HOME ? `${process.env.HOME}/android-studio/bin/studio.sh` : null,
+    process.env.HOME ? `${process.env.HOME}/.local/share/JetBrains/Toolbox/apps/AndroidStudio/ch-0/default/bin/studio.sh` : null,
   ].filter(Boolean);
 
-  let opened = false;
   for (const candidate of candidates) {
     if (fs.existsSync(candidate)) {
-      try {
-        spawn(candidate, [projectDir], { stdio: "ignore", detached: true }).unref();
-        console.log(`[open-tv] Launched: ${candidate}`);
-        opened = true;
-        break;
-      } catch (_) {
-        // try next
-      }
+      console.log(`[open-tv] Launching: ${candidate}`);
+      spawn(candidate, [projectDir], { stdio: "ignore", detached: true }).unref();
+      return;
     }
   }
 
-  if (!opened) {
-    // Last resort: xdg-open
-    try {
-      spawn("xdg-open", [projectDir], { stdio: "ignore", detached: true }).unref();
-      console.log(`[open-tv] Opened via xdg-open.`);
-    } catch (_) {
-      console.log(`[open-tv] Could not locate Android Studio automatically.`);
-      console.log(`  Set the ANDROID_STUDIO environment variable to your Android Studio install dir, or`);
-      console.log(`  open Android Studio manually and choose: File → Open`);
-      console.log(`  Navigate to: ${projectDir}`);
-    }
+  // Last resort: xdg-open (may or may not open in Android Studio).
+  try {
+    spawn("xdg-open", [projectDir], { stdio: "ignore", detached: true }).unref();
+    console.log(`[open-tv] Opened via xdg-open (may open in file manager — see below).`);
+  } catch {
+    // xdg-open not available.
   }
+
+  console.log(
+    `[open-tv] Could not locate Android Studio automatically.\n` +
+    `  Set CAPACITOR_ANDROID_STUDIO_PATH to your studio.sh path, e.g.:\n` +
+    `    export CAPACITOR_ANDROID_STUDIO_PATH=/opt/android-studio/bin/studio.sh\n` +
+    `  Or open Android Studio manually: File → Open → ${projectDir}`,
+  );
+}
+
+// ── Helpers ───────────────────────────────────────────────────────────────────
+
+function fatal(...lines) {
+  console.error(`[open-tv] ERROR: ${lines.join("\n  ")}`);
+  process.exit(1);
 }
