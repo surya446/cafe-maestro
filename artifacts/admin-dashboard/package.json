@@ -14,7 +14,7 @@
     "cap:sync:tv": "node scripts/sync-tv.js",
     "cap:open": "npx cap open android",
     "cap:open:mobile": "npx cap open android",
-    "cap:open:tv": "npx cap open android --config capacitor-tv.config.ts",
+    "cap:open:tv": "node scripts/open-tv.js",
     "serve": "vite preview --config vite.config.ts --host 0.0.0.0",
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
