@@ -1,0 +1,200 @@
+The previous implementation stopped only because the account quota was exhausted.
+
+Do NOT restart.
+
+Do NOT perform another audit.
+
+Do NOT redesign the architecture.
+
+Continue exactly from where the previous implementation stopped.
+
+==========================================================
+CURRENT STATUS
+==========================================================
+
+The architecture has already been finalized.
+
+We are using:
+
+- One React codebase
+- One Supabase project
+- One authentication system
+- One business logic layer
+- One Kitchen backend
+- Two Android projects
+
+Existing:
+
+artifacts/admin-dashboard/android
+applicationId:
+com.cafemaestro.app
+
+New:
+
+artifacts/admin-dashboard/android-tv
+applicationId:
+com.cafemaestro.tv
+
+We intentionally chose Separate Android Projects instead of Android Product Flavors because Capacitor 8's cap sync always writes to a single assets directory, making Product Flavors introduce permanent maintenance friction.
+
+This decision is final.
+
+==========================================================
+IMPLEMENTATION STATUS
+==========================================================
+
+Phase 1 had already started.
+
+The following work had already begun before the quota ended:
+
+- TV project creation
+- Build scripts
+- Platform helpers
+- VITE_APP_VARIANT support
+- TV shell
+- Android TV resources
+- Gradle configuration
+- Sync scripts
+- Android project duplication
+
+The implementation stopped in the middle because the quota expired.
+
+Continue from there.
+
+==========================================================
+DO NOT CHANGE
+==========================================================
+
+Do NOT redesign anything.
+
+Do NOT change the chosen architecture.
+
+Do NOT replace Separate Android Projects with Product Flavors.
+
+Do NOT change the mobile application behaviour.
+
+Do NOT modify existing business logic.
+
+==========================================================
+COMPLETE PHASE 1
+==========================================================
+
+Finish implementing:
+
+1. android-tv project
+
+2. Android TV Gradle configuration
+
+3. Android TV manifest
+
+4. Android TV resources
+
+5. MainActivity
+
+6. ApkUpdaterPlugin
+
+7. Build scripts
+
+build:mobile
+
+build:tv
+
+cap:sync:mobile
+
+cap:sync:tv
+
+cap:open:mobile
+
+cap:open:tv
+
+8. Build-time variants
+
+VITE_APP_VARIANT=mobile
+
+VITE_APP_VARIANT=tv
+
+9. src/tv/TvApp.tsx
+
+Placeholder only.
+
+Do NOT build Kitchen UI yet.
+
+10. Update application bootstrap
+
+Mobile build
+
+↓
+
+App.tsx
+
+TV build
+
+↓
+
+TvApp.tsx
+
+11. Extend platform helper
+
+Support:
+
+mobile
+
+tv
+
+web
+
+12. Make update system platform-aware
+
+Reuse the existing update logic.
+
+Do not duplicate it.
+
+The only difference should be:
+
+Mobile checks platform "android"
+
+TV checks platform "android-tv"
+
+==========================================================
+DO NOT IMPLEMENT YET
+==========================================================
+
+Kitchen UI
+
+TV Login
+
+Order cards
+
+D-pad navigation
+
+Remote support
+
+Wake lock
+
+Animations
+
+Sounds
+
+Hidden settings
+
+TV update UI
+
+Those belong to Phase 2.
+
+==========================================================
+VERIFICATION
+==========================================================
+
+Before finishing:
+
+1. Build the mobile project.
+
+2. Build the TV project.
+
+3. Verify both compile successfully.
+
+4. Verify the mobile application still works exactly as before.
+
+5. Explain every file that was created or modified.
+
+Only after Phase 1 is fully completed and verified will we begin implementing the Kitchen Display System in Phase 2.
