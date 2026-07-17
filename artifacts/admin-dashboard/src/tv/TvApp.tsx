@@ -1,51 +1,45 @@
 /**
- * TvApp — root of the Android TV build (VITE_APP_VARIANT=tv).
+ * TvApp — root of the Android TV / Kitchen Display System build.
  *
- * Mounted by src/main.tsx when the TV APK is loaded.
- * Completely replaces App.tsx — no sidebar, no dashboard, no admin shell.
+ * Mounted by src/main.tsx when VITE_APP_VARIANT === "tv".
+ * Completely replaces App.tsx — no sidebar, no admin dashboard, no
+ * mobile navigation.
  *
- * Phase 1: scaffold and placeholder only.
+ * Provider hierarchy (mirrors App.tsx where relevant):
+ *   QueryClientProvider  — TanStack Query (reuses shared queryClient)
+ *   AppUpdateProvider    — update check against "android-tv" platform
+ *                          (isTvApp() is true → RELEASE_PLATFORM = "android-tv")
+ *   MandatoryUpdateGate  — blocks the KDS if a force-update is pending;
+ *                          no-op on web/desktop
+ *   TvKitchenPage        — the Kitchen Display System
  *
- * Phase 2 will add:
- *   - TvAuthShell  (login + kitchen selector, persisted to localStorage)
- *   - TvKitchenPage (full-screen Kitchen Display System)
- *   - TvUpdateGate  (mandatory update check against "android-tv" platform)
- *   - D-pad / remote navigation
- *   - Screen wake lock
- *   - Hidden settings panel (5-second hold)
- *   - Sound on new orders
+ * Phase 3 will add:
+ *   TvAuthShell          — TV-native login (staff pin / email)
+ *   TvUpdateUI           — download progress for Android TV APK updates
+ *   Kitchen selector     — multi-station support
+ *
+ * Phase 2 note: the KDS launches directly into the kitchen display.
+ * If there is no active Supabase auth session the order query returns
+ * empty (RLS blocks unauthenticated reads) and the empty-state screen
+ * is shown. Phase 3 adds a dedicated TV login flow.
  */
+
+import { QueryClientProvider } from "@tanstack/react-query";
+import { Toaster } from "@/components/ui/toaster";
+import { queryClient } from "@/lib/queryClient";
+import { AppUpdateProvider } from "@/context/AppUpdateContext";
+import { MandatoryUpdateGate } from "@/components/updates/MandatoryUpdateGate";
+import { TvKitchenPage } from "./TvKitchenPage";
 
 export default function TvApp() {
   return (
-    <div
-      style={{
-        display: "flex",
-        flexDirection: "column",
-        alignItems: "center",
-        justifyContent: "center",
-        height: "100vh",
-        backgroundColor: "#0f1117",
-        color: "#ffffff",
-        fontFamily: "system-ui, sans-serif",
-        gap: "16px",
-        userSelect: "none",
-      }}
-    >
-      <div style={{ fontSize: "64px", lineHeight: 1 }}>📺</div>
-      <h1
-        style={{
-          fontSize: "36px",
-          margin: 0,
-          fontWeight: 700,
-          letterSpacing: "-0.5px",
-        }}
-      >
-        Cafe Maestro TV
-      </h1>
-      <p style={{ fontSize: "18px", color: "#6b7280", margin: 0 }}>
-        Kitchen Display System — Phase 2
-      </p>
-    </div>
+    <QueryClientProvider client={queryClient}>
+      <AppUpdateProvider>
+        <MandatoryUpdateGate>
+          <TvKitchenPage />
+        </MandatoryUpdateGate>
+      </AppUpdateProvider>
+      <Toaster />
+    </QueryClientProvider>
   );
 }
