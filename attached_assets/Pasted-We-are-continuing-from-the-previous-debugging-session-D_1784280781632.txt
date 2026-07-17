@@ -1,0 +1,130 @@
+We are continuing from the previous debugging session. Do not restart the investigation. Continue from the current state.
+
+Current status
+
+We are building an Android TV Kitchen Display System (KDS) for Cafe Maestro.
+
+The TV project is in:
+
+android-tv/
+
+The mobile project is in:
+
+android/
+
+We use a custom sync script:
+
+scripts/sync-tv.js
+Already fixed
+
+✅ pnpm cap:open:tv now opens Android Studio correctly.
+
+Previously it opened Windows Explorer because it used:
+
+start "" android-tv
+
+It now launches Android Studio directly.
+
+✅ Android Studio now recognizes the project.
+
+The following is now enabled:
+
+Build
+→ Generate Signed Bundle / APK
+
+So the Android project imports correctly.
+
+Remaining issue
+
+Gradle fails because:
+
+Could not read script
+
+android-tv/
+capacitor-cordova-android-plugins/
+cordova.variables.gradle
+
+as it does not exist
+
+The error originates from:
+
+app/capacitor.build.gradle
+
+which applies:
+
+apply from: "../capacitor-cordova-android-plugins/cordova.variables.gradle"
+Investigation already completed
+
+You already compared:
+
+android/
+android-tv/
+
+You inspected Capacitor 8.4.1 source code.
+
+You found:
+
+update.js
+the Capacitor template archive
+the generated build.gradle
+the generated cordova.variables.gradle
+
+You then created:
+
+capacitor-cordova-android-plugins/
+    build.gradle
+    cordova.variables.gradle
+
+and updated
+
+scripts/sync-tv.js
+
+so these files are regenerated every time:
+
+pnpm cap:sync:tv
+
+You also created the missing directories and placeholder files required by the template.
+
+Where work stopped
+
+The last actions were:
+
+Edited sync-tv.js
+Ran
+pnpm cap:sync:tv
+
+Then the Replit quota was exhausted before verification.
+
+No build verification was completed.
+
+Your task now
+
+Continue exactly where you stopped.
+
+Inspect the current android-tv project.
+Verify that pnpm cap:sync:tv now generates:
+capacitor-cordova-android-plugins/
+    build.gradle
+    cordova.variables.gradle
+
+every time.
+
+Run
+cd android-tv
+./gradlew assembleDebug
+
+(or gradlew.bat assembleDebug on Windows)
+
+Fix every remaining Gradle error until assembleDebug succeeds.
+
+Do not stop after fixing one error.
+
+Continue until:
+
+Gradle builds successfully.
+A signed APK can be generated.
+The APK launches directly into the TV Kitchen Display.
+
+If another Gradle error appears, fix it and continue automatically until the build is clean.
+
+Do not restart the investigation from scratch.
