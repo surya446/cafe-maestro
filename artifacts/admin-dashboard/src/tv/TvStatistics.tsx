@@ -1,7 +1,8 @@
 /**
- * TvStatistics — Pending / Preparing / Ready / Completed Today counts
- * displayed in the top bar. Props are passed from TvKitchenPage which
- * derives them from useOrders and a today count query.
+ * TvStatistics — compact order-count pills for the top bar.
+ *
+ * Horizontal layout with a coloured accent number + label.
+ * Intentionally compact: the top bar is only 64 px tall.
  */
 
 interface Props {
@@ -11,47 +12,48 @@ interface Props {
   completedToday: number;
 }
 
-interface StatProps {
+interface PillProps {
   label: string;
   value: number;
   color: string;
   bg: string;
+  border: string;
 }
 
-function Stat({ label, value, color, bg }: StatProps) {
+function Pill({ label, value, color, bg, border }: PillProps) {
   return (
     <div
       style={{
         display: "flex",
-        flexDirection: "column",
         alignItems: "center",
-        minWidth: "72px",
-        padding: "8px 16px",
-        borderRadius: "12px",
+        gap: "8px",
+        padding: "6px 14px",
+        borderRadius: "8px",
         backgroundColor: bg,
+        border: `1px solid ${border}`,
         userSelect: "none",
       }}
     >
       <span
         style={{
-          fontSize: "2rem",
+          fontSize: "1.35rem",
           fontWeight: 800,
           color,
           fontVariantNumeric: "tabular-nums",
           lineHeight: 1,
+          minWidth: "1.6ch",
+          textAlign: "right",
         }}
       >
         {value}
       </span>
       <span
         style={{
-          fontSize: "0.65rem",
-          color: "#6b7280",
-          marginTop: "4px",
+          fontSize: "0.68rem",
+          color: "#6B7280",
           textTransform: "uppercase",
-          letterSpacing: "0.08em",
+          letterSpacing: "0.07em",
           fontWeight: 600,
-          textAlign: "center",
           whiteSpace: "nowrap",
         }}
       >
@@ -61,13 +63,50 @@ function Stat({ label, value, color, bg }: StatProps) {
   );
 }
 
-export function TvStatistics({ pending, preparing, ready, completedToday }: Props) {
+export function TvStatistics({
+  pending,
+  preparing,
+  ready,
+  completedToday,
+}: Props) {
   return (
-    <div style={{ display: "flex", gap: "10px", alignItems: "center" }}>
-      <Stat label="Pending"    value={pending}        color="#f59e0b" bg="rgba(245,158,11,0.1)"  />
-      <Stat label="Preparing"  value={preparing}      color="#3b82f6" bg="rgba(59,130,246,0.1)"  />
-      <Stat label="Ready"      value={ready}          color="#22c55e" bg="rgba(34,197,94,0.1)"   />
-      <Stat label="Done Today" value={completedToday} color="#6b7280" bg="rgba(107,114,128,0.1)" />
+    <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
+      <Pill
+        label="Pending"
+        value={pending}
+        color="#F59E0B"
+        bg="rgba(245,158,11,0.08)"
+        border="rgba(245,158,11,0.2)"
+      />
+      <Pill
+        label="Preparing"
+        value={preparing}
+        color="#3B82F6"
+        bg="rgba(59,130,246,0.08)"
+        border="rgba(59,130,246,0.2)"
+      />
+      <Pill
+        label="Ready"
+        value={ready}
+        color="#10B981"
+        bg="rgba(16,185,129,0.08)"
+        border="rgba(16,185,129,0.2)"
+      />
+      <div
+        style={{
+          width: "1px",
+          height: "28px",
+          backgroundColor: "#374151",
+          flexShrink: 0,
+        }}
+      />
+      <Pill
+        label="Done Today"
+        value={completedToday}
+        color="#6B7280"
+        bg="rgba(107,114,128,0.06)"
+        border="rgba(107,114,128,0.15)"
+      />
     </div>
   );
 }

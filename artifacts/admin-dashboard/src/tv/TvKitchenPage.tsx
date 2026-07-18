@@ -1,41 +1,33 @@
 /**
- * TvKitchenPage — the main Kitchen Display System screen.
+ * TvKitchenPage — Kitchen Display System main screen.
  *
- * Reuses:
- *   useOrders()        — order data + real-time subscription + mutations
- *   useAuth()          — cafe name from authenticated staff session
- *   useNetworkStatus() — online/offline detection (Capacitor Network)
- *   useAppResume()     — reconnects Supabase realtime when app foregrounds
- *   supabase           — direct query for "completed today" count
+ * Display-only: no status mutations from the TV.
+ * Kitchen staff update orders via the staff dashboard; this screen
+ * reflects changes instantly via the existing useOrders realtime hook.
  *
- * No new data models. No duplicated business logic.
+ * Scrolling:
+ *   Auto-scroll: slow continuous downward crawl → 3 s pause at bottom →
+ *               snap back to top → repeat.
+ *   Manual:     wheel / touch / trackpad pauses auto-scroll for 20 s,
+ *               then resumes automatically.
  *
- * Layout (1080p TV-optimised):
- *   Fixed top bar (88px)
- *   Optional offline banner
- *   Scrollable order grid (auto-fill, min 380px per card)
- *   Pagination controls when > ORDERS_PER_PAGE active orders
+ * Grid: 4 columns × N rows — shows 8–12 orders on a 1920×1080 screen.
  */
 
-import { useState, useEffect } from "react";
+import { useRef, useEffect, useCallback } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase";
 import { useOrders } from "@/hooks/useOrders";
 import { useAuth } from "@/hooks/useAuth";
 import { useAppResume } from "@/hooks/useAppResume";
-import { TvTopBar, TV_BAR_HEIGHT } from "./TvTopBar";
+import { TvTopBar } from "./TvTopBar";
+import { TV_BAR_HEIGHT } from "./tvConstants";
 import { TvOfflineBanner } from "./TvOfflineBanner";
 import { TvOrderCard } from "./TvOrderCard";
 import { TvEmptyState } from "./TvEmptyState";
 import { TvLoadingScreen } from "./TvLoadingScreen";
 
-// How many cards to show per page on the TV grid.
-// 9 = 3 columns × 3 rows, fits comfortably on 1080p at ~380px min card width.
-const ORDERS_PER_PAGE = 9;
-// Auto-advance to the next page every N seconds when paginating.
-const AUTO_ADVANCE_SECONDS = 10;
-
-// ── Completed-today count query ───────────────────────────────────────────────
+// ── Completed-today count ─────────────────────────────────────────────────────
 
 function useTvCompletedToday(): number {
   const { data = 0 } = useQuery({
@@ -56,133 +48,106 @@ function useTvCompletedToday(): number {
   return data;
 }
 
-// ── Pagination controls ───────────────────────────────────────────────────────
+// ── Scroll constants ──────────────────────────────────────────────────────────
 
-interface PaginationProps {
-  page: number;
-  totalPages: number;
-  onPrev: () => void;
-  onNext: () => void;
-}
-
-function TvPagination({ page, totalPages, onPrev, onNext }: PaginationProps) {
-  if (totalPages <= 1) return null;
-
-  return (
-    <div
-      style={{
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        gap: "20px",
-        padding: "20px 0 8px",
-        userSelect: "none",
-      }}
-    >
-      <button
-        onClick={onPrev}
-        style={{
-          width: "64px",
-          height: "64px",
-          borderRadius: "12px",
-          backgroundColor: "rgba(255,255,255,0.05)",
-          border: "1px solid rgba(255,255,255,0.1)",
-          color: "#9ca3af",
-          fontSize: "1.5rem",
-          cursor: "pointer",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          transition: "background-color 0.15s",
-        }}
-        aria-label="Previous page"
-      >
-        ‹
-      </button>
-
-      <div style={{ textAlign: "center" }}>
-        <span style={{ fontSize: "1rem", color: "#6b7280", fontWeight: 500 }}>
-          Page {page} of {totalPages}
-        </span>
-      </div>
-
-      <button
-        onClick={onNext}
-        style={{
-          width: "64px",
-          height: "64px",
-          borderRadius: "12px",
-          backgroundColor: "rgba(255,255,255,0.05)",
-          border: "1px solid rgba(255,255,255,0.1)",
-          color: "#9ca3af",
-          fontSize: "1.5rem",
-          cursor: "pointer",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          transition: "background-color 0.15s",
-        }}
-        aria-label="Next page"
-      >
-        ›
-      </button>
-    </div>
-  );
-}
+// px scrolled per tick (tick = SCROLL_INTERVAL ms) — keeps the crawl slow.
+const SCROLL_PX_PER_TICK = 1;
+// ms between scroll ticks.
+const SCROLL_INTERVAL_MS = 40; // ~25 px/s
+// ms to pause at the bottom before snapping to top.
+const PAUSE_AT_BOTTOM_MS = 3_000;
+// ms to pause after snapping back to top.
+const PAUSE_AFTER_SNAP_MS = 1_500;
+// ms of inactivity after a manual scroll before auto-scroll resumes.
+const MANUAL_SCROLL_RESUME_MS = 20_000;
 
 // ── Main page ─────────────────────────────────────────────────────────────────
 
 export function TvKitchenPage() {
   const { user } = useAuth();
-  const { orders, pendingOrders, preparingOrders, readyOrders, isLoading, updateStatus, isUpdating } =
+  const { orders, pendingOrders, preparingOrders, readyOrders, isLoading } =
     useOrders();
   const completedToday = useTvCompletedToday();
 
-  // Reconnect Supabase realtime + invalidate queries when app returns to
-  // foreground (native Android only; no-op on web).
   useAppResume(user?.id);
 
-  // Active orders sorted newest-first within each status column is handled
-  // by useOrders already (created_at ascending = oldest first, which is
-  // correct for a kitchen — oldest orders need attention first).
-  const activeOrders = orders;
+  // ── Scroll refs ──────────────────────────────────────────────────────────────
+  const scrollRef = useRef<HTMLDivElement>(null);
+  // Timestamp until which auto-scroll is paused (Date.now() based).
+  const pauseUntilRef = useRef(0);
+  // Whether we just triggered a snap-to-top (prevents double-trigger).
+  const wasAtBottomRef = useRef(false);
+  // Timeout handle for resuming auto-scroll after manual interaction.
+  const resumeTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // Whether the user is actively suppressing auto-scroll.
+  const userScrollingRef = useRef(false);
 
-  // ── Pagination ──────────────────────────────────────────────────────────────
-  const [page, setPage] = useState(1);
-  const totalPages = Math.max(1, Math.ceil(activeOrders.length / ORDERS_PER_PAGE));
+  // Pause auto-scroll on user interaction, resume after MANUAL_SCROLL_RESUME_MS.
+  const handleUserScroll = useCallback(() => {
+    userScrollingRef.current = true;
+    if (resumeTimeoutRef.current) clearTimeout(resumeTimeoutRef.current);
+    resumeTimeoutRef.current = setTimeout(() => {
+      userScrollingRef.current = false;
+    }, MANUAL_SCROLL_RESUME_MS);
+  }, []);
 
-  // Reset to page 1 if the total changes and current page is out of range.
+  // Auto-scroll loop.
   useEffect(() => {
-    if (page > totalPages) setPage(1);
-  }, [page, totalPages]);
+    const el = scrollRef.current;
+    if (!el) return;
 
-  // Auto-advance to next page when paginating (cycles back to first).
-  useEffect(() => {
-    if (totalPages <= 1) return;
     const id = setInterval(() => {
-      setPage((p) => (p >= totalPages ? 1 : p + 1));
-    }, AUTO_ADVANCE_SECONDS * 1000);
+      if (userScrollingRef.current) return;
+
+      const now = Date.now();
+      if (now < pauseUntilRef.current) return;
+
+      const { scrollTop, scrollHeight, clientHeight } = el;
+      const atBottom = scrollTop + clientHeight >= scrollHeight - 4;
+
+      if (atBottom && !wasAtBottomRef.current) {
+        // Just reached bottom — pause before snapping to top.
+        wasAtBottomRef.current = true;
+        pauseUntilRef.current = now + PAUSE_AT_BOTTOM_MS;
+        return;
+      }
+
+      if (wasAtBottomRef.current) {
+        // Pause elapsed — snap to top, brief pause.
+        wasAtBottomRef.current = false;
+        el.scrollTop = 0;
+        pauseUntilRef.current = now + PAUSE_AFTER_SNAP_MS;
+        return;
+      }
+
+      el.scrollTop += SCROLL_PX_PER_TICK;
+    }, SCROLL_INTERVAL_MS);
+
     return () => clearInterval(id);
-  }, [totalPages]);
+  }, []);
 
-  const pageOrders = activeOrders.slice(
-    (page - 1) * ORDERS_PER_PAGE,
-    page * ORDERS_PER_PAGE
-  );
+  // Cleanup resume timeout on unmount.
+  useEffect(() => {
+    return () => {
+      if (resumeTimeoutRef.current) clearTimeout(resumeTimeoutRef.current);
+    };
+  }, []);
 
-  // ── Render ──────────────────────────────────────────────────────────────────
+  // ── Render ───────────────────────────────────────────────────────────────────
   return (
     <div
       style={{
-        minHeight: "100vh",
-        backgroundColor: "#080a0d",
-        color: "#ffffff",
-        fontFamily: "system-ui, -apple-system, sans-serif",
+        height: "100vh",
+        backgroundColor: "#111827",
+        color: "#F9FAFB",
+        fontFamily:
+          "'Inter', system-ui, -apple-system, BlinkMacSystemFont, sans-serif",
         display: "flex",
         flexDirection: "column",
+        overflow: "hidden",
       }}
     >
-      {/* Top bar (fixed) */}
+      {/* Fixed top bar */}
       <TvTopBar
         cafeName={user?.cafeName ?? ""}
         pending={pendingOrders.length}
@@ -191,58 +156,50 @@ export function TvKitchenPage() {
         completedToday={completedToday}
       />
 
-      {/* Content area — offset by top bar height */}
+      {/* Scrollable content area */}
       <div
+        ref={scrollRef}
+        onWheel={handleUserScroll}
+        onTouchStart={handleUserScroll}
+        onPointerDown={handleUserScroll}
         style={{
           marginTop: `${TV_BAR_HEIGHT}px`,
-          display: "flex",
-          flexDirection: "column",
           flex: 1,
-          minHeight: `calc(100vh - ${TV_BAR_HEIGHT}px)`,
+          overflowY: "auto",
+          overflowX: "hidden",
+          scrollbarWidth: "none",
         }}
       >
-        {/* Offline banner (stacks below top bar) */}
+        {/* Offline banner */}
         <TvOfflineBanner />
 
         {/* Loading */}
         {isLoading && <TvLoadingScreen />}
 
         {/* Empty state */}
-        {!isLoading && activeOrders.length === 0 && <TvEmptyState />}
+        {!isLoading && orders.length === 0 && <TvEmptyState />}
 
         {/* Order grid */}
-        {!isLoading && activeOrders.length > 0 && (
-          <div style={{ padding: "24px 28px 16px", flex: 1, display: "flex", flexDirection: "column" }}>
-            {/* Grid */}
-            <div
-              style={{
-                display: "grid",
-                gridTemplateColumns: "repeat(auto-fill, minmax(380px, 1fr))",
-                gap: "20px",
-                flex: 1,
-                alignContent: "start",
-              }}
-            >
-              {pageOrders.map((order) => (
-                <TvOrderCard
-                  key={order.id}
-                  order={order}
-                  onUpdate={updateStatus}
-                  isUpdating={isUpdating}
-                />
-              ))}
-            </div>
-
-            {/* Pagination */}
-            <TvPagination
-              page={page}
-              totalPages={totalPages}
-              onPrev={() => setPage((p) => (p <= 1 ? totalPages : p - 1))}
-              onNext={() => setPage((p) => (p >= totalPages ? 1 : p + 1))}
-            />
+        {!isLoading && orders.length > 0 && (
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: "repeat(4, 1fr)",
+              gap: "14px",
+              padding: "16px 20px 24px",
+            }}
+          >
+            {orders.map((order) => (
+              <TvOrderCard key={order.id} order={order} />
+            ))}
           </div>
         )}
       </div>
+
+      {/* Hide scrollbar in WebKit */}
+      <style>{`
+        ::-webkit-scrollbar { display: none; }
+      `}</style>
     </div>
   );
 }

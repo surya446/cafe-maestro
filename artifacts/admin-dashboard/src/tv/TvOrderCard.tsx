@@ -1,19 +1,79 @@
 /**
- * TvOrderCard — a single kitchen order card for the TV/KDS display.
+ * TvOrderCard — display-only kitchen order card for the TV/KDS.
  *
- * Designed to be readable from several metres away:
- *   - Large typography (table, items, elapsed time)
- *   - Colour-coded elapsed timer (green → orange → red → pulse)
- *   - Large action buttons (Accept / Start Cooking / Mark Ready / Mark Served)
- *   - Status badge prominently placed in the card header
- *
- * Reuses StaffOrder and OrderStatus from the existing useOrders hook.
- * No new data models — the existing kitchen backend is the source of truth.
+ * Design goals:
+ *   - Fixed 300 px height — never grows, never overflows the grid.
+ *   - Items dominate the card; customer name is de-emphasised.
+ *   - Long item lists are truncated with "+N more items".
+ *   - Long modifier strings are truncated with "+N more".
+ *   - Status indicated by a top border accent + badge.
+ *   - Timer shows elapsed kitchen time with colour urgency cues.
+ *   - NO action buttons — kitchen staff use the staff dashboard.
+ *   - New cards fade in; status changes trigger a brief highlight.
  */
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { format } from "date-fns";
 import type { StaffOrder, OrderStatus } from "@/hooks/useOrders";
+
+// ── Layout constants ──────────────────────────────────────────────────────────
+
+/** Fixed card height in px. Must stay constant regardless of item count. */
+const CARD_HEIGHT = 300;
+/** Max item rows shown before "+N more items" overflow label. */
+const MAX_VISIBLE_ITEMS = 4;
+/** Max modifier fragments shown per item before "+N more". */
+const MAX_VISIBLE_MODS = 2;
+
+// ── Status config ─────────────────────────────────────────────────────────────
+
+const STATUS_CONFIG: Record<
+  OrderStatus,
+  { label: string; color: string; bg: string; border: string; glow: string }
+> = {
+  pending_approval: {
+    label: "NEW",
+    color: "#F59E0B",
+    bg: "rgba(245,158,11,0.12)",
+    border: "rgba(245,158,11,0.35)",
+    glow: "rgba(245,158,11,0.08)",
+  },
+  approved: {
+    label: "ACCEPTED",
+    color: "#8B5CF6",
+    bg: "rgba(139,92,246,0.1)",
+    border: "rgba(139,92,246,0.3)",
+    glow: "rgba(139,92,246,0.06)",
+  },
+  in_kitchen: {
+    label: "PREPARING",
+    color: "#3B82F6",
+    bg: "rgba(59,130,246,0.1)",
+    border: "rgba(59,130,246,0.3)",
+    glow: "rgba(59,130,246,0.06)",
+  },
+  ready: {
+    label: "READY",
+    color: "#10B981",
+    bg: "rgba(16,185,129,0.1)",
+    border: "rgba(16,185,129,0.3)",
+    glow: "rgba(16,185,129,0.1)",
+  },
+  served: {
+    label: "DONE",
+    color: "#6B7280",
+    bg: "rgba(107,114,128,0.08)",
+    border: "rgba(107,114,128,0.2)",
+    glow: "transparent",
+  },
+  cancelled: {
+    label: "CANCELLED",
+    color: "#EF4444",
+    bg: "rgba(239,68,68,0.08)",
+    border: "rgba(239,68,68,0.25)",
+    glow: "rgba(239,68,68,0.05)",
+  },
+};
 
 // ── Elapsed timer ─────────────────────────────────────────────────────────────
 
@@ -23,7 +83,9 @@ function useElapsedSeconds(createdAt: string): number {
   );
   useEffect(() => {
     const id = setInterval(() => {
-      setElapsed(Math.max(0, Math.floor((Date.now() - new Date(createdAt).getTime()) / 1000)));
+      setElapsed(
+        Math.max(0, Math.floor((Date.now() - new Date(createdAt).getTime()) / 1000))
+      );
     }, 1000);
     return () => clearInterval(id);
   }, [createdAt]);
@@ -34,36 +96,25 @@ function ElapsedTimer({ createdAt }: { createdAt: string }) {
   const elapsed = useElapsedSeconds(createdAt);
   const mins = Math.floor(elapsed / 60);
   const secs = elapsed % 60;
-  const formatted = `${String(mins).padStart(2, "0")}:${String(secs).padStart(2, "0")}`;
+  const label = `${String(mins).padStart(2, "0")}:${String(secs).padStart(2, "0")}`;
 
-  const isPulsing = mins >= 20;
   const color =
-    mins < 5  ? "#22c55e"
-    : mins < 10 ? "#f97316"
-    : "#ef4444";
-
-  const bg =
-    mins < 5  ? "rgba(34,197,94,0.12)"
-    : mins < 10 ? "rgba(249,115,22,0.12)"
-    : "rgba(239,68,68,0.12)";
+    mins < 5 ? "#22C55E" : mins < 10 ? "#F59E0B" : "#EF4444";
+  const isPulsing = mins >= 15;
 
   return (
     <div
       style={{
         display: "inline-flex",
         alignItems: "center",
-        gap: "8px",
-        padding: "6px 14px",
-        borderRadius: "9999px",
-        backgroundColor: bg,
-        border: `1.5px solid ${color}44`,
-        animation: isPulsing ? "tv-card-pulse 2s ease-in-out infinite" : undefined,
+        gap: "5px",
+        animation: isPulsing ? "kds-pulse 1.8s ease-in-out infinite" : undefined,
       }}
     >
       <div
         style={{
-          width: "8px",
-          height: "8px",
+          width: "7px",
+          height: "7px",
           borderRadius: "50%",
           backgroundColor: color,
           flexShrink: 0,
@@ -73,81 +124,64 @@ function ElapsedTimer({ createdAt }: { createdAt: string }) {
         style={{
           fontVariantNumeric: "tabular-nums",
           fontWeight: 700,
-          fontSize: "1.1rem",
+          fontSize: "1rem",
           color,
           letterSpacing: "0.04em",
         }}
       >
-        {formatted}
+        {label}
       </span>
     </div>
   );
 }
 
-// ── Status config ─────────────────────────────────────────────────────────────
+// ── Modifier helpers ──────────────────────────────────────────────────────────
 
-const STATUS_CONFIG: Record<
-  OrderStatus,
-  { label: string; color: string; bg: string; border: string }
-> = {
-  pending_approval: { label: "NEW",       color: "#f59e0b", bg: "rgba(245,158,11,0.15)", border: "rgba(245,158,11,0.4)" },
-  approved:         { label: "ACCEPTED",  color: "#a78bfa", bg: "rgba(167,139,250,0.15)", border: "rgba(167,139,250,0.4)" },
-  in_kitchen:       { label: "PREPARING", color: "#60a5fa", bg: "rgba(96,165,250,0.15)", border: "rgba(96,165,250,0.4)"  },
-  ready:            { label: "READY",     color: "#4ade80", bg: "rgba(74,222,128,0.15)", border: "rgba(74,222,128,0.4)"  },
-  served:           { label: "SERVED",    color: "#6b7280", bg: "rgba(107,114,128,0.15)", border: "rgba(107,114,128,0.4)" },
-  cancelled:        { label: "CANCELLED", color: "#ef4444", bg: "rgba(239,68,68,0.15)",  border: "rgba(239,68,68,0.4)"   },
-};
+function parseModifiers(notes: string | null): string[] {
+  if (!notes) return [];
+  return notes
+    .split(/[,\n;]/)
+    .map((s) => s.trim())
+    .filter(Boolean);
+}
 
-// ── Action button config ──────────────────────────────────────────────────────
+function ItemModifiers({ notes }: { notes: string | null }) {
+  const mods = parseModifiers(notes);
+  if (mods.length === 0) return null;
 
-const NEXT_STATUS: Partial<Record<OrderStatus, { label: string; next: OrderStatus; color: string }>> = {
-  pending_approval: { label: "✓  Accept Order",  next: "approved",   color: "#22c55e" },
-  approved:         { label: "🍳  Start Cooking", next: "in_kitchen", color: "#3b82f6" },
-  in_kitchen:       { label: "✓  Mark Ready",    next: "ready",      color: "#22c55e" },
-  ready:            { label: "✓  Mark Served",   next: "served",     color: "#6b7280" },
-};
+  const shown = mods.slice(0, MAX_VISIBLE_MODS);
+  const hidden = mods.length - shown.length;
 
-// ── Action button ─────────────────────────────────────────────────────────────
-
-function TvActionButton({
-  label,
-  onClick,
-  busy,
-  color,
-  variant = "primary",
-}: {
-  label: string;
-  onClick: () => void;
-  busy: boolean;
-  color: string;
-  variant?: "primary" | "outline";
-}) {
-  const isPrimary = variant === "primary";
   return (
-    <button
-      onClick={onClick}
-      disabled={busy}
-      style={{
-        flex: 1,
-        height: "64px",
-        borderRadius: "12px",
-        border: isPrimary ? "none" : `2px solid ${color}66`,
-        backgroundColor: isPrimary ? color : "transparent",
-        color: isPrimary ? "#fff" : color,
-        fontSize: "1.05rem",
-        fontWeight: 700,
-        letterSpacing: "0.02em",
-        cursor: busy ? "not-allowed" : "pointer",
-        opacity: busy ? 0.5 : 1,
-        transition: "opacity 0.15s, transform 0.1s",
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        gap: "8px",
-      }}
-    >
-      {busy ? "…" : label}
-    </button>
+    <div style={{ marginTop: "2px", display: "flex", flexWrap: "wrap", gap: "3px" }}>
+      {shown.map((mod, i) => (
+        <span
+          key={i}
+          style={{
+            fontSize: "0.72rem",
+            color: "#9CA3AF",
+            backgroundColor: "rgba(255,255,255,0.04)",
+            border: "1px solid rgba(255,255,255,0.08)",
+            borderRadius: "4px",
+            padding: "1px 6px",
+            fontStyle: "italic",
+          }}
+        >
+          {mod}
+        </span>
+      ))}
+      {hidden > 0 && (
+        <span
+          style={{
+            fontSize: "0.72rem",
+            color: "#6B7280",
+            padding: "1px 4px",
+          }}
+        >
+          +{hidden} more
+        </span>
+      )}
+    </div>
   );
 }
 
@@ -155,181 +189,229 @@ function TvActionButton({
 
 interface Props {
   order: StaffOrder;
-  onUpdate: (id: string, status: OrderStatus, note?: string | null) => Promise<void>;
-  isUpdating: boolean;
 }
 
-export function TvOrderCard({ order, onUpdate, isUpdating }: Props) {
-  const [busy, setBusy] = useState(false);
-  const [showReject, setShowReject] = useState(false);
-
+export function TvOrderCard({ order }: Props) {
   const cfg = STATUS_CONFIG[order.status] ?? STATUS_CONFIG.pending_approval;
-  const advance = NEXT_STATUS[order.status];
 
+  // Status-change highlight animation.
+  const [highlight, setHighlight] = useState(false);
+  const prevStatusRef = useRef(order.status);
+  useEffect(() => {
+    if (prevStatusRef.current === order.status) return;
+    prevStatusRef.current = order.status;
+    setHighlight(true);
+    const t = setTimeout(() => setHighlight(false), 1200);
+    return () => clearTimeout(t);
+  }, [order.status]);
+
+  // Derived display values.
   const tableLabel =
     order.tableNumber !== null && order.tableName
       ? `${order.tableName} (${order.tableNumber})`
       : order.tableNumber !== null
       ? `Table ${order.tableNumber}`
-      : order.tableName ?? "Unknown table";
+      : order.tableName ?? "Unknown";
 
+  const totalQty = order.items.reduce((s, i) => s + i.quantity, 0);
+  const itemCountLabel = `${totalQty} ${totalQty === 1 ? "item" : "items"}`;
   const orderTime = format(new Date(order.createdAt), "HH:mm");
 
-  async function act(status: OrderStatus, note?: string | null) {
-    setBusy(true);
-    try {
-      await onUpdate(order.id, status, note);
-    } finally {
-      setBusy(false);
-      setShowReject(false);
-    }
-  }
+  const shownItems = order.items.slice(0, MAX_VISIBLE_ITEMS);
+  const hiddenItems = order.items.length - shownItems.length;
 
   return (
     <div
       style={{
+        height: `${CARD_HEIGHT}px`,
         display: "flex",
         flexDirection: "column",
-        backgroundColor: "#111318",
-        border: "1px solid #1e2230",
-        borderRadius: "16px",
+        backgroundColor: "#1F2937",
+        border: `1px solid ${cfg.border}`,
+        borderTop: `3px solid ${cfg.color}`,
+        borderRadius: "10px",
         overflow: "hidden",
-        minHeight: "300px",
         position: "relative",
+        boxShadow: highlight
+          ? `0 0 0 2px ${cfg.color}55, 0 0 20px ${cfg.glow}`
+          : `0 0 12px ${cfg.glow}`,
+        transition: "box-shadow 0.4s ease",
+        animation: "kds-fadein 0.35s ease-out",
+        flexShrink: 0,
       }}
     >
-      {/* ── Header ──────────────────────────────────────────────────── */}
+      {/* ── Header: status badge + timer ──────────────────────────── */}
       <div
         style={{
           display: "flex",
-          alignItems: "flex-start",
+          alignItems: "center",
           justifyContent: "space-between",
-          gap: "12px",
-          padding: "18px 20px 14px",
-          borderBottom: "1px solid #1e2230",
-          backgroundColor: "#13161d",
+          padding: "9px 12px 7px",
+          flexShrink: 0,
         }}
       >
-        <div style={{ minWidth: 0 }}>
-          {/* Table name */}
-          <div
-            style={{
-              fontSize: "1.5rem",
-              fontWeight: 800,
-              color: "#ffffff",
-              letterSpacing: "-0.02em",
-              lineHeight: 1.1,
-              whiteSpace: "nowrap",
-              overflow: "hidden",
-              textOverflow: "ellipsis",
-            }}
-          >
-            {tableLabel}
-          </div>
-          {/* Customer name + order time */}
-          <div
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: "10px",
-              marginTop: "6px",
-              flexWrap: "wrap",
-            }}
-          >
-            {order.customerName && (
-              <span style={{ fontSize: "0.9rem", color: "#9ca3af", fontWeight: 500 }}>
-                {order.customerName}
-              </span>
-            )}
-            <span style={{ fontSize: "0.85rem", color: "#6b7280" }}>
-              Ordered at {orderTime}
-            </span>
-          </div>
-        </div>
-
         {/* Status badge */}
         <div
           style={{
             display: "inline-flex",
             alignItems: "center",
-            padding: "5px 12px",
-            borderRadius: "8px",
+            padding: "3px 10px",
+            borderRadius: "5px",
             backgroundColor: cfg.bg,
-            border: `1.5px solid ${cfg.border}`,
-            flexShrink: 0,
+            border: `1px solid ${cfg.border}`,
           }}
         >
-          <span style={{ fontSize: "0.8rem", fontWeight: 800, color: cfg.color, letterSpacing: "0.08em" }}>
+          <span
+            style={{
+              fontSize: "0.7rem",
+              fontWeight: 800,
+              color: cfg.color,
+              letterSpacing: "0.1em",
+            }}
+          >
             {cfg.label}
           </span>
         </div>
+
+        {/* Elapsed timer */}
+        <ElapsedTimer createdAt={order.createdAt} />
       </div>
 
-      {/* ── Items ───────────────────────────────────────────────────── */}
-      <div style={{ padding: "16px 20px", flex: 1 }}>
-        <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
-          {order.items.map((item) => (
-            <div key={item.id} style={{ display: "flex", gap: "12px", alignItems: "flex-start" }}>
-              {/* Quantity bubble */}
-              <div
+      {/* ── Identity: table + item count ──────────────────────────── */}
+      <div style={{ padding: "2px 12px 8px", flexShrink: 0 }}>
+        {/* Table label — largest element on the card */}
+        <div
+          style={{
+            fontSize: "1.75rem",
+            fontWeight: 800,
+            color: "#F9FAFB",
+            letterSpacing: "-0.02em",
+            lineHeight: 1.1,
+            whiteSpace: "nowrap",
+            overflow: "hidden",
+            textOverflow: "ellipsis",
+          }}
+        >
+          {tableLabel}
+        </div>
+
+        {/* Item count + customer name (de-emphasised) */}
+        <div
+          style={{
+            display: "flex",
+            alignItems: "baseline",
+            gap: "8px",
+            marginTop: "3px",
+          }}
+        >
+          <span
+            style={{
+              fontSize: "0.85rem",
+              fontWeight: 600,
+              color: "#9CA3AF",
+            }}
+          >
+            {itemCountLabel}
+          </span>
+          {order.customerName && (
+            <span
+              style={{
+                fontSize: "0.72rem",
+                color: "#4B5563",
+                fontWeight: 400,
+                whiteSpace: "nowrap",
+                overflow: "hidden",
+                textOverflow: "ellipsis",
+                maxWidth: "120px",
+              }}
+            >
+              {order.customerName}
+            </span>
+          )}
+        </div>
+      </div>
+
+      {/* ── Divider ───────────────────────────────────────────────── */}
+      <div style={{ height: "1px", backgroundColor: "#374151", flexShrink: 0 }} />
+
+      {/* ── Items list ────────────────────────────────────────────── */}
+      <div
+        style={{
+          flex: 1,
+          overflow: "hidden",
+          padding: "8px 12px 6px",
+          display: "flex",
+          flexDirection: "column",
+          gap: "5px",
+          minHeight: 0,
+        }}
+      >
+        {shownItems.map((item) => (
+          <div key={item.id} style={{ flexShrink: 0 }}>
+            <div style={{ display: "flex", alignItems: "baseline", gap: "6px" }}>
+              {/* Quantity */}
+              <span
                 style={{
-                  width: "34px",
-                  height: "34px",
-                  borderRadius: "8px",
-                  backgroundColor: "rgba(249,115,22,0.15)",
-                  border: "1px solid rgba(249,115,22,0.3)",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  flexShrink: 0,
-                  fontSize: "1.05rem",
+                  fontSize: "0.78rem",
                   fontWeight: 800,
-                  color: "#f97316",
+                  color: "#F97316",
+                  minWidth: "18px",
+                  flexShrink: 0,
                 }}
               >
-                {item.quantity}
-              </div>
-              <div style={{ minWidth: 0, flex: 1 }}>
-                <div
-                  style={{
-                    fontSize: "1.1rem",
-                    fontWeight: 600,
-                    color: "#e5e7eb",
-                    lineHeight: 1.2,
-                  }}
-                >
-                  {item.name}
-                </div>
-                {item.notes && (
-                  <div
-                    style={{
-                      fontSize: "0.85rem",
-                      color: "#f59e0b",
-                      marginTop: "3px",
-                      fontStyle: "italic",
-                      fontWeight: 500,
-                    }}
-                  >
-                    ⚠ {item.notes}
-                  </div>
-                )}
-              </div>
+                ×{item.quantity}
+              </span>
+              {/* Item name */}
+              <span
+                style={{
+                  fontSize: "0.92rem",
+                  fontWeight: 600,
+                  color: "#E5E7EB",
+                  lineHeight: 1.2,
+                  overflow: "hidden",
+                  textOverflow: "ellipsis",
+                  whiteSpace: "nowrap",
+                }}
+              >
+                {item.name}
+              </span>
             </div>
-          ))}
-        </div>
+            <div style={{ paddingLeft: "24px" }}>
+              <ItemModifiers notes={item.notes} />
+            </div>
+          </div>
+        ))}
+
+        {/* Overflow label */}
+        {hiddenItems > 0 && (
+          <div
+            style={{
+              fontSize: "0.78rem",
+              color: "#6B7280",
+              fontStyle: "italic",
+              flexShrink: 0,
+            }}
+          >
+            +{hiddenItems} more {hiddenItems === 1 ? "item" : "items"}…
+          </div>
+        )}
 
         {/* Staff note */}
         {order.staffNote && (
           <div
             style={{
-              marginTop: "12px",
-              padding: "10px 12px",
-              borderRadius: "8px",
-              backgroundColor: "rgba(245,158,11,0.08)",
-              border: "1px solid rgba(245,158,11,0.2)",
-              fontSize: "0.9rem",
-              color: "#fcd34d",
+              marginTop: "auto",
+              padding: "4px 8px",
+              borderRadius: "5px",
+              backgroundColor: "rgba(245,158,11,0.07)",
+              border: "1px solid rgba(245,158,11,0.18)",
+              fontSize: "0.75rem",
+              color: "#FCD34D",
               fontStyle: "italic",
+              overflow: "hidden",
+              textOverflow: "ellipsis",
+              whiteSpace: "nowrap",
+              flexShrink: 0,
             }}
           >
             📋 {order.staffNote}
@@ -337,70 +419,38 @@ export function TvOrderCard({ order, onUpdate, isUpdating }: Props) {
         )}
       </div>
 
-      {/* ── Footer: timer + actions ──────────────────────────────────── */}
+      {/* ── Divider ───────────────────────────────────────────────── */}
+      <div style={{ height: "1px", backgroundColor: "#374151", flexShrink: 0 }} />
+
+      {/* ── Footer: ordered time ──────────────────────────────────── */}
       <div
         style={{
-          padding: "14px 20px",
-          borderTop: "1px solid #1e2230",
+          padding: "7px 12px",
+          flexShrink: 0,
           display: "flex",
-          flexDirection: "column",
-          gap: "10px",
-          backgroundColor: "#0d0f14",
+          alignItems: "center",
         }}
       >
-        {/* Elapsed timer row */}
-        <div style={{ display: "flex", justifyContent: "flex-start" }}>
-          <ElapsedTimer createdAt={order.createdAt} />
-        </div>
-
-        {/* Action buttons */}
-        <div style={{ display: "flex", gap: "10px" }}>
-          {/* Reject button (pending_approval only) */}
-          {order.status === "pending_approval" && !showReject && (
-            <TvActionButton
-              label="✗  Reject"
-              onClick={() => setShowReject(true)}
-              busy={busy}
-              color="#ef4444"
-              variant="outline"
-            />
-          )}
-
-          {/* Reject confirm */}
-          {order.status === "pending_approval" && showReject && (
-            <>
-              <TvActionButton
-                label="Confirm Reject"
-                onClick={() => act("cancelled")}
-                busy={busy}
-                color="#ef4444"
-              />
-              <TvActionButton
-                label="Cancel"
-                onClick={() => setShowReject(false)}
-                busy={false}
-                color="#6b7280"
-                variant="outline"
-              />
-            </>
-          )}
-
-          {/* Advance button */}
-          {advance && !showReject && (
-            <TvActionButton
-              label={advance.label}
-              onClick={() => act(advance.next)}
-              busy={busy || isUpdating}
-              color={advance.color}
-            />
-          )}
-        </div>
+        <span
+          style={{
+            fontSize: "0.75rem",
+            color: "#6B7280",
+            fontWeight: 500,
+          }}
+        >
+          Ordered:{" "}
+          <span style={{ color: "#9CA3AF", fontWeight: 600 }}>{orderTime}</span>
+        </span>
       </div>
 
-      {/* Global pulse animation */}
+      {/* Keyframe animations */}
       <style>{`
-        @keyframes tv-card-pulse {
-          0%, 100% { opacity: 0.7; }
+        @keyframes kds-fadein {
+          from { opacity: 0; transform: translateY(6px); }
+          to   { opacity: 1; transform: translateY(0); }
+        }
+        @keyframes kds-pulse {
+          0%, 100% { opacity: 0.65; }
           50%       { opacity: 1; }
         }
       `}</style>
