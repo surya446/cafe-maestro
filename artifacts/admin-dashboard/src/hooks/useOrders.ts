@@ -67,6 +67,23 @@ export function useOrders() {
 
       if (error) throw error;
 
+      // ── DIAGNOSTIC: log raw Supabase payload so we can verify
+      //    whether order_items is populated before any mapping.
+      //    Remove once the root cause is confirmed.
+      if (import.meta.env.DEV || import.meta.env.VITE_APP_VARIANT === "tv") {
+        console.group("[useOrders] raw Supabase response");
+        console.log("row count:", (data ?? []).length);
+        (data ?? []).forEach((o: any, idx: number) => {
+          console.log(
+            `order[${idx}] id=${o.id} status=${o.status}` +
+            ` order_items=${JSON.stringify(o.order_items)}` +
+            ` cafe_tables=${JSON.stringify(o.cafe_tables)}` +
+            ` table_sessions=${JSON.stringify(o.table_sessions)}`
+          );
+        });
+        console.groupEnd();
+      }
+
       const rows = (data ?? []).map((o: any) => {
         const items: StaffOrderItem[] = (o.order_items ?? []).map((oi: any) => ({
           id:          oi.id,

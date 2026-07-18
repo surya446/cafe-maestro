@@ -194,6 +194,16 @@ interface Props {
 export function TvOrderCard({ order }: Props) {
   const cfg = STATUS_CONFIG[order.status] ?? STATUS_CONFIG.pending_approval;
 
+  // ── DIAGNOSTIC: log the exact prop received by this card.
+  //    Remove once the root cause is confirmed.
+  useEffect(() => {
+    console.log(
+      `[TvOrderCard] id=${order.id} items.length=${order.items.length}` +
+      ` items=${JSON.stringify(order.items)}`
+    );
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [order.id]);
+
   // Status-change highlight animation.
   const [highlight, setHighlight] = useState(false);
   const prevStatusRef = useRef(order.status);

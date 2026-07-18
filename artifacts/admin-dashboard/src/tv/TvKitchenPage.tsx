@@ -69,6 +69,23 @@ export function TvKitchenPage() {
     useOrders();
   const completedToday = useTvCompletedToday();
 
+  // ── DIAGNOSTIC: log every order as it reaches the page component.
+  //    Remove once the root cause is confirmed.
+  useEffect(() => {
+    if (!isLoading) {
+      console.group("[TvKitchenPage] orders after useOrders mapping");
+      console.log("total orders:", orders.length);
+      orders.forEach((o, idx) => {
+        console.log(
+          `order[${idx}] id=${o.id} status=${o.status}` +
+          ` items.length=${o.items.length}` +
+          ` items=${JSON.stringify(o.items)}`
+        );
+      });
+      console.groupEnd();
+    }
+  }, [orders, isLoading]);
+
   useAppResume(user?.id);
 
   // ── Scroll refs ──────────────────────────────────────────────────────────────
