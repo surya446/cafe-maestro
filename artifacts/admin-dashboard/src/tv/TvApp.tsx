@@ -13,15 +13,15 @@
  *                          no-op on web/desktop
  *   TvKitchenPage        — the Kitchen Display System
  *
- * Phase 3 will add:
- *   TvAuthShell          — TV-native login (staff pin / email)
- *   TvUpdateUI           — download progress for Android TV APK updates
- *   Kitchen selector     — multi-station support
+ * Phase 3 extension points (inside TvAuthShell):
+ *   - PIN-pad login alternative
+ *   - Multi-station / kitchen-selector after login
+ *   - "Session expired" toast before re-showing the login form
  *
- * Phase 2 note: the KDS launches directly into the kitchen display.
- * If there is no active Supabase auth session the order query returns
- * empty (RLS blocks unauthenticated reads) and the empty-state screen
- * is shown. Phase 3 adds a dedicated TV login flow.
+ * Auth note: TvAuthShell gates the kitchen display behind a valid
+ * Supabase staff session. On first launch (or after WebView data is
+ * cleared) it shows TvLoginScreen. Once signed in, persistSession:true
+ * keeps the session alive across restarts via the WebView localStorage.
  */
 
 import { QueryClientProvider } from "@tanstack/react-query";
@@ -29,6 +29,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { queryClient } from "@/lib/queryClient";
 import { AppUpdateProvider } from "@/context/AppUpdateContext";
 import { MandatoryUpdateGate } from "@/components/updates/MandatoryUpdateGate";
+import { TvAuthShell } from "./TvAuthShell";
 import { TvKitchenPage } from "./TvKitchenPage";
 
 export default function TvApp() {
@@ -36,7 +37,9 @@ export default function TvApp() {
     <QueryClientProvider client={queryClient}>
       <AppUpdateProvider>
         <MandatoryUpdateGate>
-          <TvKitchenPage />
+          <TvAuthShell>
+            <TvKitchenPage />
+          </TvAuthShell>
         </MandatoryUpdateGate>
       </AppUpdateProvider>
       <Toaster />
