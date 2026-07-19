@@ -29,6 +29,17 @@ const config: CapacitorConfig = {
     androidScheme: "https",
     cleartext: false,
   },
+  plugins: {
+    // CapacitorHttp is auto-registered by BridgeActivity in Capacitor 8 and
+    // intercepts every fetch/XHR at the native OkHttp layer.  For the TV build
+    // this interception causes all external HTTPS requests to fail with
+    // "TypeError: Failed to fetch" — including the raw probe to supabase.co
+    // (confirmed in Logcat).  Disabling it lets the WebView's native Chromium
+    // fetch handle requests directly, which works correctly.
+    CapacitorHttp: {
+      enabled: false,
+    },
+  },
 };
 
 export default config;
