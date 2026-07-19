@@ -1,0 +1,263 @@
+You are taking over an existing Android TV project (Cafe Maestro TV Kitchen Display). Read this entire prompt carefully before making any changes.
+
+IMPORTANT RULES
+
+1. Do NOT guess.
+2. Do NOT propose speculative fixes.
+3. Investigate first, then prove the root cause using evidence.
+4. Every conclusion must be supported by code inspection or runtime logs.
+5. If you are unsure, instrument the code and collect evidence instead of assuming.
+
+====================================================
+PROJECT
+====================================================
+
+Project:
+Cafe Maestro
+
+Platform:
+React + Vite
+Capacitor Android TV
+Supabase
+
+Purpose:
+Android TV Kitchen Display.
+
+====================================================
+ORIGINAL ISSUE
+====================================================
+
+TV login always failed.
+
+Initially UI displayed:
+
+"Invalid email or password"
+
+After diagnostics we discovered this was NOT an authentication problem.
+
+====================================================
+KNOWN FACTS
+====================================================
+
+✔ Same credentials successfully log into the web dashboard.
+
+✔ Orders and order items exist in Supabase.
+
+✔ Web app works correctly.
+
+✔ Android TV fails before authentication completes.
+
+====================================================
+DIAGNOSTICS ALREADY ADDED
+====================================================
+
+Diagnostics already exist for:
+
+- Supabase initialization
+- fetch interception
+- raw fetch probe
+- signInWithPassword
+- session existence
+- user existence
+
+Please reuse these diagnostics instead of creating different ones.
+
+====================================================
+CURRENT RUNTIME LOGS
+====================================================
+
+The attached Logcat contains the complete runtime logs.
+
+Please use those logs as the primary evidence.
+
+Key observations already confirmed:
+
+[supabase init]
+url: (undefined → placeholder)
+key length: 0
+
+Supabase singleton:
+https://placeholder.supabase.co
+
+fetch intercepted:
+https://placeholder.supabase.co/auth/v1/token
+
+probe:
+https://usllfqogcdskfeszntwf.supabase.co/rest/v1/
+
+probe FAILED:
+TypeError: Failed to fetch
+
+AuthRetryableFetchError
+
+These indicate that the TV runtime is creating a Supabase client using placeholder values.
+
+====================================================
+IMPORTANT CONTRADICTION
+====================================================
+
+Bundle inspection previously claimed:
+
+Current bundle contains:
+
+https://usllfqogcdskfeszntwf.supabase.co
+
+and
+
+sb_publishable_...
+
+However runtime clearly reports:
+
+(undefined -> placeholder)
+
+Therefore there is a contradiction between:
+
+generated bundle
+
+vs
+
+running APK
+
+This contradiction must be resolved.
+
+====================================================
+ANOTHER IMPORTANT OBSERVATION
+====================================================
+
+Logcat shows runtime loading:
+
+index-Dl_2oDqa.js
+
+Earlier bundle inspection referred to:
+
+index-B8kJ55FW.js
+
+These are different bundles.
+
+Need to determine exactly why.
+
+====================================================
+CAPACITOR
+====================================================
+
+Logcat confirms:
+
+Registering plugin instance:
+
+CapacitorHttp
+
+Need to determine whether CapacitorHttp is intercepting fetch and causing network failures.
+
+Do NOT assume.
+
+Verify through source code and Capacitor configuration.
+
+====================================================
+YOUR TASK
+====================================================
+
+Investigate these in order:
+
+1.
+Determine why the running APK is loading a different bundle than the one inspected.
+
+2.
+Determine why runtime still receives placeholder values.
+
+3.
+Determine exactly how build:tv works.
+
+4.
+Trace:
+
+pnpm build:tv
+
+↓
+
+vite build
+
+↓
+
+generated assets
+
+↓
+
+capacitor sync
+
+↓
+
+Gradle packaging
+
+↓
+
+APK installation
+
+Find where placeholder configuration enters.
+
+5.
+Inspect:
+
+capacitor.config
+
+capacitor.config.ts
+
+vite.config
+
+package.json
+
+Android TV build scripts
+
+Capacitor asset copying
+
+Gradle packaging
+
+6.
+Verify whether Android Studio is packaging stale assets.
+
+7.
+Investigate CapacitorHttp.
+
+Confirm whether it intercepts fetch.
+
+Confirm whether it causes the probe failure.
+
+Provide evidence.
+
+====================================================
+DO NOT
+====================================================
+
+Do NOT rewrite login.
+
+Do NOT rewrite auth.
+
+Do NOT add workarounds.
+
+Do NOT bypass Supabase.
+
+Do NOT replace fetch.
+
+====================================================
+SUCCESS CRITERIA
+====================================================
+
+I want a root-cause report with evidence.
+
+Not guesses.
+
+For every conclusion include:
+
+- source file
+- line numbers
+- runtime logs
+- explanation
+
+Only after the root cause is proven should code changes be proposed.
+
+====================================================
+ADDITIONAL CONTEXT
+====================================================
+
+I will also paste the complete Logcat after this prompt.
+
+Use that together with the project source to determine the exact root cause.
