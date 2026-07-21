@@ -4,13 +4,16 @@ import * as schema from "./schema";
 
 const { Pool } = pg;
 
-if (!process.env.DATABASE_URL) {
+const connectionString =
+  process.env.SUPABASE_DATABASE_URL || process.env.DATABASE_URL;
+
+if (!connectionString) {
   throw new Error(
-    "DATABASE_URL must be set. Did you forget to provision a database?",
+    "SUPABASE_DATABASE_URL must be set. Add the Supabase Transaction pooler URL (port 6543) as a secret.",
   );
 }
 
-export const pool = new Pool({ connectionString: process.env.DATABASE_URL });
+export const pool = new Pool({ connectionString });
 export const db = drizzle(pool, { schema });
 
 export * from "./schema";
