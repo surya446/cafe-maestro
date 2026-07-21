@@ -43,7 +43,7 @@ export function CafeAboutPage() {
     >
 
       {/* ── Cinematic header ─────────────────────────────────── */}
-      <div className="relative pt-24 sm:pt-36 pb-12 sm:pb-20 px-4 sm:px-6 text-center overflow-hidden" style={{ background: BG1 }}>
+      <div className="relative pt-20 sm:pt-28 pb-5 sm:pb-10 px-4 sm:px-6 text-center overflow-hidden" style={{ background: BG1 }}>
         <div className="absolute inset-0 opacity-[0.06]" style={{ backgroundImage: `radial-gradient(ellipse at 50% 0%, ${GOLD}, transparent 58%)` }} />
         {isLoading ? (
           <div className="flex justify-center items-center h-20">
