@@ -10,8 +10,71 @@ import {
   MapPin,
   Phone,
   Globe,
-  Heart,
 } from "lucide-react";
+
+/* ── Coffee cup brand icon (matches uploaded logo) ──────────────────── */
+function CoffeeCupIcon({ className, style }: { className?: string; style?: React.CSSProperties }) {
+  return (
+    <svg
+      viewBox="0 0 56 62"
+      fill="none"
+      xmlns="http://www.w3.org/2000/svg"
+      className={className}
+      style={style}
+      aria-hidden="true"
+    >
+      {/* Saucer — two layered ovals like the logo */}
+      <ellipse cx="29" cy="55" rx="23" ry="6" fill="currentColor" fillOpacity="0.22" />
+      <ellipse cx="29" cy="52" rx="19" ry="4.5" fill="currentColor" fillOpacity="0.42" />
+
+      {/* Cup body */}
+      <path
+        d="M13 28 Q12 46 29 49 Q46 46 45 28"
+        stroke="currentColor"
+        strokeWidth="2.3"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        fill="none"
+      />
+
+      {/* Cup top rim — wide oval */}
+      <ellipse cx="29" cy="28" rx="16" ry="4.8" stroke="currentColor" strokeWidth="2.3" />
+
+      {/* Inner oval — liquid surface */}
+      <ellipse cx="29" cy="28" rx="12" ry="3.2" stroke="currentColor" strokeWidth="1.5" />
+
+      {/* Handle — D-curve on left */}
+      <path
+        d="M13 31 C6 31 3 35 3 39 C3 43 6 47 13 45.5"
+        stroke="currentColor"
+        strokeWidth="2.3"
+        strokeLinecap="round"
+        fill="none"
+      />
+
+      {/* Heart inside the handle loop */}
+      <path
+        d="M9.5 38.5 C9.5 36.8 7.5 35.8 7.5 37.5
+           C7.5 35.8 5.5 36.8 5.5 38.5
+           C5.5 40.2 7.5 42 7.5 42
+           C7.5 42 9.5 40.2 9.5 38.5 Z"
+        stroke="currentColor"
+        strokeWidth="1.2"
+        strokeLinejoin="round"
+        fill="none"
+      />
+
+      {/* Steam curl — single elegant spiral matching the logo */}
+      <path
+        d="M35 22 C38 17 34 12.5 37.5 8 C41 3.5 38 1 35 2"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+        fill="none"
+      />
+    </svg>
+  );
+}
 import { WebsiteSettings } from "@/types";
 import { SmoothScrollProvider } from "@/providers/SmoothScrollProvider";
 import { BookingModalProvider, useBookingModal } from "@/contexts/BookingModalContext";
@@ -105,7 +168,7 @@ function CafeLayoutInner({
                 />
               ) : (
                 <div className="flex items-center gap-2">
-                  <Heart className="w-7 h-7" style={{ color: TERRA }} strokeWidth={1.5} />
+                  <CoffeeCupIcon className="w-8 h-8" style={{ color: TERRA }} />
                   <span
                     className="font-serif font-semibold text-xl tracking-tight"
                     style={{ color: BROWN }}
