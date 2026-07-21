@@ -336,19 +336,20 @@ export function TvOrderCard({ order }: Props) {
               {/* Quantity */}
               <span
                 style={{
-                  fontSize: "0.78rem",
+                  fontSize: "0.9rem",
                   fontWeight: 800,
                   color: "#F97316",
-                  minWidth: "18px",
+                  minWidth: "20px",
                   flexShrink: 0,
                 }}
               >
                 ×{item.quantity}
               </span>
-              {/* Item name */}
+              {/* Item name — 17 % larger than before (0.92 → 1.08 rem)
+                  so it reads clearly from several metres on a TV. */}
               <span
                 style={{
-                  fontSize: "0.92rem",
+                  fontSize: "1.08rem",
                   fontWeight: 600,
                   color: "#E5E7EB",
                   lineHeight: 1.2,

@@ -76,8 +76,13 @@ const PAUSE_BOTTOM_MS = 2_000;
 const PAUSE_TOP_MS = 1_500;
 /** Smooth return-to-top animation duration (ms). */
 const RETURN_DURATION_MS = 2_000;
-/** Inactivity window after the last manual input before auto-scroll resumes (ms). */
+/** Inactivity window after the last manual input before auto-scroll resumes (ms).
+ *  Uses performance.now() — same clock as the rAF callback — to avoid
+ *  the Date.now() vs performance.now() epoch mismatch that permanently
+ *  freezes auto-scroll after the first key press. */
 const MANUAL_RESUME_DELAY_MS = 4_000;
+/** Pixels scrolled per arrow-key press during manual control. */
+const KEY_SCROLL_PX = 160;
 
 // ── Easing ───────────────────────────────────────────────────────────────────
 
@@ -104,39 +109,67 @@ export function TvKitchenPage() {
   // ── Auto-scroll state (all refs — no React re-renders needed) ─────────────
   type Phase = "down" | "pause-bottom" | "return" | "pause-top";
   const phaseRef        = useRef<Phase>("down");
-  const phaseStartRef   = useRef(0);       // timestamp when current phase began
+  const phaseStartRef   = useRef(0);       // performance.now() when phase began
   const returnFromYRef  = useRef(0);       // scrollTop captured at start of return
   const rafIdRef        = useRef(0);
   const lastFrameRef    = useRef<number | null>(null);
 
-  /** Epoch ms until which auto-scroll is suppressed by manual input. */
+  /**
+   * performance.now() value until which auto-scroll is suppressed.
+   *
+   * CRITICAL: must use performance.now() — the same clock the rAF callback
+   * receives. Using Date.now() (Unix epoch, ~1.75 × 10¹²) compared against
+   * a rAF timestamp (~thousands) makes the condition permanently true,
+   * freezing auto-scroll forever after the first key press.
+   */
   const manualPauseUntil = useRef(0);
-  const manualResumeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  /**
+   * True while we are inside a manual-pause window.
+   * Detected by the rAF tick to trigger a clean phase reset on resume,
+   * so auto-scroll always continues downward from the current position
+   * rather than jumping back into whatever phase was interrupted.
+   */
+  const wasManuallyPaused = useRef(false);
 
   // ── Manual-input handler ───────────────────────────────────────────────────
   /**
    * Called on any user interaction (wheel, touch, pointer, D-pad key).
-   * Extends the manual pause window by MANUAL_RESUME_DELAY_MS from NOW.
-   * Resets on every input so the timer always counts from the last key press.
+   * Extends the manual pause window by MANUAL_RESUME_DELAY_MS from NOW
+   * using performance.now() so the rAF comparison is apples-to-apples.
+   * Resets on every input so the 4 s timer always counts from the LAST press.
    */
   const handleManualInput = useCallback(() => {
-    manualPauseUntil.current = Date.now() + MANUAL_RESUME_DELAY_MS;
-    if (manualResumeTimer.current) clearTimeout(manualResumeTimer.current);
-    manualResumeTimer.current = setTimeout(() => {
-      // Timer expires naturally; manualPauseUntil is already in the past.
-    }, MANUAL_RESUME_DELAY_MS);
+    manualPauseUntil.current = performance.now() + MANUAL_RESUME_DELAY_MS;
+    wasManuallyPaused.current = true;
   }, []);
 
   // ── Remote-control D-pad key handler ──────────────────────────────────────
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
-      if (
+      const isArrow =
         e.key === "ArrowUp" ||
         e.key === "ArrowDown" ||
         e.key === "ArrowLeft" ||
-        e.key === "ArrowRight"
-      ) {
-        handleManualInput();
+        e.key === "ArrowRight";
+      if (!isArrow) return;
+
+      // Prevent default browser scroll / focus movement so we own the board.
+      e.preventDefault();
+
+      // Extend the pause window — resets the 4 s countdown.
+      handleManualInput();
+
+      // Actually scroll the board on Up/Down.
+      const el = scrollRef.current;
+      if (!el) return;
+      if (e.key === "ArrowDown") {
+        el.scrollTop = Math.min(
+          el.scrollTop + KEY_SCROLL_PX,
+          el.scrollHeight - el.clientHeight,
+        );
+      } else if (e.key === "ArrowUp") {
+        el.scrollTop = Math.max(el.scrollTop - KEY_SCROLL_PX, 0);
       }
     };
     document.addEventListener("keydown", onKeyDown);
@@ -151,11 +184,29 @@ export function TvKitchenPage() {
     function tick(now: number) {
       rafIdRef.current = requestAnimationFrame(tick);
 
+      // ── Manual-pause gate ───────────────────────────────────────────────
+      // `now` is performance.now() — same epoch as manualPauseUntil.
+      if (now < manualPauseUntil.current) {
+        // Still inside the 4 s manual window.
+        // Update lastFrameRef so dt is ~0 on the first auto-resume frame
+        // (prevents a large accumulated dt from causing a scroll jump).
+        lastFrameRef.current = now;
+        return;
+      }
+
+      // Detect the exact frame where the manual pause ends.
+      if (wasManuallyPaused.current) {
+        wasManuallyPaused.current = false;
+        // Resume scrolling downward from the current position.
+        // Resetting to "down" means we never jump back mid-return or
+        // re-enter pause-bottom from an unexpected scrollTop.
+        phaseRef.current = "down";
+        phaseStartRef.current = now;
+        lastFrameRef.current = now;
+      }
+
       const dt = lastFrameRef.current !== null ? now - lastFrameRef.current : 0;
       lastFrameRef.current = now;
-
-      // Suppress during manual input
-      if (now < manualPauseUntil.current) return;
 
       const { scrollTop, scrollHeight, clientHeight } = el!;
       const maxScroll = scrollHeight - clientHeight;
@@ -215,13 +266,6 @@ export function TvKitchenPage() {
     return () => {
       cancelAnimationFrame(rafIdRef.current);
       lastFrameRef.current = null;
-    };
-  }, []);
-
-  // ── Cleanup manual-resume timer on unmount ─────────────────────────────────
-  useEffect(() => {
-    return () => {
-      if (manualResumeTimer.current) clearTimeout(manualResumeTimer.current);
     };
   }, []);
 

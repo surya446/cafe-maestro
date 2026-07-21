@@ -1,0 +1,73 @@
+The dynamic KDS layout looks much better now. However, there are two issues that need to be fixed.
+
+====================================================
+1. FIX AUTO SCROLL + MANUAL SCROLL INTERACTION
+====================================================
+
+Current problem:
+
+- Auto board scrolling works.
+- When I press the TV remote UP or DOWN, the auto scroll stops permanently.
+- Manual scrolling also stops working.
+- The board becomes stuck.
+
+This is a bug.
+
+Expected behavior:
+
+- Auto scrolling runs normally.
+- If the user presses UP or DOWN:
+  - Immediately pause auto scrolling.
+  - Manual scrolling should work normally.
+  - Every additional UP/DOWN press should continue manual scrolling.
+  - After the LAST remote input, wait exactly 4 seconds.
+  - Then automatically resume auto scrolling from the CURRENT board position.
+- Do NOT restart from the top.
+- Do NOT freeze.
+- Do NOT permanently disable auto scrolling.
+- Make sure event listeners, timers, and animation loops are managed correctly and cannot get stuck.
+
+====================================================
+2. INCREASE ORDER ITEM TEXT SIZE
+====================================================
+
+The order item names are a little too small when viewed from a distance on a TV.
+
+Increase only the menu item text size by around 15–20%.
+
+Examples:
+
+x1 Flat White
+x2 Cappuccino
+x1 Sandwich
+
+These should be easier to read from several meters away.
+
+Keep:
+
+- table number
+- timers
+- badges
+- counters
+- top bar
+
+at their current sizes unless necessary.
+
+Do not make the text so large that it causes unnecessary wrapping.
+
+====================================================
+3. VERIFY
+====================================================
+
+Test the following:
+
+✓ Auto scrolling starts automatically.
+✓ UP/DOWN pauses auto scrolling immediately.
+✓ Manual scrolling works smoothly.
+✓ Auto scrolling resumes exactly 4 seconds after the last key press.
+✓ Auto scrolling resumes from the current position.
+✓ Repeated key presses keep delaying the resume timer.
+✓ The board never freezes.
+✓ Large orders remain fully visible.
+✓ Item text is larger and easier to read on a TV.
+✓ Performance remains smooth.
