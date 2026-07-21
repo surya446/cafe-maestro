@@ -14,11 +14,23 @@ interface AndroidBackHandlerProps {
  * Mounted once at the app root. Owns the Android back-button
  * navigation behaviour and the exit confirmation dialog. Renders
  * nothing (and the hook is a no-op) on web/desktop.
+ *
+ * Back-button behaviour:
+ *   - Dialog CLOSED → open the exit confirmation dialog.
+ *   - Dialog OPEN   → close the dialog and return to the app.
+ *     (Previously always called setExitOpen(true) which meant pressing
+ *      BACK while the dialog was visible had no visible effect.)
  */
 export function AndroidBackHandler({ disabled = false }: AndroidBackHandlerProps) {
   const [exitOpen, setExitOpen] = useState(false);
 
-  useAndroidBackButton(() => setExitOpen(true), disabled);
+  // Toggle: if dialog is already open, BACK closes it; otherwise open it.
+  useAndroidBackButton(() => {
+    setExitOpen((prev) => {
+      if (prev) return false;   // dialog open → close it
+      return true;              // dialog closed → open it
+    });
+  }, disabled);
 
   // If a mandatory update becomes active while the exit dialog happens
   // to be open, close it — it must not remain a way to dismiss/exit.

@@ -1,0 +1,81 @@
+The KDS is now working very well. There are only two remaining issues before it is production-ready.
+
+IMPORTANT:
+Do not redesign or modify any existing functionality that is already working.
+Only fix the issues described below.
+
+====================================================
+1. MAKE MANUAL SCROLLING SMOOTH
+====================================================
+
+Current problem:
+
+When navigating the board using the TV remote (UP/DOWN), the board scrolls continuously but the movement feels like stop-motion or stepping.
+
+It is not smooth.
+
+Expected behavior:
+
+- Manual scrolling should feel smooth and fluid.
+- It should scroll at 60fps where possible.
+- Avoid repeatedly jumping the scroll position.
+- Use requestAnimationFrame or another smooth animation approach instead of discrete scroll increments.
+- The movement should feel like native Android TV scrolling.
+- Holding DOWN should produce one continuous smooth scroll.
+- Holding UP should produce one continuous smooth scroll upward.
+- Releasing the button should immediately stop scrolling.
+- Performance should remain smooth even with many large order cards.
+
+====================================================
+2. FIX BACK DIALOG TV REMOTE NAVIGATION
+====================================================
+
+Current problem:
+
+When the BACK button is pressed, the confirmation dialog appears correctly.
+
+However:
+
+LEFT and RIGHT on the TV remote do not move the selection between:
+
+Cancel
+
+and
+
+Exit.
+
+The focus remains stuck on one button.
+
+Expected behavior:
+
+When the confirmation dialog opens:
+
+- One button should receive initial focus automatically (preferably "Cancel").
+- LEFT and RIGHT should move focus between Cancel and Exit.
+- The focused button should have a clear visual highlight.
+- CENTER / ENTER / OK should activate the focused button.
+- BACK should close the dialog and return to the KDS.
+- Focus should never get trapped.
+- The dialog should be fully navigable using only the TV remote.
+
+====================================================
+3. VERIFY
+====================================================
+
+Test and verify:
+
+✓ Manual scrolling is smooth (not stop-motion).
+✓ Holding UP/DOWN continuously scrolls smoothly.
+✓ Releasing the button immediately stops scrolling.
+✓ Auto-scroll behavior still works correctly after manual scrolling.
+✓ BACK opens the confirmation dialog.
+✓ LEFT/RIGHT changes focus between Cancel and Exit.
+✓ ENTER activates the focused button.
+✓ BACK closes the dialog correctly.
+✓ No regressions in existing KDS functionality.
+
+Finally explain:
+- what caused the manual scrolling to appear jerky,
+- how it was fixed,
+- what caused the dialog focus issue,
+- and how TV remote focus handling was implemented.

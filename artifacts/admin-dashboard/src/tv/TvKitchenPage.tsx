@@ -81,8 +81,12 @@ const RETURN_DURATION_MS = 2_000;
  *  the Date.now() vs performance.now() epoch mismatch that permanently
  *  freezes auto-scroll after the first key press. */
 const MANUAL_RESUME_DELAY_MS = 4_000;
-/** Pixels scrolled per arrow-key press during manual control. */
-const KEY_SCROLL_PX = 160;
+/**
+ * Speed of MANUAL key-driven scrolling in pixels per second.
+ * Applied by the RAF loop — not as discrete jumps — so the motion is
+ * perfectly smooth at the display refresh rate.
+ */
+const MANUAL_SCROLL_SPEED_PX_S = 600;
 
 // ── Easing ───────────────────────────────────────────────────────────────────
 
@@ -132,6 +136,20 @@ export function TvKitchenPage() {
    */
   const wasManuallyPaused = useRef(false);
 
+  /**
+   * Current manual scroll velocity in px/s set by held arrow keys.
+   * The rAF tick reads this every frame and moves scrollTop accordingly,
+   * producing perfectly smooth 60 fps motion instead of discrete jumps.
+   * Zero means no active manual scrolling.
+   */
+  const manualScrollVelocityRef = useRef(0);
+
+  /**
+   * Tracks which directional keys are currently held down.
+   * Allows correct velocity when one key is released while another is held.
+   */
+  const heldKeysRef = useRef(new Set<string>());
+
   // ── Manual-input handler ───────────────────────────────────────────────────
   /**
    * Called on any user interaction (wheel, touch, pointer, D-pad key).
@@ -144,37 +162,64 @@ export function TvKitchenPage() {
     wasManuallyPaused.current = true;
   }, []);
 
+  /** Recomputes manualScrollVelocityRef from the current held-key set. */
+  const syncVelocity = useCallback(() => {
+    const held = heldKeysRef.current;
+    if (held.has("ArrowDown")) {
+      manualScrollVelocityRef.current = MANUAL_SCROLL_SPEED_PX_S;
+    } else if (held.has("ArrowUp")) {
+      manualScrollVelocityRef.current = -MANUAL_SCROLL_SPEED_PX_S;
+    } else {
+      manualScrollVelocityRef.current = 0;
+    }
+  }, []);
+
   // ── Remote-control D-pad key handler ──────────────────────────────────────
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
-      const isArrow =
-        e.key === "ArrowUp" ||
-        e.key === "ArrowDown" ||
-        e.key === "ArrowLeft" ||
-        e.key === "ArrowRight";
+      const isUpDown = e.key === "ArrowUp" || e.key === "ArrowDown";
+      const isArrow = isUpDown || e.key === "ArrowLeft" || e.key === "ArrowRight";
       if (!isArrow) return;
 
-      // Prevent default browser scroll / focus movement so we own the board.
-      e.preventDefault();
+      // If a system dialog (e.g. exit-confirm) is open, let it own arrow keys.
+      if (document.querySelector('[role="alertdialog"][data-state="open"]')) return;
 
-      // Extend the pause window — resets the 4 s countdown.
+      // Prevent the browser from scrolling focused elements or shifting focus.
+      // Only needed for Up/Down (Left/Right do not scroll the board).
+      if (isUpDown) e.preventDefault();
+
+      // Keep the pause window open for as long as keys are held.
       handleManualInput();
 
-      // Actually scroll the board on Up/Down.
-      const el = scrollRef.current;
-      if (!el) return;
-      if (e.key === "ArrowDown") {
-        el.scrollTop = Math.min(
-          el.scrollTop + KEY_SCROLL_PX,
-          el.scrollHeight - el.clientHeight,
-        );
-      } else if (e.key === "ArrowUp") {
-        el.scrollTop = Math.max(el.scrollTop - KEY_SCROLL_PX, 0);
+      // Track held keys and update velocity (first press only — repeat events
+      // only refresh the pause window, they don't change velocity).
+      if (!e.repeat && isUpDown) {
+        heldKeysRef.current.add(e.key);
+        syncVelocity();
       }
     };
+
+    const onKeyUp = (e: KeyboardEvent) => {
+      if (e.key !== "ArrowUp" && e.key !== "ArrowDown") return;
+
+      // Remove from held set and recompute velocity immediately.
+      heldKeysRef.current.delete(e.key);
+      syncVelocity();
+
+      // Start the 4 s countdown from key release.
+      handleManualInput();
+    };
+
     document.addEventListener("keydown", onKeyDown);
-    return () => document.removeEventListener("keydown", onKeyDown);
-  }, [handleManualInput]);
+    document.addEventListener("keyup", onKeyUp);
+    return () => {
+      document.removeEventListener("keydown", onKeyDown);
+      document.removeEventListener("keyup", onKeyUp);
+      // Clear any stale velocity when the listener is torn down.
+      heldKeysRef.current.clear();
+      manualScrollVelocityRef.current = 0;
+    };
+  }, [handleManualInput, syncVelocity]);
 
   // ── Auto-scroll RAF loop ───────────────────────────────────────────────────
   useEffect(() => {
@@ -187,10 +232,22 @@ export function TvKitchenPage() {
       // ── Manual-pause gate ───────────────────────────────────────────────
       // `now` is performance.now() — same epoch as manualPauseUntil.
       if (now < manualPauseUntil.current) {
-        // Still inside the 4 s manual window.
-        // Update lastFrameRef so dt is ~0 on the first auto-resume frame
-        // (prevents a large accumulated dt from causing a scroll jump).
+        // Compute dt here so velocity-driven motion is framerate-independent.
+        const mdt = lastFrameRef.current !== null ? now - lastFrameRef.current : 0;
         lastFrameRef.current = now;
+
+        // Apply manual scroll velocity — this is what makes held arrow keys
+        // feel smooth. Each frame moves scrollTop by (speed × dt) instead of
+        // one discrete jump per key-repeat event (~30 ms), eliminating the
+        // stop-motion stepping the chef sees.
+        const vel = manualScrollVelocityRef.current;
+        if (vel !== 0) {
+          const maxScroll = el!.scrollHeight - el!.clientHeight;
+          el!.scrollTop = Math.max(
+            0,
+            Math.min(el!.scrollTop + vel * (mdt / 1000), maxScroll),
+          );
+        }
         return;
       }
 
