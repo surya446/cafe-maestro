@@ -5,14 +5,6 @@
  * isNativeAndroid()  — true when running inside the Capacitor WebView on
  *                      Android (applies to BOTH the Mobile and TV APKs).
  *
- * isNativePlatform() — true when running inside any Capacitor native shell
- *                      (Android or iOS).
- *
- * openExternalUrl()  — open a URL in the system browser on native (via
- *                      @capacitor/browser), or a new tab on the web. Always
- *                      use this instead of window.open() so the URL is never
- *                      trapped inside the Capacitor WebView.
- *
  * getAppVariant()    — returns the build-time variant baked in by Vite via
  *                      VITE_APP_VARIANT.  Never guesses at runtime; the value
  *                      is a compile-time constant so Vite's dead-code
@@ -27,40 +19,6 @@ import { Capacitor } from "@capacitor/core";
 /** True when running inside the Capacitor WebView on Android (mobile OR TV). */
 export function isNativeAndroid(): boolean {
   return Capacitor.isNativePlatform() && Capacitor.getPlatform() === "android";
-}
-
-/** True when running inside any Capacitor native shell (Android or iOS). */
-export function isNativePlatform(): boolean {
-  return Capacitor.isNativePlatform();
-}
-
-/**
- * Open a URL in the actual system browser for the current platform.
- *
- * - Native (Android/iOS): uses window.open with the "_system" target, which
- *   Capacitor maps to Intent.ACTION_VIEW on Android (launches the default
- *   browser app — Chrome or user-set default, NOT a Custom Tab) and to
- *   UIApplication.openURL on iOS (launches Safari or the user-set default,
- *   NOT SFSafariViewController). The URL must be absolute (https://…).
- * - Web: opens in a new tab via window.open with "_blank".
- *
- * Do NOT use @capacitor/browser here — Browser.open() renders a Chrome Custom
- * Tab on Android and SFSafariViewController on iOS, both of which overlay the
- * app rather than launching an independent browser process.
- *
- * NOTE: on native the URL must be absolute (https://…). Set VITE_APP_URL to
- * the root public domain (e.g. https://yourapp.replit.app) and build the full
- * path at the call site.
- */
-export function openExternalUrl(url: string): void {
-  if (Capacitor.isNativePlatform()) {
-    // "_system" is handled by Capacitor's bridge:
-    //   Android → startActivity(Intent(ACTION_VIEW, uri))  → default browser
-    //   iOS     → UIApplication.shared.open(url)          → Safari / default
-    window.open(url, "_system");
-  } else {
-    window.open(url, "_blank", "noopener,noreferrer");
-  }
 }
 
 export type AppVariant = "mobile" | "tv" | "web";

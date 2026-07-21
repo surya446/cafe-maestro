@@ -20,7 +20,6 @@ import {
   FileText,
   ExternalLink,
 } from "lucide-react";
-import { openExternalUrl, isNativePlatform } from "@/native/platform";
 import { PageHeader } from "@/components/common/PageHeader";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -183,25 +182,6 @@ function ImageUploadField({
       />
     </div>
   );
-}
-
-/**
- * Returns the absolute URL for the public website's /cafe route.
- *
- * Web: built from window.location.origin + BASE_URL so it always points to
- *      the correct deployed origin regardless of the preview domain.
- *
- * Native (Capacitor): the WebView is served from https://localhost, which the
- *      system browser cannot reach. VITE_APP_URL must be the root public domain
- *      (e.g. https://yourapp.replit.app). The /admin/ prefix and cafe path are
- *      appended here because the web deployment serves this app at /admin/.
- */
-function getPublicWebsiteUrl(): string {
-  if (isNativePlatform()) {
-    const appUrl = (import.meta.env.VITE_APP_URL as string | undefined) ?? "";
-    return `${appUrl.replace(/\/$/, "")}/admin/cafe`;
-  }
-  return `${window.location.origin}${import.meta.env.BASE_URL}cafe`;
 }
 
 export function WebsiteSettingsPage() {
@@ -376,14 +356,15 @@ export function WebsiteSettingsPage() {
                 <><Save className="w-4 h-4 mr-1.5" />Save changes</>
               )}
             </Button>
-            <button
-              type="button"
-              onClick={() => openExternalUrl(getPublicWebsiteUrl())}
+            <a
+              href={`${import.meta.env.BASE_URL}cafe`}
+              target="_blank"
+              rel="noopener noreferrer"
               className="inline-flex items-center gap-1.5 text-xs font-medium text-muted-foreground hover:text-foreground transition-colors"
             >
               <ExternalLink className="w-3.5 h-3.5" />
               Visit website
-            </button>
+            </a>
           </div>
         </div>
 
@@ -643,14 +624,15 @@ export function WebsiteSettingsPage() {
                   <><Save className="w-4 h-4 mr-1.5" />Save all changes</>
                 )}
               </Button>
-              <button
-                type="button"
-                onClick={() => openExternalUrl(getPublicWebsiteUrl())}
+              <a
+                href={`${import.meta.env.BASE_URL}cafe`}
+                target="_blank"
+                rel="noopener noreferrer"
                 className="inline-flex items-center gap-1.5 text-xs font-medium text-muted-foreground hover:text-foreground transition-colors"
               >
                 <ExternalLink className="w-3.5 h-3.5" />
                 Visit website
-              </button>
+              </a>
             </div>
           </div>
         )}
