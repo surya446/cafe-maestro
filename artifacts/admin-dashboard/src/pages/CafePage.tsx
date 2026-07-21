@@ -16,30 +16,18 @@ const BROWN = "#3D1E0F";
 const TERRA = "#8B4A2B";
 const MID   = "#6B3A2A";
 
-/* ── Photos ─────────────────────────────────────────────────────────────── */
-// Hero — warm café interior with pendant lights & bookshelves
-const HERO_BG =
-  "https://images.unsplash.com/photo-1554118811-1e0d58224f24?w=1800&q=90";
+/* ── Photos (real Cup & Cozy photos from public/) ───────────────────────── */
+// Hero — café interior with ring lights, arch, bookshelves
+const HERO_BG = "/admin/cafe-hero.png";
 
-// "Crafted to" left panel — iced latte in a glass
-const CRAFTED_BG =
-  "https://images.unsplash.com/photo-1461023058943-07fcbe16d735?w=900&q=85";
+// "Crafted to" left panel — iced hazelnut velvet drink
+const CRAFTED_BG = "/admin/cafe-crafted.png";
 
-// Curated corners mosaic photos
-const CURATED = [
-  "https://images.unsplash.com/photo-1481627834876-b7833e8f5570?w=600&q=80",
-  "https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?w=600&q=80",
-  "https://images.unsplash.com/photo-1442512595331-e89e73853f31?w=600&q=80",
-  "https://images.unsplash.com/photo-1509042239860-f550ce710b93?w=600&q=80",
-];
-
-// Pendant light vibe photo
-const PENDANT_PHOTO =
-  "https://images.unsplash.com/photo-1543007630-9710e4a00a20?w=600&q=80";
+// Curated corners — framed art wall + pendant light shots
+const CURATED_PHOTO = "/admin/cafe-curated.png";
 
 // Bottom contact photo — café with staircase / dining area
-const CONTACT_BG =
-  "https://images.unsplash.com/photo-1559329007-40df8a9345d8?w=1800&q=85";
+const CONTACT_BG = "/admin/cafe-contact.png";
 
 /* ── Animations ─────────────────────────────────────────────────────────── */
 const fadeUp = {
@@ -73,9 +61,7 @@ export function CafePage() {
   const openLabel   = hasHours ? todayHours(settings!.opening_hours) : null;
   const heroImg     = settings?.hero_image_url ?? HERO_BG;
 
-  /* Gallery photos for mosaic */
-  const galleryUrls = (gallery ?? []).slice(0, 4).map((g) => g.url);
-  const mosaicPhotos = galleryUrls.length >= 4 ? galleryUrls : [...galleryUrls, ...CURATED].slice(0, 4);
+  /* Gallery — unused on home page now (curated corners uses real café photo) */
 
   if (isLoading) {
     return (
@@ -292,47 +278,20 @@ export function CafePage() {
                 The Vibe
               </motion.p>
 
-              {/* Photo mosaic grid */}
+              {/* Real Cup & Cozy curated corners photo */}
               <motion.div
                 variants={fadeUp}
-                className="grid grid-cols-2 gap-2 flex-1"
+                className="flex-1 rounded-xl overflow-hidden"
+                style={{ minHeight: 220, border: `1px solid ${BROWN}12` }}
               >
-                {mosaicPhotos.map((url, i) => (
-                  <div
-                    key={i}
-                    className={cn(
-                      "rounded-lg overflow-hidden",
-                      i === 0 ? "row-span-2" : ""
-                    )}
-                    style={{
-                      aspectRatio: i === 0 ? "3/4" : "4/3",
-                      border: `1px solid ${BROWN}12`,
-                    }}
-                  >
-                    <img
-                      src={url}
-                      alt={`Vibe ${i + 1}`}
-                      className="w-full h-full object-cover hover:scale-105 transition-transform duration-500"
-                      loading="lazy"
-                    />
-                  </div>
-                ))}
+                <img
+                  src={CURATED_PHOTO}
+                  alt="Curated Corners — The Vibe"
+                  className="w-full h-full object-cover hover:scale-[1.03] transition-transform duration-500"
+                  loading="lazy"
+                />
               </motion.div>
             </motion.div>
-          </div>
-
-          {/* Pendant / accent photo strip */}
-          <div className="hidden sm:block w-[180px] lg:w-[200px] relative overflow-hidden shrink-0">
-            <img
-              src={PENDANT_PHOTO}
-              alt="Café vibe"
-              className="w-full h-full object-cover"
-              loading="lazy"
-            />
-            <div
-              className="absolute inset-0"
-              style={{ background: "linear-gradient(to bottom, transparent 60%, rgba(61,30,15,0.35) 100%)" }}
-            />
           </div>
         </div>
       </section>
@@ -366,9 +325,7 @@ export function CafePage() {
       <section className="relative overflow-hidden" style={{ minHeight: 480 }}>
         {/* Background photo */}
         <motion.img
-          src={settings?.hero_image_url
-            ? "https://images.unsplash.com/photo-1559329007-40df8a9345d8?w=1800&q=85"
-            : CONTACT_BG}
+          src={CONTACT_BG}
           alt="Café interior"
           className="w-full object-cover"
           style={{ height: "min(520px, 60vw)", minHeight: 320 }}
