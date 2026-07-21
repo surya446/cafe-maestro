@@ -1,11 +1,17 @@
 /**
- * TvTopBar — slimmed fixed top bar for the Kitchen Display System.
- *
- * 64 px tall (down from 88 px) to give more vertical space to the order grid.
+ * TvTopBar — fixed top bar for the Kitchen Display System.
  *
  * Left:   Kitchen identity
  * Centre: Live order counts (Pending / Preparing / Ready / Done Today)
  * Right:  Connection status pill + live clock
+ *
+ * Responsive fixes:
+ *  - Right section has flexShrink: 0 and overflow: visible so the clock
+ *    is never clipped regardless of how wide the centre section grows.
+ *  - Padding-right increased to 48px to protect against TV overscan cutting
+ *    off the edges (a common issue on consumer TVs).
+ *  - Centre section uses minWidth: 0 so it can shrink rather than pushing
+ *    the clock off screen on narrower TVs.
  */
 
 import { TvClock } from "./TvClock";
@@ -43,9 +49,13 @@ export function TvTopBar({
         display: "flex",
         alignItems: "center",
         justifyContent: "space-between",
-        padding: "0 24px",
+        // Extra right padding guards against TV overscan cutting off the clock.
+        padding: "0 48px 0 24px",
         zIndex: 50,
-        gap: "20px",
+        gap: "16px",
+        // overflow visible ensures the clock is never cropped by this container.
+        overflow: "visible",
+        boxSizing: "border-box",
       }}
     >
       {/* ── Left: identity ────────────────────────────────────────── */}
@@ -81,6 +91,7 @@ export function TvTopBar({
               color: "#F9FAFB",
               letterSpacing: "-0.01em",
               lineHeight: 1.2,
+              whiteSpace: "nowrap",
             }}
           >
             Kitchen Display
@@ -92,6 +103,7 @@ export function TvTopBar({
                 color: "#6B7280",
                 fontWeight: 500,
                 marginTop: "1px",
+                whiteSpace: "nowrap",
               }}
             >
               {cafeName}
@@ -101,7 +113,16 @@ export function TvTopBar({
       </div>
 
       {/* ── Centre: statistics ────────────────────────────────────── */}
-      <div style={{ flex: 1, display: "flex", justifyContent: "center" }}>
+      {/* minWidth: 0 lets this section shrink so it never displaces the clock */}
+      <div
+        style={{
+          flex: 1,
+          minWidth: 0,
+          display: "flex",
+          justifyContent: "center",
+          overflow: "hidden",
+        }}
+      >
         <TvStatistics
           pending={pending}
           preparing={preparing}
@@ -111,12 +132,14 @@ export function TvTopBar({
       </div>
 
       {/* ── Right: status + clock ─────────────────────────────────── */}
+      {/* flexShrink: 0 guarantees the clock always has its natural width */}
       <div
         style={{
           display: "flex",
           alignItems: "center",
-          gap: "20px",
+          gap: "16px",
           flexShrink: 0,
+          overflow: "visible",
         }}
       >
         <TvConnectionStatus />

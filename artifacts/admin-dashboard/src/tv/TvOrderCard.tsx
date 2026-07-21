@@ -2,12 +2,13 @@
  * TvOrderCard — display-only kitchen order card for the TV/KDS.
  *
  * Design goals:
- *   - Fixed 300 px height — never grows, never overflows the grid.
- *   - Items dominate the card; customer name is de-emphasised.
- *   - Long item lists are truncated with "+N more items".
- *   - Long modifier strings are truncated with "+N more".
+ *   - Height is DYNAMIC — the card grows to show every ordered item.
+ *   - ALL items are always visible. No "+N more items" truncation.
+ *   - ALL modifiers are always visible. No "+N more" truncation.
  *   - Status indicated by a top border accent + badge.
  *   - Timer shows elapsed kitchen time with colour urgency cues.
+ *   - tabIndex={0} + data-kds-card attribute enable remote-control focus
+ *     and board-level scroll-into-view in TvKitchenPage.
  *   - NO action buttons — kitchen staff use the staff dashboard.
  *   - New cards fade in; status changes trigger a brief highlight.
  */
@@ -15,15 +16,6 @@
 import { useState, useEffect, useRef } from "react";
 import { format } from "date-fns";
 import type { StaffOrder, OrderStatus } from "@/hooks/useOrders";
-
-// ── Layout constants ──────────────────────────────────────────────────────────
-
-/** Fixed card height in px. Must stay constant regardless of item count. */
-const CARD_HEIGHT = 300;
-/** Max item rows shown before "+N more items" overflow label. */
-const MAX_VISIBLE_ITEMS = 4;
-/** Max modifier fragments shown per item before "+N more". */
-const MAX_VISIBLE_MODS = 2;
 
 // ── Status config ─────────────────────────────────────────────────────────────
 
@@ -145,16 +137,17 @@ function parseModifiers(notes: string | null): string[] {
     .filter(Boolean);
 }
 
+/**
+ * Shows ALL modifier tags for an item — no truncation.
+ * Chefs must see every instruction.
+ */
 function ItemModifiers({ notes }: { notes: string | null }) {
   const mods = parseModifiers(notes);
   if (mods.length === 0) return null;
 
-  const shown = mods.slice(0, MAX_VISIBLE_MODS);
-  const hidden = mods.length - shown.length;
-
   return (
     <div style={{ marginTop: "2px", display: "flex", flexWrap: "wrap", gap: "3px" }}>
-      {shown.map((mod, i) => (
+      {mods.map((mod, i) => (
         <span
           key={i}
           style={{
@@ -170,17 +163,6 @@ function ItemModifiers({ notes }: { notes: string | null }) {
           {mod}
         </span>
       ))}
-      {hidden > 0 && (
-        <span
-          style={{
-            fontSize: "0.72rem",
-            color: "#6B7280",
-            padding: "1px 4px",
-          }}
-        >
-          +{hidden} more
-        </span>
-      )}
     </div>
   );
 }
@@ -193,16 +175,6 @@ interface Props {
 
 export function TvOrderCard({ order }: Props) {
   const cfg = STATUS_CONFIG[order.status] ?? STATUS_CONFIG.pending_approval;
-
-  // ── DIAGNOSTIC: log the exact prop received by this card.
-  //    Remove once the root cause is confirmed.
-  useEffect(() => {
-    console.log(
-      `[TvOrderCard] id=${order.id} items.length=${order.items.length}` +
-      ` items=${JSON.stringify(order.items)}`
-    );
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [order.id]);
 
   // Status-change highlight animation.
   const [highlight, setHighlight] = useState(false);
@@ -227,27 +199,32 @@ export function TvOrderCard({ order }: Props) {
   const itemCountLabel = `${totalQty} ${totalQty === 1 ? "item" : "items"}`;
   const orderTime = format(new Date(order.createdAt), "HH:mm");
 
-  const shownItems = order.items.slice(0, MAX_VISIBLE_ITEMS);
-  const hiddenItems = order.items.length - shownItems.length;
-
   return (
+    /*
+     * tabIndex={0}       — makes the card focusable by TV remote D-pad navigation.
+     * data-kds-card      — used by TvKitchenPage's onFocus handler to locate this
+     *                      element and scroll it fully into view.
+     * height is NOT set  — the card grows to fit all its items naturally.
+     * overflow is NOT hidden — content is never clipped.
+     */
     <div
+      tabIndex={0}
+      data-kds-card="true"
       style={{
-        height: `${CARD_HEIGHT}px`,
         display: "flex",
         flexDirection: "column",
         backgroundColor: "#1F2937",
         border: `1px solid ${cfg.border}`,
         borderTop: `3px solid ${cfg.color}`,
         borderRadius: "10px",
-        overflow: "hidden",
         position: "relative",
         boxShadow: highlight
           ? `0 0 0 2px ${cfg.color}55, 0 0 20px ${cfg.glow}`
           : `0 0 12px ${cfg.glow}`,
         transition: "box-shadow 0.4s ease",
         animation: "kds-fadein 0.35s ease-out",
-        flexShrink: 0,
+        // outline on focus for remote-control visibility
+        outline: "none",
       }}
     >
       {/* ── Header: status badge + timer ──────────────────────────── */}
@@ -305,7 +282,7 @@ export function TvOrderCard({ order }: Props) {
           {tableLabel}
         </div>
 
-        {/* Item count + customer name (de-emphasised) */}
+        {/* Item count + customer name */}
         <div
           style={{
             display: "flex",
@@ -329,10 +306,6 @@ export function TvOrderCard({ order }: Props) {
                 fontSize: "0.72rem",
                 color: "#4B5563",
                 fontWeight: 400,
-                whiteSpace: "nowrap",
-                overflow: "hidden",
-                textOverflow: "ellipsis",
-                maxWidth: "120px",
               }}
             >
               {order.customerName}
@@ -345,19 +318,20 @@ export function TvOrderCard({ order }: Props) {
       <div style={{ height: "1px", backgroundColor: "#374151", flexShrink: 0 }} />
 
       {/* ── Items list ────────────────────────────────────────────── */}
+      {/*
+       * ALL items are rendered — no slice, no "+N more" label.
+       * The card height grows naturally to show everything.
+       */}
       <div
         style={{
-          flex: 1,
-          overflow: "hidden",
           padding: "8px 12px 6px",
           display: "flex",
           flexDirection: "column",
           gap: "5px",
-          minHeight: 0,
         }}
       >
-        {shownItems.map((item) => (
-          <div key={item.id} style={{ flexShrink: 0 }}>
+        {order.items.map((item) => (
+          <div key={item.id}>
             <div style={{ display: "flex", alignItems: "baseline", gap: "6px" }}>
               {/* Quantity */}
               <span
@@ -378,9 +352,6 @@ export function TvOrderCard({ order }: Props) {
                   fontWeight: 600,
                   color: "#E5E7EB",
                   lineHeight: 1.2,
-                  overflow: "hidden",
-                  textOverflow: "ellipsis",
-                  whiteSpace: "nowrap",
                 }}
               >
                 {item.name}
@@ -392,25 +363,11 @@ export function TvOrderCard({ order }: Props) {
           </div>
         ))}
 
-        {/* Overflow label */}
-        {hiddenItems > 0 && (
-          <div
-            style={{
-              fontSize: "0.78rem",
-              color: "#6B7280",
-              fontStyle: "italic",
-              flexShrink: 0,
-            }}
-          >
-            +{hiddenItems} more {hiddenItems === 1 ? "item" : "items"}…
-          </div>
-        )}
-
         {/* Staff note */}
         {order.staffNote && (
           <div
             style={{
-              marginTop: "auto",
+              marginTop: "6px",
               padding: "4px 8px",
               borderRadius: "5px",
               backgroundColor: "rgba(245,158,11,0.07)",
@@ -418,9 +375,6 @@ export function TvOrderCard({ order }: Props) {
               fontSize: "0.75rem",
               color: "#FCD34D",
               fontStyle: "italic",
-              overflow: "hidden",
-              textOverflow: "ellipsis",
-              whiteSpace: "nowrap",
               flexShrink: 0,
             }}
           >
@@ -462,6 +416,9 @@ export function TvOrderCard({ order }: Props) {
         @keyframes kds-pulse {
           0%, 100% { opacity: 0.65; }
           50%       { opacity: 1; }
+        }
+        [data-kds-card]:focus {
+          box-shadow: 0 0 0 3px rgba(249,115,22,0.7), 0 0 24px rgba(249,115,22,0.2);
         }
       `}</style>
     </div>
