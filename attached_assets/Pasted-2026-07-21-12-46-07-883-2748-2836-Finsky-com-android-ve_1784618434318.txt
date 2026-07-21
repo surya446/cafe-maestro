@@ -1,0 +1,163 @@
+2026-07-21 12:46:07.883  2748-2836  Finsky                  com.android.vending                  E  [59] VerifyApps: APK Analysis scan failed for com.cafemaestro.tv
+                                                                                                    com.google.android.finsky.verifier.apkanalysis.client.ApkAnalysisException: DOWNLOAD_FILE_NOT_FOUND_EXCEPTION while analyzing APK
+                                                                                                    	at ijf.b(PG:571)
+                                                                                                    	at aqtc.u(PG:5)
+                                                                                                    	at aqzq.run(PG:109)
+                                                                                                    	at java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1156)
+                                                                                                    	at java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:651)
+                                                                                                    	at mfe.run(PG:278)
+                                                                                                    	at java.lang.Thread.run(Thread.java:1119)
+---------------------------- PROCESS STARTED (3257) for package com.cafemaestro.tv ----------------------------
+2026-07-21 12:46:09.687  3257-3257  nativeloader            com.cafemaestro.tv                   D  Load libframework-connectivity-tiramisu-jni.so using APEX ns com_android_tethering for caller /apex/com.android.tethering/javalib/framework-connectivity-t.jar: ok
+2026-07-21 12:46:10.125  3257-3257  nativeloader            com.cafemaestro.tv                   D  Configuring clns-7 for other apk /data/app/~~IqB77hq_y5Xs8b6PR89LMA==/com.cafemaestro.tv-_0E0tyVXjEqpHihm7dJhIA==/base.apk. target_sdk_version=36, uses_libraries=, library_path=/data/app/~~IqB77hq_y5Xs8b6PR89LMA==/com.cafemaestro.tv-_0E0tyVXjEqpHihm7dJhIA==/lib/x86, permitted_path=/data:/mnt/expand:/data/user/0/com.cafemaestro.tv
+2026-07-21 12:46:10.136  3257-3257  .cafemaestro.tv         com.cafemaestro.tv                   I  AssetManager2(0xefa46c14) locale list changing from [] to [en-US]
+2026-07-21 12:46:10.156  3257-3257  GraphicsEnvironment     com.cafemaestro.tv                   V  Currently set values for:
+2026-07-21 12:46:10.156  3257-3257  GraphicsEnvironment     com.cafemaestro.tv                   V    angle_gl_driver_selection_pkgs=[]
+2026-07-21 12:46:10.157  3257-3257  GraphicsEnvironment     com.cafemaestro.tv                   V    angle_gl_driver_selection_values=[]
+2026-07-21 12:46:10.157  3257-3257  GraphicsEnvironment     com.cafemaestro.tv                   V  com.cafemaestro.tv is not listed in per-application setting
+2026-07-21 12:46:10.157  3257-3257  GraphicsEnvironment     com.cafemaestro.tv                   V  ANGLE allowlist from config: 
+2026-07-21 12:46:10.157  3257-3257  GraphicsEnvironment     com.cafemaestro.tv                   V  com.cafemaestro.tv is not listed in ANGLE allowlist or settings, returning default
+2026-07-21 12:46:10.157  3257-3257  GraphicsEnvironment     com.cafemaestro.tv                   V  Neither updatable production driver nor prerelease driver is supported.
+2026-07-21 12:46:10.223  3257-3284  DisplayManager          com.cafemaestro.tv                   I  Choreographer implicitly registered for the refresh rate.
+2026-07-21 12:46:10.231  3257-3257  .cafemaestro.tv         com.cafemaestro.tv                   I  AssetManager2(0xefa45e94) locale list changing from [] to [en-US]
+2026-07-21 12:46:10.291  3257-3257  AppCompatDelegate       com.cafemaestro.tv                   D  Checking for metadata for AppLocalesMetadataHolderService : Service not found
+2026-07-21 12:46:10.293  3257-3257  .cafemaestro.tv         com.cafemaestro.tv                   I  AssetManager2(0xefa44ed4) locale list changing from [] to [en-US]
+2026-07-21 12:46:10.305  3257-3257  ashmem                  com.cafemaestro.tv                   E  Pinning is deprecated since Android Q. Please use trim or other methods.
+2026-07-21 12:46:10.338  3257-3284  EGL_emulation           com.cafemaestro.tv                   I  Opening libGLESv1_CM_emulation.so
+2026-07-21 12:46:10.343  3257-3284  EGL_emulation           com.cafemaestro.tv                   I  Opening libGLESv2_emulation.so
+2026-07-21 12:46:10.401  3257-3284  HWUI                    com.cafemaestro.tv                   W  Failed to initialize 101010-2 format, error = EGL_SUCCESS
+2026-07-21 12:46:10.423  3257-3257  CompatChangeReporter    com.cafemaestro.tv                   D  Compat change id reported: 377864165; UID 10093; state: ENABLED
+2026-07-21 12:46:10.428  3257-3257  DesktopModeFlags        com.cafemaestro.tv                   D  Toggle override initialized to: OVERRIDE_UNSET
+2026-07-21 12:46:10.473  3257-3257  .cafemaestro.tv         com.cafemaestro.tv                   I  hiddenapi: Accessing hidden method Landroid/view/ViewGroup;->makeOptionalFitsSystemWindows()V (runtime_flags=0, domain=platform, api=unsupported) from Landroidx/appcompat/widget/ViewUtils; (domain=app) using reflection: allowed
+2026-07-21 12:46:10.510  3257-3257  .cafemaestro.tv         com.cafemaestro.tv                   I  AssetManager2(0xefa4da54) locale list changing from [] to [en-US]
+2026-07-21 12:46:10.511  3257-3257  WebViewFactory          com.cafemaestro.tv                   I  Loading com.google.android.webview version 143.0.7499.24 (code 749902436)
+2026-07-21 12:46:10.515  3257-3257  .cafemaestro.tv         com.cafemaestro.tv                   I  AssetManager2(0xefa4c3d4) locale list changing from [] to [en-US]
+2026-07-21 12:46:10.521  3257-3257  .cafemaestro.tv         com.cafemaestro.tv                   I  AssetManager2(0xefa4a694) locale list changing from [] to [en-US]
+2026-07-21 12:46:10.529  3257-3257  .cafemaestro.tv         com.cafemaestro.tv                   I  AssetManager2(0xefa4e354) locale list changing from [] to [en-US]
+2026-07-21 12:46:10.533  3257-3257  .cafemaestro.tv         com.cafemaestro.tv                   I  AssetManager2(0xefa4c854) locale list changing from [] to [en-US]
+2026-07-21 12:46:10.535  3257-3257  ResourcesManager        com.cafemaestro.tv                   V  The following library key has been added: ResourcesKey{ mHash=5aed3042 mResDir=null mSplitDirs=[] mOverlayDirs=[] mLibDirs=[/data/app/~~9_Fb50sXb4Lnx7JOKNQDng==/com.google.android.webview-1QBkvQh5698p0KXH4xxKOA==/WebViewGoogle.apk,/data/app/~~rLp2C87_AWBELdLjDQVjRw==/com.google.android.trichromelibrary_749902436-UamRacuxOe_JMqdGZQgMLQ==/TrichromeLibrary.apk] mDisplayId=0 mOverrideConfig=v36 mCompatInfo={320dpi always-compat} mLoaders=[]}
+2026-07-21 12:46:10.542  3257-3257  .cafemaestro.tv         com.cafemaestro.tv                   W  Failed to find entry 'classes.dex': Entry not found
+2026-07-21 12:46:10.546  3257-3257  nativeloader            com.cafemaestro.tv                   D  Configuring clns-8 for other apk /data/app/~~rLp2C87_AWBELdLjDQVjRw==/com.google.android.trichromelibrary_749902436-UamRacuxOe_JMqdGZQgMLQ==/TrichromeLibrary.apk. target_sdk_version=36, uses_libraries=ALL, library_path=/data/app/~~9_Fb50sXb4Lnx7JOKNQDng==/com.google.android.webview-1QBkvQh5698p0KXH4xxKOA==/lib/x86:/data/app/~~9_Fb50sXb4Lnx7JOKNQDng==/com.google.android.webview-1QBkvQh5698p0KXH4xxKOA==/WebViewGoogle.apk!/lib/x86:/data/app/~~rLp2C87_AWBELdLjDQVjRw==/com.google.android.trichromelibrary_749902436-UamRacuxOe_JMqdGZQgMLQ==/TrichromeLibrary.apk!/lib/x86, permitted_path=/data:/mnt/expand
+2026-07-21 12:46:10.555  3257-3257  nativeloader            com.cafemaestro.tv                   D  Configuring clns-9 for other apk /data/app/~~9_Fb50sXb4Lnx7JOKNQDng==/com.google.android.webview-1QBkvQh5698p0KXH4xxKOA==/WebViewGoogle.apk. target_sdk_version=36, uses_libraries=, library_path=/data/app/~~9_Fb50sXb4Lnx7JOKNQDng==/com.google.android.webview-1QBkvQh5698p0KXH4xxKOA==/lib/x86:/data/app/~~9_Fb50sXb4Lnx7JOKNQDng==/com.google.android.webview-1QBkvQh5698p0KXH4xxKOA==/WebViewGoogle.apk!/lib/x86:/data/app/~~rLp2C87_AWBELdLjDQVjRw==/com.google.android.trichromelibrary_749902436-UamRacuxOe_JMqdGZQgMLQ==/TrichromeLibrary.apk!/lib/x86, permitted_path=/data:/mnt/expand
+2026-07-21 12:46:10.721  3257-3257  cr_WVCFactoryProvider   com.cafemaestro.tv                   I  version=143.0.7499.24 (749902436) minSdkVersion=29 multiprocess=true packageId=2 splits=<none>
+2026-07-21 12:46:10.723  3257-3257  .cafemaestro.tv         com.cafemaestro.tv                   I  AssetManager2(0xefa4f314) locale list changing from [] to [en-US]
+2026-07-21 12:46:10.807  3257-3257  nativeloader            com.cafemaestro.tv                   D  Load /data/app/~~rLp2C87_AWBELdLjDQVjRw==/com.google.android.trichromelibrary_749902436-UamRacuxOe_JMqdGZQgMLQ==/TrichromeLibrary.apk!/lib/x86/libmonochrome.so using class loader ns clns-9 (caller=/data/app/~~9_Fb50sXb4Lnx7JOKNQDng==/com.google.android.webview-1QBkvQh5698p0KXH4xxKOA==/WebViewGoogle.apk): ok
+2026-07-21 12:46:10.853  3257-3257  nativeloader            com.cafemaestro.tv                   D  Load /system/lib/libwebviewchromium_plat_support.so using class loader ns clns-9 (caller=/data/app/~~9_Fb50sXb4Lnx7JOKNQDng==/com.google.android.webview-1QBkvQh5698p0KXH4xxKOA==/WebViewGoogle.apk): ok
+2026-07-21 12:46:10.904  3257-3290  chromium                com.cafemaestro.tv                   I  [0721/124610.890359:INFO:android_webview/browser/variations/variations_seed_loader.cc:67] Failed to open file for reading.: No such file or directory (2)
+2026-07-21 12:46:10.924  3257-3290  chromium                com.cafemaestro.tv                   I  [0721/124610.924795:INFO:android_webview/browser/variations/variations_seed_loader.cc:67] Failed to open file for reading.: No such file or directory (2)
+2026-07-21 12:46:11.061  3257-3257  cr_LibraryLoader        com.cafemaestro.tv                   I  Successfully loaded native library
+2026-07-21 12:46:11.124  3257-3257  cr_CachingUmaRecorder   com.cafemaestro.tv                   I  Flushed 20 samples from 20 histograms, 0 samples were dropped.
+2026-07-21 12:46:11.183  3257-3257  cr_CombinedPProvider    com.cafemaestro.tv                   I  #registerProvider() provider:WV.jk@adbc9b3 isPolicyCacheEnabled:false policyProvidersSize:0
+2026-07-21 12:46:11.186  3257-3257  cr_PolicyProvider       com.cafemaestro.tv                   I  #setManagerAndSource() 0
+2026-07-21 12:46:11.197  3257-3257  cr_DisplayManager       com.cafemaestro.tv                   I  Is Display Topology available: false
+2026-07-21 12:46:11.199  3257-3257  .cafemaestro.tv         com.cafemaestro.tv                   I  AssetManager2(0xefa4f0d4) locale list changing from [] to [en-US]
+2026-07-21 12:46:11.203  3257-3257  .cafemaestro.tv         com.cafemaestro.tv                   I  AssetManager2(0xefa44a54) locale list changing from [] to [en-US]
+2026-07-21 12:46:11.617  3257-3257  cr_CombinedPProvider    com.cafemaestro.tv                   I  #linkNativeInternal() 1
+2026-07-21 12:46:11.619  3257-3257  cr_AppResProvider       com.cafemaestro.tv                   I  #getApplicationRestrictionsFromUserManager() Bundle[EMPTY_PARCEL]
+2026-07-21 12:46:11.619  3257-3257  cr_PolicyProvider       com.cafemaestro.tv                   I  #notifySettingsAvailable() 0
+2026-07-21 12:46:11.619  3257-3257  cr_CombinedPProvider    com.cafemaestro.tv                   I  #onSettingsAvailable() 0
+2026-07-21 12:46:11.619  3257-3257  cr_CombinedPProvider    com.cafemaestro.tv                   I  #flushPolicies()
+2026-07-21 12:46:12.321  3257-3257  chromium                com.cafemaestro.tv                   W  [WARNING:android_webview/browser/network_service/net_helpers.cc:143] HTTP Cache size is: 20971520
+2026-07-21 12:46:12.698  3257-3257  Capacitor               com.cafemaestro.tv                   D  Starting BridgeActivity
+2026-07-21 12:46:12.761  3257-3257  Capacitor               com.cafemaestro.tv                   D  Registering plugin instance: CapacitorCookies
+2026-07-21 12:46:12.768  3257-3257  Capacitor               com.cafemaestro.tv                   D  Registering plugin instance: WebView
+2026-07-21 12:46:12.774  3257-3257  Capacitor               com.cafemaestro.tv                   D  Registering plugin instance: CapacitorHttp
+2026-07-21 12:46:12.779  3257-3257  Capacitor               com.cafemaestro.tv                   D  Registering plugin instance: SystemBars
+2026-07-21 12:46:12.787  3257-3257  Capacitor               com.cafemaestro.tv                   D  Registering plugin instance: ApkUpdater
+2026-07-21 12:46:12.794  3257-3257  Capacitor               com.cafemaestro.tv                   D  Registering plugin instance: App
+2026-07-21 12:46:12.803  3257-3257  Capacitor               com.cafemaestro.tv                   D  Registering plugin instance: Browser
+2026-07-21 12:46:12.809  3257-3257  Capacitor               com.cafemaestro.tv                   D  Registering plugin instance: Device
+2026-07-21 12:46:12.814  3257-3257  Capacitor               com.cafemaestro.tv                   D  Registering plugin instance: Network
+2026-07-21 12:46:12.840  3257-3257  Capacitor               com.cafemaestro.tv                   E  Unable to read public/cordova.js file, Cordova plugins will not work
+2026-07-21 12:46:12.843  3257-3257  Capacitor               com.cafemaestro.tv                   W  Unable to read file at path public/plugins
+2026-07-21 12:46:12.843  3257-3257  Capacitor               com.cafemaestro.tv                   E  Unable to read public/cordova_plugins.js file, Cordova plugins will not work
+2026-07-21 12:46:12.856  3257-3257  Capacitor               com.cafemaestro.tv                   D  Loading app at https://localhost
+2026-07-21 12:46:12.920  3257-3343  cr_media                com.cafemaestro.tv                   W  BLUETOOTH_CONNECT permission is missing.
+2026-07-21 12:46:12.923  3257-3343  cr_media                com.cafemaestro.tv                   W  getBluetoothAdapter() requires BLUETOOTH permission
+2026-07-21 12:46:12.924  3257-3343  cr_media                com.cafemaestro.tv                   W  registerBluetoothIntentsIfNeeded: Requires BLUETOOTH permission
+2026-07-21 12:46:13.059  3257-3383  libc                    com.cafemaestro.tv                   W  Access denied finding property "vendor.mesa.log"
+2026-07-21 12:46:13.059  3257-3383  libc                    com.cafemaestro.tv                   W  Access denied finding property "vendor.mesa.log.file"
+2026-07-21 12:46:13.059  3257-3383  MESA                    com.cafemaestro.tv                   E  Failed to open rendernode: No such file or directory
+2026-07-21 12:46:13.064  3257-3337  Capacitor               com.cafemaestro.tv                   D  Handling local request: https://localhost/
+2026-07-21 12:46:13.095  3257-3257  Capacitor               com.cafemaestro.tv                   D  App started
+2026-07-21 12:46:13.104  3257-3257  Capacitor/AppPlugin     com.cafemaestro.tv                   D  Firing change: true
+2026-07-21 12:46:13.105  3257-3257  Capacitor/AppPlugin     com.cafemaestro.tv                   V  Notifying listeners for event appStateChange
+2026-07-21 12:46:13.105  3257-3257  Capacitor/AppPlugin     com.cafemaestro.tv                   D  No listeners found for event appStateChange
+2026-07-21 12:46:13.130  3257-3391  Capacitor/NetworkPlugin com.cafemaestro.tv                   V  Notifying listeners for event networkStatusChange
+2026-07-21 12:46:13.130  3257-3391  Capacitor/NetworkPlugin com.cafemaestro.tv                   D  No listeners found for event networkStatusChange
+2026-07-21 12:46:13.136  3257-3257  CustomTabsClient        com.cafemaestro.tv                   W  Unable to find any Custom Tabs packages, you may need to add a <queries> element to your manifest. See the docs for CustomTabsClient#getPackageName.
+2026-07-21 12:46:13.141  3257-3257  Capacitor/BrowserPlugin com.cafemaestro.tv                   V  Notifying listeners for event browserFinished
+2026-07-21 12:46:13.142  3257-3257  Capacitor/BrowserPlugin com.cafemaestro.tv                   D  No listeners found for event browserFinished
+2026-07-21 12:46:13.142  3257-3257  Capacitor/BrowserPlugin com.cafemaestro.tv                   E  Error binding to custom tabs service
+2026-07-21 12:46:13.143  3257-3257  Capacitor               com.cafemaestro.tv                   D  App resumed
+2026-07-21 12:46:13.185  3257-3257  HWUI                    com.cafemaestro.tv                   W  Unknown dataspace 0
+2026-07-21 12:46:13.280  3257-3383  libc                    com.cafemaestro.tv                   W  Access denied finding property "vendor.mesa.vk.trace.per.submit"
+2026-07-21 12:46:13.280  3257-3383  libc                    com.cafemaestro.tv                   W  Access denied finding property "vendor.mesa.gallium.print.optio"
+2026-07-21 12:46:13.280  3257-3383  libc                    com.cafemaestro.tv                   W  Access denied finding property "vendor.mesa.vk.trace.frame"
+2026-07-21 12:46:13.313  3257-3383  libc                    com.cafemaestro.tv                   W  Access denied finding property "vendor.mesa.vk.wsi.headless.swa"
+2026-07-21 12:46:13.334  3257-3395  CameraManagerGlobal     com.cafemaestro.tv                   I  Connecting to camera service
+2026-07-21 12:46:13.850  3257-3270  HWUI                    com.cafemaestro.tv                   I  Davey! duration=830ms; Flags=1, FrameTimelineVsyncId=7103, IntendedVsync=120003996857, Vsync=120370663509, InputEventId=0, HandleInputStart=120385444151, AnimationStart=120385446027, PerformTraversalsStart=120439044474, DrawStart=120561187579, FrameDeadline=120020663523, FrameStartTime=120383167792, FrameInterval=16666666, WorkloadTarget=16666666, SyncQueued=120599799820, SyncStart=120600593785, IssueDrawCommandsStart=120601051934, SwapBuffers=120689550354, FrameCompleted=120835467248, DequeueBufferDuration=7382, QueueBufferDuration=384618, GpuCompleted=120835375362, SwapBuffersCompleted=120835467248, DisplayPresentTime=3168328450299692993, CommandSubmissionCompleted=120689550354, 
+2026-07-21 12:46:13.905  3257-3338  Capacitor               com.cafemaestro.tv                   D  Handling local request: https://localhost/assets/index-D8WIHncH.js
+2026-07-21 12:46:13.935  3257-3342  Capacitor               com.cafemaestro.tv                   D  Handling local request: https://localhost/assets/index-BT8StoQE.css
+2026-07-21 12:46:14.061  3257-3257  Choreographer           com.cafemaestro.tv                   I  Skipped 36 frames!  The application may be doing too much work on its main thread.
+2026-07-21 12:46:14.264  3257-3257  InsetsController        com.cafemaestro.tv                   D  hide(ime(), fromIme=false)
+2026-07-21 12:46:14.264  3257-3257  ImeTracker              com.cafemaestro.tv                   I  com.cafemaestro.tv:2a788996: onCancelled at PHASE_CLIENT_ALREADY_HIDDEN
+2026-07-21 12:46:14.448  3257-3351  VideoCapabilities       com.cafemaestro.tv                   W  Unrecognized profile/level 0/3 for video/mpeg2
+2026-07-21 12:46:14.697  3257-3351  VideoCapabilities       com.cafemaestro.tv                   W  Unrecognized profile/level 0/3 for video/mpeg2
+2026-07-21 12:46:14.698  3257-3351  VideoCapabilities       com.cafemaestro.tv                   W  Unrecognized profile/level 0/3 for video/mpeg2
+2026-07-21 12:46:15.844  3257-3474  ProfileInstaller        com.cafemaestro.tv                   D  Installing profile for com.cafemaestro.tv
+2026-07-21 12:46:34.348  3257-3257  Capacitor/Console       com.cafemaestro.tv                   I  File: https://localhost/assets/index-D8WIHncH.js - Line 52 - Msg: [supabase init] url: (undefined → placeholder) | key length: 0 | key prefix: (none) | isTV: true
+2026-07-21 12:46:34.348  3257-3257  Capacitor/Console       com.cafemaestro.tv                   W  File: https://localhost/assets/index-D8WIHncH.js - Line 52 - Msg: Supabase env vars not set. Set VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY.
+2026-07-21 12:46:34.434  3257-3257  Capacitor/Console       com.cafemaestro.tv                   I  File: https://localhost/assets/index-D8WIHncH.js - Line 52 - Msg: [useAppUpdateCheck] ── check triggered by: launch (platform: android-tv) ──
+2026-07-21 12:46:34.440  3257-3257  Capacitor/Console       com.cafemaestro.tv                   I  File:  - Line 349 - Msg: [object Object]
+2026-07-21 12:46:34.442  3257-3257  Capacitor/Console       com.cafemaestro.tv                   I  File:  - Line 349 - Msg: [object Object]
+2026-07-21 12:46:34.443  3257-3257  Capacitor/Console       com.cafemaestro.tv                   I  File:  - Line 349 - Msg: [object Object]
+2026-07-21 12:46:34.446  3257-3335  Capacitor               com.cafemaestro.tv                   D  Handling local request: https://localhost/favicon.svg
+2026-07-21 12:46:34.449  3257-3257  Capacitor/Plugin        com.cafemaestro.tv                   V  To native (Capacitor plugin): callbackId: 44633237, pluginId: App, methodName: addListener
+2026-07-21 12:46:34.450  3257-3257  Capacitor               com.cafemaestro.tv                   V  callback: 44633237, pluginId: App, methodName: addListener, methodData: {"eventName":"backButton"}
+2026-07-21 12:46:34.450  3257-3257  Capacitor/Plugin        com.cafemaestro.tv                   V  To native (Capacitor plugin): callbackId: 44633238, pluginId: App, methodName: getInfo
+2026-07-21 12:46:34.451  3257-3257  Capacitor               com.cafemaestro.tv                   V  callback: 44633238, pluginId: App, methodName: getInfo, methodData: {}
+2026-07-21 12:46:34.452  3257-3257  Capacitor/Plugin        com.cafemaestro.tv                   V  To native (Capacitor plugin): callbackId: 44633239, pluginId: App, methodName: addListener
+2026-07-21 12:46:34.452  3257-3257  Capacitor               com.cafemaestro.tv                   V  callback: 44633239, pluginId: App, methodName: addListener, methodData: {"eventName":"appStateChange"}
+2026-07-21 12:46:34.462  3257-3257  Capacitor/Console       com.cafemaestro.tv                   I  File:  - Line 333 - Msg: {"name":"Cup & Cozy TV","id":"com.cafemaestro.tv","build":"1","version":"1.0"}
+2026-07-21 12:46:34.463  3257-3257  Capacitor/Console       com.cafemaestro.tv                   I  File: https://localhost/assets/index-D8WIHncH.js - Line 52 - Msg: [versionService] App.getInfo() raw → {"appId":"com.cafemaestro.tv","version":"1.0","build":"1","parsedBuildNumber":1}
+2026-07-21 12:46:34.463  3257-3257  Capacitor/Console       com.cafemaestro.tv                   I  File: https://localhost/assets/index-D8WIHncH.js - Line 52 - Msg: [releaseService] calling get_latest_release RPC — platform="android-tv" — network fetch (no cache)
+2026-07-21 12:46:54.540  3257-3257  Capacitor/Console       com.cafemaestro.tv                   E  File: https://localhost/assets/index-D8WIHncH.js - Line 52 - Msg: [releaseService] get_latest_release error: [object Object]
+2026-07-21 12:46:54.541  3257-3257  Capacitor/Console       com.cafemaestro.tv                   I  File: https://localhost/assets/index-D8WIHncH.js - Line 52 - Msg: [useAppUpdateCheck] result (launch) → {"trigger":"launch","platform":"android-tv","installedVersion":"1.0","installedBuild":1,"latestBuild":null,"hasUpdate":false,"isForceUpdate":false,"latestReleaseId":null}
+2026-07-21 12:46:54.566  3257-3257  Capacitor/Console       com.cafemaestro.tv                   I  File:  - Line 349 - Msg: [object Object]
+2026-07-21 12:46:54.566  3257-3257  Capacitor/Console       com.cafemaestro.tv                   I  File:  - Line 349 - Msg: [object Object]
+2026-07-21 12:46:54.591  3257-3257  Capacitor/Plugin        com.cafemaestro.tv                   V  To native (Capacitor plugin): callbackId: 44633240, pluginId: App, methodName: addListener
+2026-07-21 12:46:54.592  3257-3257  Capacitor               com.cafemaestro.tv                   V  callback: 44633240, pluginId: App, methodName: addListener, methodData: {"eventName":"backButton"}
+2026-07-21 12:46:54.595  3257-3257  Capacitor/Plugin        com.cafemaestro.tv                   V  To native (Capacitor plugin): callbackId: 44633241, pluginId: App, methodName: removeListener
+2026-07-21 12:46:54.595  3257-3257  Capacitor               com.cafemaestro.tv                   V  callback: 44633241, pluginId: App, methodName: removeListener, methodData: {"eventName":"backButton","callbackId":"44633237"}
+2026-07-21 12:46:54.680  3257-3257  Capacitor/Console       com.cafemaestro.tv                   I  File: https://localhost/assets/index-D8WIHncH.js - Line 145 - Msg: [DIAG] fetch implementation: native (WebView built-in)
+2026-07-21 12:46:54.681  3257-3257  Capacitor/Console       com.cafemaestro.tv                   I  File: https://localhost/assets/index-D8WIHncH.js - Line 145 - Msg: [DIAG] Capacitor: isNative=true, plugins=[App, SystemBars, Device, Network, CapacitorCookies, WebView, CapacitorHttp, ApkUpdater, Browser]
+2026-07-21 12:46:54.684  3257-3257  Capacitor/Console       com.cafemaestro.tv                   I  File: https://localhost/assets/index-D8WIHncH.js - Line 145 - Msg: [DIAG] Supabase singleton — url: https://placeholder.supabase.co | key length: 15 | key prefix: placeholder-key
+2026-07-21 12:46:54.685  3257-3257  Capacitor/Console       com.cafemaestro.tv                   I  File: https://localhost/assets/index-D8WIHncH.js - Line 145 - Msg: [DIAG] raw fetch probe → https://usllfqogcdskfeszntwf.supabase.co/rest/v1/
+2026-07-21 12:47:14.763  3257-3257  Capacitor/Console       com.cafemaestro.tv                   E  File: https://localhost/assets/index-D8WIHncH.js - Line 145 - Msg: [DIAG] probe FAILED — TypeError: Failed to fetch
+2026-07-21 12:47:24.772  3257-3257  cr_AwAutofillManager    com.cafemaestro.tv                   W  Autofill is disabled: AutofillManager isn't available in given Context.
+2026-07-21 12:47:24.782  3257-3257  ImeTracker              com.cafemaestro.tv                   I  com.cafemaestro.tv:ddb836d2: onRequestShow at ORIGIN_CLIENT reason SHOW_SOFT_INPUT fromUser false
+2026-07-21 12:47:24.787  3257-3257  InsetsController        com.cafemaestro.tv                   D  show(ime(), fromIme=false)
+2026-07-21 12:47:24.791  3257-3257  InsetsController        com.cafemaestro.tv                   D  Setting requestedVisibleTypes to -1 (was -9)
+2026-07-21 12:47:25.777  3257-3997  InteractionJankMonitor  com.cafemaestro.tv                   W  Initializing without READ_DEVICE_CONFIG permission. enabled=false, interval=1, missedFrameThreshold=3, frameTimeThreshold=64, package=com.cafemaestro.tv
+2026-07-21 12:47:25.941  3257-3257  cr_AwAutofillManager    com.cafemaestro.tv                   W  Autofill is disabled: AutofillManager isn't available in given Context.
+2026-07-21 12:47:26.061  3257-3257  ImeTracker              com.cafemaestro.tv                   I  system_server:29c53541: onShown
+2026-07-21 12:47:37.801  3257-3257  cr_AwAutofillManager    com.cafemaestro.tv                   W  Autofill is disabled: AutofillManager isn't available in given Context.
+2026-07-21 12:47:37.806  3257-3257  ImeTracker              com.cafemaestro.tv                   I  com.cafemaestro.tv:df826eb9: onRequestShow at ORIGIN_CLIENT reason SHOW_SOFT_INPUT fromUser false
+2026-07-21 12:47:37.807  3257-3257  InsetsController        com.cafemaestro.tv                   D  show(ime(), fromIme=false)
+2026-07-21 12:47:37.807  3257-3257  ImeTracker              com.cafemaestro.tv                   I  com.cafemaestro.tv:df826eb9: onCancelled at PHASE_CLIENT_APPLY_ANIMATION
+2026-07-21 12:47:41.398  3257-3257  Capacitor/Console       com.cafemaestro.tv                   I  File: https://localhost/assets/index-D8WIHncH.js - Line 145 - Msg: [TvLoginScreen] signInWithPassword
+2026-07-21 12:47:41.398  3257-3257  Capacitor/Console       com.cafemaestro.tv                   I  File: https://localhost/assets/index-D8WIHncH.js - Line 145 - Msg: email: surya.u4759@gmail.com
+2026-07-21 12:47:41.399  3257-3257  Capacitor/Console       com.cafemaestro.tv                   I  File: https://localhost/assets/index-D8WIHncH.js - Line 145 - Msg: [DIAG] fetch intercepted → https://placeholder.supabase.co/auth/v1/token?grant_type=password
+2026-07-21 12:47:41.399  3257-3257  Capacitor/Console       com.cafemaestro.tv                   I  File: https://localhost/assets/index-D8WIHncH.js - Line 145 - Msg: [DIAG] headers (first 4): Content-Type: application/json;charset=UTF-8 | Authorization: Bearer placeholder-key… | apikey: placeholder-key… | X-Client-Info: supabase-js/2.108.1; runtime=web
+2026-07-21 12:47:41.399  3257-3257  Capacitor/Console       com.cafemaestro.tv                   I  File: https://localhost/assets/index-D8WIHncH.js - Line 145 - Msg: [DIAG] method: POST
+2026-07-21 12:47:41.406  3257-3257  ImeTracker              com.cafemaestro.tv                   I  com.cafemaestro.tv:e76538de: onRequestHide at ORIGIN_CLIENT reason HIDE_SOFT_INPUT fromUser false
+2026-07-21 12:47:41.408  3257-3257  InsetsController        com.cafemaestro.tv                   D  hide(ime(), fromIme=false)
+2026-07-21 12:47:41.410  3257-3257  WindowOnBackDispatcher  com.cafemaestro.tv                   W  sendCancelIfRunning: isInProgress=false callback=ImeCallback=ImeOnBackInvokedCallback@55823287 Callback=android.window.IOnBackInvokedCallback$Stub$Proxy@406abbf
+2026-07-21 12:47:41.411  3257-3257  InsetsController        com.cafemaestro.tv                   D  Setting requestedVisibleTypes to -9 (was -1)
+2026-07-21 12:47:41.414  3257-3257  CompatChangeReporter    com.cafemaestro.tv                   D  Compat change id reported: 395521150; UID 10093; state: ENABLED
+2026-07-21 12:47:51.105  2748-2853  Finsky                  com.android.vending                  E  [62] ItemStore: getItems RPC failed for item com.cafemaestro.tv
+2026-07-21 12:48:01.441  3257-3257  Capacitor/Console       com.cafemaestro.tv                   E  File: https://localhost/assets/index-D8WIHncH.js - Line 36 - Msg: TypeError: Failed to fetch
+2026-07-21 12:48:01.441  3257-3257  Capacitor/Console       com.cafemaestro.tv                   I  File: https://localhost/assets/index-D8WIHncH.js - Line 145 - Msg: error: {"message":"Failed to fetch","status":0,"name":"AuthRetryableFetchError"}
+2026-07-21 12:48:01.441  3257-3257  Capacitor/Console       com.cafemaestro.tv                   I  File: https://localhost/assets/index-D8WIHncH.js - Line 145 - Msg: data.session exists: false
+2026-07-21 12:48:01.441  3257-3257  Capacitor/Console       com.cafemaestro.tv                   I  File: https://localhost/assets/index-D8WIHncH.js - Line 145 - Msg: data.user exists: false

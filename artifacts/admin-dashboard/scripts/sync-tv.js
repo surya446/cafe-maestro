@@ -159,6 +159,10 @@ writeJSON(path.join(assetsDir, "capacitor.config.json"), {
   webDir: "dist/tv-public",
   android: { path: "android-tv" },
   server: { androidScheme: "https", cleartext: false },
+  plugins: {
+    CapacitorHttp: { enabled: false },
+    CapacitorCookies: { enabled: false },
+  },
 });
 
 // 5b. capacitor.plugins.json — list of installed Capacitor plugin classes.
