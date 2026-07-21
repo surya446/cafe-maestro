@@ -8,8 +8,16 @@ import { usePublicCafe, usePublicCreateBooking, PublicBookingResult } from "@/ho
 import { formatTime } from "@/lib/utils";
 import { useBookingModal } from "@/contexts/BookingModalContext";
 
-const GOLD = "#C9A46C";
+/* ── Brand palette (matches public website) ─────────────────────────── */
+const BG_WARM      = "#F8F3EA";   /* primary modal background            */
+const BG_SECONDARY = "#F2E8D8";   /* header strip                        */
+const BG_INPUT     = "#FFFDF8";   /* input / card surface                */
+const HEADING      = "#4B2E1F";   /* dark coffee headings                */
+const BODY         = "#6D5845";   /* warm body text                      */
+const ACCENT       = "#A66A3F";   /* terracotta accent / CTA             */
+const BORDER       = "#D9CBB7";   /* soft warm border                    */
 
+/* ── Time slots (unchanged) ─────────────────────────────────────────── */
 function buildTimeSlots() {
   const slots: { value: string; label: string }[] = [];
   for (let h = 7; h <= 22; h++) {
@@ -28,18 +36,71 @@ function todayStr() {
   return new Date().toISOString().split("T")[0];
 }
 
-/* ── Shared input style ─────────────────────────────── */
+/* ── Shared input style ─────────────────────────────────────────────── */
 const inputCls = [
-  "w-full h-10 rounded-xl px-3 text-sm text-white placeholder:text-white/25",
-  "border border-white/[0.08] focus:border-[#C9A46C]/50 focus:outline-none",
+  "w-full h-10 rounded-xl px-3 text-sm placeholder:text-[#A8937E]",
+  "border focus:outline-none focus:ring-0",
   "transition-colors duration-200",
 ].join(" ");
 
-const inputStyle = { background: "#171717", colorScheme: "dark" as const };
+const inputStyle = {
+  background: BG_INPUT,
+  color: HEADING,
+  borderColor: BORDER,
+  colorScheme: "light" as const,
+};
+
+const inputFocusStyle = {
+  ...inputStyle,
+  borderColor: ACCENT,
+};
+
+/* ── Tiny helper to handle focus border swap ────────────────────────── */
+function WarmInput(props: React.InputHTMLAttributes<HTMLInputElement>) {
+  const [focused, setFocused] = useState(false);
+  return (
+    <input
+      {...props}
+      className={`${inputCls} ${props.className ?? ""}`}
+      style={focused ? inputFocusStyle : inputStyle}
+      onFocus={(e) => { setFocused(true); props.onFocus?.(e); }}
+      onBlur={(e)  => { setFocused(false); props.onBlur?.(e); }}
+    />
+  );
+}
+
+function WarmTextarea(props: React.TextareaHTMLAttributes<HTMLTextAreaElement>) {
+  const [focused, setFocused] = useState(false);
+  return (
+    <textarea
+      {...props}
+      className={`${inputCls} h-auto py-2.5 resize-none ${props.className ?? ""}`}
+      style={focused ? inputFocusStyle : inputStyle}
+      onFocus={(e) => { setFocused(true); props.onFocus?.(e); }}
+      onBlur={(e)  => { setFocused(false); props.onBlur?.(e); }}
+    />
+  );
+}
+
+function WarmSelect(props: React.SelectHTMLAttributes<HTMLSelectElement>) {
+  const [focused, setFocused] = useState(false);
+  return (
+    <select
+      {...props}
+      className={`${inputCls} appearance-none pr-8 cursor-pointer ${props.className ?? ""}`}
+      style={focused ? inputFocusStyle : inputStyle}
+      onFocus={(e) => { setFocused(true); props.onFocus?.(e); }}
+      onBlur={(e)  => { setFocused(false); props.onBlur?.(e); }}
+    />
+  );
+}
 
 function FieldLabel({ children }: { children: React.ReactNode }) {
   return (
-    <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-white/35 mb-1">
+    <p
+      className="text-[10px] font-semibold uppercase tracking-[0.14em] mb-1"
+      style={{ color: `${BODY}90` }}
+    >
       {children}
     </p>
   );
@@ -51,15 +112,15 @@ export function BookingModal() {
   const createBooking = usePublicCreateBooking();
 
   const today = todayStr();
-  const [name, setName] = useState("");
-  const [email, setEmail] = useState("");
-  const [phone, setPhone] = useState("");
-  const [partySize, setPartySize] = useState(2);
-  const [date, setDate] = useState(today);
-  const [time, setTime] = useState("12:00");
-  const [notes, setNotes] = useState("");
+  const [name,        setName       ] = useState("");
+  const [email,       setEmail      ] = useState("");
+  const [phone,       setPhone      ] = useState("");
+  const [partySize,   setPartySize  ] = useState(2);
+  const [date,        setDate       ] = useState(today);
+  const [time,        setTime       ] = useState("12:00");
+  const [notes,       setNotes      ] = useState("");
   const [submitError, setSubmitError] = useState<string | null>(null);
-  const [confirmed, setConfirmed] = useState<PublicBookingResult | null>(null);
+  const [confirmed,   setConfirmed  ] = useState<PublicBookingResult | null>(null);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -89,14 +150,14 @@ export function BookingModal() {
     setSubmitError(null);
     try {
       const result = await createBooking.mutateAsync({
-        cafe_id: cafe.id,
-        name: name.trim(),
-        email: email.trim(),
-        phone: phone.trim() || null,
-        party_size: partySize,
+        cafe_id:      cafe.id,
+        name:         name.trim(),
+        email:        email.trim(),
+        phone:        phone.trim() || null,
+        party_size:   partySize,
         booking_date: date,
         booking_time: time,
-        notes: notes.trim() || null,
+        notes:        notes.trim() || null,
       });
       setConfirmed(result);
     } catch (err: unknown) {
@@ -108,90 +169,105 @@ export function BookingModal() {
     <AnimatePresence>
       {isOpen && (
         <>
-          {/* ── Backdrop ─────────────────────────────────────── */}
+          {/* ── Backdrop ──────────────────────────────────────────────── */}
           <motion.div
             key="bm-backdrop"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            transition={{ duration: 0.28 }}
+            transition={{ duration: 0.3 }}
             className="fixed inset-0 z-[200]"
-            style={{ background: "rgba(0,0,0,0.82)", backdropFilter: "blur(12px)" }}
+            style={{ background: "rgba(60,45,35,0.38)", backdropFilter: "blur(6px)" }}
             onClick={handleClose}
             aria-hidden="true"
           />
 
-          {/* ── Panel ─────────────────────────────────────────── */}
+          {/* ── Panel wrapper ─────────────────────────────────────────── */}
           <motion.div
             key="bm-panel-wrap"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            transition={{ duration: 0.2 }}
+            transition={{ duration: 0.22 }}
             className="fixed inset-0 z-[210] flex flex-col sm:items-center sm:justify-center sm:p-5"
             onClick={(e) => { if (e.target === e.currentTarget) handleClose(); }}
           >
             <motion.div
-              initial={{ y: "100%", opacity: 0 }}
-              animate={{ y: 0, opacity: 1 }}
-              exit={{ y: "60%", opacity: 0 }}
-              transition={{ type: "spring", damping: 32, stiffness: 340, mass: 0.85 }}
-              className="relative w-full flex flex-col overflow-hidden flex-1 sm:flex-initial sm:max-w-[460px] sm:rounded-[28px]"
+              initial={{ opacity: 0, scale: 0.97, y: 12 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.96, y: 8 }}
+              transition={{ type: "spring", damping: 30, stiffness: 320, mass: 0.8 }}
+              className="relative w-full flex flex-col overflow-hidden flex-1 sm:flex-initial sm:max-w-[480px] sm:rounded-[22px]"
               style={{
-                background: "#0B0B0B",
-                border: "1px solid rgba(255,255,255,0.06)",
-                boxShadow: "0 40px 120px rgba(0,0,0,0.95), 0 0 0 1px rgba(255,255,255,0.03)",
+                background: BG_WARM,
+                border: `1px solid ${BORDER}`,
+                boxShadow: "0 24px 64px rgba(61,30,15,0.18), 0 4px 16px rgba(61,30,15,0.08)",
               }}
               role="dialog"
               aria-modal="true"
               aria-label="Book a table"
               onClick={(e) => e.stopPropagation()}
             >
-              {/* ── Modal header ─────────────────────────────── */}
+              {/* ── Header ──────────────────────────────────────────── */}
               <div
-                className="shrink-0 flex items-center justify-between px-5 sm:px-6 h-[54px] border-b border-white/[0.05]"
-                style={{ background: "#050505" }}
+                className="shrink-0 flex items-center justify-between px-5 sm:px-6 h-[56px] border-b"
+                style={{ background: BG_SECONDARY, borderColor: BORDER }}
               >
                 <div className="flex items-center gap-2.5">
-                  <Coffee className="w-4 h-4" style={{ color: GOLD }} />
-                  <h2 className="font-serif text-[15px] font-medium text-white tracking-tight">
+                  <Coffee className="w-4 h-4" style={{ color: ACCENT }} />
+                  <h2
+                    className="font-serif text-[15px] font-medium tracking-tight"
+                    style={{ color: HEADING }}
+                  >
                     {confirmed ? "Booking Received" : "Reserve a Table"}
                   </h2>
                 </div>
                 <button
                   onClick={handleClose}
-                  className="flex items-center justify-center w-8 h-8 rounded-lg text-white/35 hover:text-white hover:bg-white/[0.08] transition-colors"
+                  className="flex items-center justify-center w-8 h-8 rounded-full transition-colors"
+                  style={{ color: BODY, border: `1px solid ${BORDER}` }}
+                  onMouseEnter={(e) => {
+                    (e.currentTarget as HTMLButtonElement).style.background = BORDER;
+                  }}
+                  onMouseLeave={(e) => {
+                    (e.currentTarget as HTMLButtonElement).style.background = "transparent";
+                  }}
                   aria-label="Close"
                 >
-                  <X className="w-4 h-4" />
+                  <X className="w-3.5 h-3.5" />
                 </button>
               </div>
 
-              {/* ── Content ──────────────────────────────────── */}
-              <div className="flex-1 sm:flex-initial px-5 sm:px-6 pt-4 pb-5 sm:pb-6 flex flex-col">
+              {/* ── Content ─────────────────────────────────────────── */}
+              <div className="flex-1 sm:flex-initial px-5 sm:px-6 pt-4 pb-5 sm:pb-6 flex flex-col overflow-y-auto">
 
-                {/* Success state */}
+                {/* ── Success state ────────────────────────────────── */}
                 {confirmed ? (
                   <div className="flex flex-col items-center gap-5 text-center py-6 sm:py-4">
+
                     <div
                       className="flex items-center justify-center w-16 h-16 rounded-full"
-                      style={{ background: "rgba(201,164,108,0.1)", border: `1px solid rgba(201,164,108,0.25)` }}
+                      style={{ background: `${ACCENT}15`, border: `1.5px solid ${ACCENT}40` }}
                     >
-                      <CheckCircle2 className="w-8 h-8" style={{ color: GOLD }} />
+                      <CheckCircle2 className="w-8 h-8" style={{ color: ACCENT }} />
                     </div>
 
                     <div>
-                      <h3 className="font-serif text-xl font-light text-white mb-1.5">
+                      <h3
+                        className="font-serif text-xl font-light mb-1.5"
+                        style={{ color: HEADING }}
+                      >
                         Thank you, {confirmed.name.split(" ")[0]}!
                       </h3>
-                      <p className="text-white/40 text-sm leading-relaxed max-w-xs">
+                      <p className="text-sm leading-relaxed max-w-xs" style={{ color: BODY }}>
                         Your booking request has been received. We'll confirm via email shortly.
                       </p>
                     </div>
 
+                    {/* Confirmation card */}
                     <div
-                      className="w-full rounded-2xl p-4 border border-white/[0.06] text-left space-y-3"
-                      style={{ background: "#111111" }}
+                      className="w-full rounded-2xl p-4 text-left space-y-3 border"
+                      style={{ background: BG_INPUT, borderColor: BORDER }}
                     >
                       {[
                         {
@@ -207,44 +283,47 @@ export function BookingModal() {
                         },
                       ].map(({ icon: Icon, label }) => (
                         <div key={label} className="flex items-center gap-3">
-                          <Icon className="w-3.5 h-3.5 text-white/30 shrink-0" />
-                          <span className="text-sm text-white/65">{label}</span>
+                          <Icon className="w-3.5 h-3.5 shrink-0" style={{ color: `${BODY}80` }} />
+                          <span className="text-sm" style={{ color: BODY }}>{label}</span>
                         </div>
                       ))}
-                      <div className="pt-2 border-t border-white/[0.06]">
-                        <p className="text-[11px] text-white/25">
-                          Ref: <span className="font-mono">{confirmed.id.slice(0, 8).toUpperCase()}</span>
+                      <div className="pt-2 border-t" style={{ borderColor: BORDER }}>
+                        <p className="text-[11px]" style={{ color: `${BODY}60` }}>
+                          Ref:{" "}
+                          <span className="font-mono">{confirmed.id.slice(0, 8).toUpperCase()}</span>
                         </p>
                       </div>
                     </div>
 
                     <button
                       onClick={handleClose}
-                      className="mt-1 px-6 py-2.5 rounded-full text-sm font-semibold text-[#050505] transition-opacity hover:opacity-90"
-                      style={{ background: GOLD }}
+                      className="mt-1 px-8 py-2.5 rounded-full text-sm font-semibold text-white transition-opacity hover:opacity-90 active:scale-[0.98]"
+                      style={{ background: ACCENT }}
                     >
                       Close
                     </button>
                   </div>
+
                 ) : (
-                  /* ── Booking form ──────────────────────────── */
+                  /* ── Booking form ─────────────────────────────────── */
                   <form onSubmit={handleSubmit} className="flex flex-col gap-2.5 sm:gap-3 flex-1 sm:flex-initial">
+
                     {cafe?.name && (
-                      <p className="text-[11px] text-white/30 -mt-0.5 mb-0.5">at {cafe.name}</p>
+                      <p className="text-[11px] -mt-0.5 mb-0.5" style={{ color: `${BODY}70` }}>
+                        at {cafe.name}
+                      </p>
                     )}
 
                     {/* Full name */}
                     <div>
                       <FieldLabel>Full name *</FieldLabel>
-                      <input
+                      <WarmInput
                         type="text"
                         value={name}
                         onChange={(e) => setName(e.target.value)}
                         placeholder="Your full name"
                         required
                         disabled={createBooking.isPending}
-                        className={inputCls}
-                        style={inputStyle}
                       />
                     </div>
 
@@ -252,27 +331,23 @@ export function BookingModal() {
                     <div className="grid grid-cols-2 gap-2.5">
                       <div>
                         <FieldLabel>Email *</FieldLabel>
-                        <input
+                        <WarmInput
                           type="email"
                           value={email}
                           onChange={(e) => setEmail(e.target.value)}
                           placeholder="you@example.com"
                           required
                           disabled={createBooking.isPending}
-                          className={inputCls}
-                          style={inputStyle}
                         />
                       </div>
                       <div>
                         <FieldLabel>Phone</FieldLabel>
-                        <input
+                        <WarmInput
                           type="tel"
                           value={phone}
                           onChange={(e) => setPhone(e.target.value)}
                           placeholder="+91 98765 43210"
                           disabled={createBooking.isPending}
-                          className={inputCls}
-                          style={inputStyle}
                         />
                       </div>
                     </div>
@@ -281,35 +356,33 @@ export function BookingModal() {
                     <div className="grid grid-cols-2 gap-2.5">
                       <div>
                         <FieldLabel>Date *</FieldLabel>
-                        <input
+                        <WarmInput
                           type="date"
                           value={date}
                           min={today}
                           onChange={(e) => setDate(e.target.value)}
                           required
                           disabled={createBooking.isPending}
-                          className={inputCls}
-                          style={inputStyle}
                         />
                       </div>
                       <div>
                         <FieldLabel>Time *</FieldLabel>
                         <div className="relative">
-                          <select
+                          <WarmSelect
                             value={time}
                             onChange={(e) => setTime(e.target.value)}
                             disabled={createBooking.isPending}
-                            className={`${inputCls} appearance-none pr-8 cursor-pointer`}
-                            style={{ ...inputStyle, paddingRight: "2rem" }}
                           >
                             {TIME_SLOTS.map((slot) => (
-                              <option key={slot.value} value={slot.value}
-                                style={{ background: "#171717", color: "#fff" }}>
+                              <option key={slot.value} value={slot.value}>
                                 {slot.label}
                               </option>
                             ))}
-                          </select>
-                          <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-white/25 pointer-events-none" />
+                          </WarmSelect>
+                          <ChevronDown
+                            className="absolute right-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 pointer-events-none"
+                            style={{ color: `${BODY}70` }}
+                          />
                         </div>
                       </div>
                     </div>
@@ -317,42 +390,66 @@ export function BookingModal() {
                     {/* Guests stepper */}
                     <div>
                       <FieldLabel>Guests *</FieldLabel>
-                      <div className="flex items-center gap-3 h-10">
+                      <div
+                        className="flex items-center h-10 rounded-xl border overflow-hidden"
+                        style={{ borderColor: BORDER, background: BG_INPUT }}
+                      >
                         <button
                           type="button"
                           onClick={() => setPartySize((n) => Math.max(1, n - 1))}
                           disabled={partySize <= 1 || createBooking.isPending}
-                          className="flex items-center justify-center w-10 h-10 rounded-xl border border-white/[0.08] text-white/50 hover:text-white hover:border-white/20 transition-colors disabled:opacity-30"
-                          style={{ background: "#171717" }}
+                          className="flex items-center justify-center w-10 h-full border-r shrink-0 transition-colors disabled:opacity-30"
+                          style={{
+                            color: BODY,
+                            borderColor: BORDER,
+                          }}
+                          onMouseEnter={(e) => {
+                            if (!e.currentTarget.disabled)
+                              (e.currentTarget as HTMLButtonElement).style.background = BG_SECONDARY;
+                          }}
+                          onMouseLeave={(e) => {
+                            (e.currentTarget as HTMLButtonElement).style.background = "transparent";
+                          }}
                         >
                           <Minus className="w-3.5 h-3.5" />
                         </button>
-                        <span className="flex-1 text-center text-sm font-medium text-white">
+                        <span
+                          className="flex-1 text-center text-sm font-medium"
+                          style={{ color: HEADING }}
+                        >
                           {partySize} {partySize === 1 ? "guest" : "guests"}
                         </span>
                         <button
                           type="button"
                           onClick={() => setPartySize((n) => Math.min(20, n + 1))}
                           disabled={partySize >= 20 || createBooking.isPending}
-                          className="flex items-center justify-center w-10 h-10 rounded-xl border border-white/[0.08] text-white/50 hover:text-white hover:border-white/20 transition-colors disabled:opacity-30"
-                          style={{ background: "#171717" }}
+                          className="flex items-center justify-center w-10 h-full border-l shrink-0 transition-colors disabled:opacity-30"
+                          style={{
+                            color: BODY,
+                            borderColor: BORDER,
+                          }}
+                          onMouseEnter={(e) => {
+                            if (!e.currentTarget.disabled)
+                              (e.currentTarget as HTMLButtonElement).style.background = BG_SECONDARY;
+                          }}
+                          onMouseLeave={(e) => {
+                            (e.currentTarget as HTMLButtonElement).style.background = "transparent";
+                          }}
                         >
                           <Plus className="w-3.5 h-3.5" />
                         </button>
                       </div>
                     </div>
 
-                    {/* Notes */}
+                    {/* Special requests */}
                     <div>
                       <FieldLabel>Special requests</FieldLabel>
-                      <textarea
+                      <WarmTextarea
                         value={notes}
                         onChange={(e) => setNotes(e.target.value)}
                         placeholder="Allergies, dietary requirements, special occasions…"
                         rows={2}
                         disabled={createBooking.isPending}
-                        className={`${inputCls} h-auto py-2.5 resize-none`}
-                        style={{ ...inputStyle, height: "auto" }}
                       />
                     </div>
 
@@ -360,7 +457,11 @@ export function BookingModal() {
                     {submitError && (
                       <div
                         className="flex items-start gap-2.5 p-3 rounded-xl text-sm border"
-                        style={{ background: "rgba(239,68,68,0.08)", borderColor: "rgba(239,68,68,0.2)", color: "#f87171" }}
+                        style={{
+                          background: "rgba(180,60,40,0.07)",
+                          borderColor: "rgba(180,60,40,0.22)",
+                          color: "#9B3A28",
+                        }}
                       >
                         <AlertCircle className="w-4 h-4 mt-0.5 shrink-0" />
                         <p>{submitError}</p>
@@ -371,13 +472,13 @@ export function BookingModal() {
                     <button
                       type="submit"
                       disabled={createBooking.isPending || !name.trim() || !email.trim() || !date || !time}
-                      className="w-full h-11 rounded-xl text-sm font-semibold text-[#050505] transition-opacity hover:opacity-90 active:scale-[0.99] disabled:opacity-40 mt-0.5"
-                      style={{ background: GOLD }}
+                      className="w-full h-11 rounded-full text-sm font-semibold text-white transition-all hover:opacity-90 active:scale-[0.99] disabled:opacity-40 mt-1"
+                      style={{ background: ACCENT, letterSpacing: "0.04em" }}
                     >
                       {createBooking.isPending ? "Submitting…" : "Request Booking"}
                     </button>
 
-                    <p className="text-[11px] text-white/20 text-center">
+                    <p className="text-[11px] text-center" style={{ color: `${BODY}55` }}>
                       We'll confirm your reservation and get back to you shortly.
                     </p>
                   </form>
