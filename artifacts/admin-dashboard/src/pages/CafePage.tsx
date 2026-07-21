@@ -337,22 +337,51 @@ export function CafePage() {
               </motion.div>
             </motion.div>
 
-            {/* Image — RIGHT, same size as §2 */}
+            {/* Image group — RIGHT: main feature + two accent portraits stacked */}
             <motion.div
-              className="w-full sm:w-[44%] shrink-0 overflow-hidden"
+              className="w-full sm:w-[44%] shrink-0"
               style={{ height: "min(440px, 58vw)", minHeight: 260 }}
               initial={{ opacity: 0, x: 24 }}
               whileInView={{ opacity: 1, x: 0 }}
               viewport={{ once: true, amount: 0.2 }}
               transition={{ duration: 0.9, ease: [0.16, 1, 0.3, 1] }}
             >
-              <img
-                src={PHOTOS.artwall}
-                alt="Curated interior — gallery wall and warm lighting"
-                className="w-full h-full object-cover object-center"
-                loading="lazy"
-                decoding="async"
-              />
+              <div className="flex gap-2.5 sm:gap-3 h-full">
+
+                {/* Main artwall — fills ~70% of the column */}
+                <div className="flex-1 overflow-hidden">
+                  <img
+                    src={PHOTOS.artwall}
+                    alt="Curated interior — gallery wall and warm lighting"
+                    className="w-full h-full object-cover object-center"
+                    loading="lazy"
+                    decoding="async"
+                  />
+                </div>
+
+                {/* Accent portraits — stacked, ~29% width */}
+                <div className="flex flex-col gap-2.5 sm:gap-3" style={{ width: "29%" }}>
+                  <div className="flex-1 overflow-hidden">
+                    <img
+                      src={PHOTOS.pendant}
+                      alt="Geometric diamond pendant light — warm amber glow"
+                      className="w-full h-full object-cover object-center"
+                      loading="lazy"
+                      decoding="async"
+                    />
+                  </div>
+                  <div className="flex-1 overflow-hidden">
+                    <img
+                      src={PHOTOS.ringlight}
+                      alt="Orbital ring light installation"
+                      className="w-full h-full object-cover object-center"
+                      loading="lazy"
+                      decoding="async"
+                    />
+                  </div>
+                </div>
+
+              </div>
             </motion.div>
 
           </div>
