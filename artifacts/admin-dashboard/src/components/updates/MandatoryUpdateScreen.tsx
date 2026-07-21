@@ -376,7 +376,7 @@ export function MandatoryUpdateScreen({ installedVersion, installedBuild, releas
           </div>
           <div>
             <h1 className="text-lg font-bold text-foreground leading-tight">
-              Cafe Maestro Update Available
+              Cup & Cozy Update Available
             </h1>
             <p className="text-xs text-muted-foreground mt-0.5">
               This update is required to continue using the app.

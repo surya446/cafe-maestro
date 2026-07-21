@@ -2,7 +2,7 @@ import type { CapacitorConfig } from "@capacitor/cli";
 
 const config: CapacitorConfig = {
   appId: "com.cafemaestro.app",
-  appName: "Cafe Maestro",
+  appName: "Cup & Cozy",
   webDir: "dist/public",
   server: {
     androidScheme: "https",

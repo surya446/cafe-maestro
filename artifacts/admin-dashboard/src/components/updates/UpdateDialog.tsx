@@ -78,7 +78,7 @@ export function UpdateDialog({
                 <div className="flex items-center justify-center w-10 h-10 rounded-xl bg-primary/10 text-primary shrink-0">
                   <Sparkles className="w-5 h-5" />
                 </div>
-                <DialogTitle>Cafe Maestro Update Available</DialogTitle>
+                <DialogTitle>Cup & Cozy Update Available</DialogTitle>
               </div>
               <DialogDescription>
                 {isForceUpdate
@@ -145,7 +145,7 @@ export function UpdateDialog({
               <DialogDescription>
                 {status === "error"
                   ? "Something went wrong while downloading the update."
-                  : `Cafe Maestro v${release.version}`}
+                  : `Cup & Cozy v${release.version}`}
               </DialogDescription>
             </DialogHeader>
 
@@ -196,7 +196,7 @@ export function UpdateDialog({
             <DialogHeader>
               <DialogTitle>Ready to Install</DialogTitle>
               <DialogDescription>
-                Cafe Maestro v{release.version} has finished downloading.
+                Cup & Cozy v{release.version} has finished downloading.
               </DialogDescription>
             </DialogHeader>
             <DialogFooter>

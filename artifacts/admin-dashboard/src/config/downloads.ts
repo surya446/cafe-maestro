@@ -15,22 +15,22 @@ export interface ComingSoonPlatform {
 export const COMING_SOON_PLATFORMS: ComingSoonPlatform[] = [
   {
     id: "windows",
-    label: "Cafe Maestro for Windows",
+    label: "Cup & Cozy for Windows",
     description: "Native Windows desktop application. Planned for a future release.",
   },
   {
     id: "macos",
-    label: "Cafe Maestro for macOS",
+    label: "Cup & Cozy for macOS",
     description: "Native macOS desktop application. Planned for a future release.",
   },
   {
     id: "linux",
-    label: "Cafe Maestro for Linux",
+    label: "Cup & Cozy for Linux",
     description: "Native Linux desktop application. Planned for a future release.",
   },
   {
     id: "ios",
-    label: "Cafe Maestro for iOS",
+    label: "Cup & Cozy for iOS",
     description: "iPhone and iPad support is planned for a future release.",
   },
 ];

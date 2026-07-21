@@ -912,7 +912,7 @@ function PwaCard() {
         </Badge>
       </div>
       <p className="text-sm text-muted-foreground">
-        Install Cafe Maestro directly from your browser on any device.
+        Install Cup & Cozy directly from your browser on any device.
       </p>
       <div className="flex flex-col items-center gap-2 py-1">
         <div className="p-3 bg-white border border-border rounded-xl">

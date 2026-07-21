@@ -155,7 +155,7 @@ const assetsDir = path.join(root, "android-tv/app/src/main/assets");
 // 5a. capacitor.config.json — runtime config read by the Capacitor bridge.
 writeJSON(path.join(assetsDir, "capacitor.config.json"), {
   appId: "com.cafemaestro.tv",
-  appName: "Cafe Maestro TV",
+  appName: "Cup & Cozy TV",
   webDir: "dist/tv-public",
   android: { path: "android-tv" },
   server: { androidScheme: "https", cleartext: false },

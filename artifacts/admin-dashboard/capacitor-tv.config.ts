@@ -8,8 +8,8 @@ import type { CapacitorConfig } from "@capacitor/cli";
  *   pnpm cap:open:tv   →  npx cap open android --config capacitor-tv.config.ts
  *
  * Key differences from capacitor.config.ts (mobile):
- *   - appId:         com.cafemaestro.tv
- *   - appName:       Cafe Maestro TV
+ *   - appId:         com.cupandcozy.tv
+ *   - appName:       Cup & Cozy TV
  *   - webDir:        dist/tv-public  (TV Vite build output; see build:tv in package.json)
  *   - android.path:  android-tv      (separate Android project; not android/)
  *
@@ -20,7 +20,7 @@ import type { CapacitorConfig } from "@capacitor/cli";
  */
 const config: CapacitorConfig = {
   appId: "com.cafemaestro.tv",
-  appName: "Cafe Maestro TV",
+  appName: "Cup & Cozy TV",
   webDir: "dist/tv-public",
   android: {
     path: "android-tv",

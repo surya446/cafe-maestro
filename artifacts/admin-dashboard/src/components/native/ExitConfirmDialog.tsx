@@ -22,7 +22,7 @@ export function ExitConfirmDialog({ open, onOpenChange, onExit }: ExitConfirmDia
     <AlertDialog open={open} onOpenChange={onOpenChange}>
       <AlertDialogContent>
         <AlertDialogHeader>
-          <AlertDialogTitle>Exit Cafe Maestro?</AlertDialogTitle>
+          <AlertDialogTitle>Exit Cup & Cozy?</AlertDialogTitle>
           <AlertDialogDescription>
             You'll need to reopen the app to continue working.
           </AlertDialogDescription>
