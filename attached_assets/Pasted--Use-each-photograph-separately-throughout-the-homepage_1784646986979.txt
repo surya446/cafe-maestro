@@ -1,0 +1,411 @@
+
+
+
+
+
+
+
+
+Use each photograph separately throughout the homepage.
+
+
+
+The collage should disappear completely.
+
+
+
+The final website should look like it was professionally designed using those original photographs.
+
+
+
+====================================================
+
+
+
+HOMEPAGE STRUCTURE
+
+
+
+The homepage should contain ONLY these sections.
+
+
+
+No extra sections.
+
+
+
+No testimonials.
+
+
+
+No blog.
+
+
+
+No features.
+
+
+
+No unnecessary content.
+
+
+
+Only:
+
+
+
+1. Hero Section
+
+
+
+2. Curated Corners
+
+
+
+3. Footer / Contact Section
+
+
+
+Nothing else.
+
+
+
+====================================================
+
+
+
+SECTION 1 — HERO
+
+
+
+The Hero should use the café entrance/interior photograph from the mood board as a full-screen background.
+
+
+
+Do NOT use the collage.
+
+
+
+Overlay elegant typography.
+
+
+
+Example structure:
+
+
+
+Cup & Cozy
+
+
+
+Curated coffee.
+
+Curated conversations.
+
+
+
+View Menu
+
+
+
+Reserve Table
+
+
+
+Minimal.
+
+
+
+Luxury.
+
+
+
+Large typography.
+
+
+
+Editorial spacing.
+
+
+
+====================================================
+
+
+
+SECTION 2 — CURATED CORNERS
+
+
+
+This section should showcase all of the remaining café photographs individually.
+
+
+
+Examples:
+
+
+
+Wall gallery
+
+
+
+Lighting
+
+
+
+Coffee
+
+
+
+Interior seating
+
+
+
+Entrance
+
+
+
+Bookshelf
+
+
+
+etc.
+
+
+
+Each photograph should be displayed separately.
+
+
+
+Create an elegant editorial layout using CSS Grid or Masonry.
+
+
+
+Do NOT recreate the collage.
+
+
+
+Instead build a modern gallery inspired by luxury hotel websites.
+
+
+
+Use generous whitespace.
+
+
+
+Allow images to breathe.
+
+
+
+====================================================
+
+
+
+SECTION 3 — FOOTER
+
+
+
+Use the elegant footer style shown in the reference.
+
+
+
+Include only:
+
+
+
+Address
+
+
+
+Opening Hours
+
+
+
+Instagram
+
+
+
+Phone
+
+
+
+Reservation Button
+
+
+
+Copyright
+
+
+
+Keep the same warm luxury aesthetic.
+
+
+
+====================================================
+
+
+
+IMPORTANT IMAGE RULES
+
+
+
+The uploaded mood board contains the actual photographs I want.
+
+
+
+Use those exact photographs.
+
+
+
+Do NOT generate AI placeholder images.
+
+
+
+Do NOT use stock photos.
+
+
+
+Do NOT crop the entire collage.
+
+
+
+Instead:
+
+
+
+Separate each photograph from the mood board and reuse them individually throughout the homepage.
+
+
+
+====================================================
+
+
+
+DESIGN STYLE
+
+
+
+The website should feel like:
+
+
+
+Aesop
+
+
+
+Starbucks Reserve
+
+
+
+Blue Tokai
+
+
+
+Apple
+
+
+
+Boutique Hotel
+
+
+
+Premium Editorial Magazine
+
+
+
+NOT
+
+
+
+Restaurant template
+
+
+
+Bootstrap template
+
+
+
+Food ordering template
+
+
+
+====================================================
+
+
+
+Typography
+
+
+
+Elegant serif headings
+
+
+
+Minimal sans-serif body
+
+
+
+Large whitespace
+
+
+
+Warm cream colors
+
+
+
+Coffee brown
+
+
+
+Wood textures
+
+
+
+Soft animations
+
+
+
+Smooth scrolling
+
+
+
+Premium microinteractions
+
+
+
+====================================================
+
+
+
+ABSOLUTELY DO NOT
+
+
+
+❌ Display the mood board itself.
+
+
+
+❌ Copy the collage layout.
+
+
+
+❌ Put the uploaded image inside an <img> tag.
+
+
+
+❌ Recreate the reference image as HTML.
+
+
+
+====================================================
+
+
+
+SUCCESS CRITERIA
+
+
+
+A visitor should never realize there was originally a collage.
+
+
+
+The homepage should look like a professionally designed café website that happens to use the same original photographs.

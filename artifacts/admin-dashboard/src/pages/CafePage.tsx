@@ -1,14 +1,11 @@
 import { Link } from "wouter";
-import { ArrowRight, MapPin, Phone, Clock, Facebook, Instagram, Coffee } from "lucide-react";
+import { ArrowRight, MapPin, Phone, Clock, Instagram, Coffee } from "lucide-react";
 import { motion } from "framer-motion";
 import { CafeLayout } from "@/components/layout/CafeLayout";
 import { usePublicCafe } from "@/hooks/usePublicBooking";
 import { usePublicWebsiteSettings } from "@/hooks/usePublicWebsiteSettings";
-import { usePublicGallery } from "@/hooks/usePublicGallery";
-import { usePublicReviews } from "@/hooks/usePublicReviews";
 import { BookingCTAButton } from "@/contexts/BookingModalContext";
 import { OpeningHoursEntry } from "@/types";
-import { cn } from "@/lib/utils";
 
 /* ── Brand palette ──────────────────────────────────────────────────────── */
 const CREAM = "#F2E8D5";
@@ -16,30 +13,38 @@ const BROWN = "#3D1E0F";
 const TERRA = "#8B4A2B";
 const MID   = "#6B3A2A";
 
-/* ── Photos (real Cup & Cozy photos from public/) ───────────────────────── */
-// Hero — café interior with ring lights, arch, bookshelves
-const HERO_BG = "/admin/cafe-hero.png";
+/* ── Photo manifest — each real Cup & Cozy photograph, used individually ── */
+const PHOTOS = {
+  // Hero — café interior, full-screen background
+  hero:       "/admin/cafe-hero.png",
+  // Iced Hazelnut Velvet — signature drink
+  coffee:     "/admin/cafe-crafted.png",
+  // Gallery wall with framed art prints
+  artwall:    "/admin/cafe-artwall.png",
+  // Geometric diamond pendant light, warm amber glow
+  pendant:    "/admin/cafe-pendant.png",
+  // Orbital ring light installation
+  ringlight:  "/admin/cafe-ringlight.png",
+  // Interior seating — arch alcove, ring lights, white lattice chairs
+  seating:    "/admin/cafe-seating.png",
+  // Bookshelf wall — white shelves, curated books, trailing ivy
+  bookshelf:  "/admin/cafe-curated.png",
+  // Full interior — staircase, counter, warm wood tones
+  staircase:  "/admin/cafe-staircase.png",
+  // Dining area with natural light
+  dining:     "/admin/cafe-contact.png",
+};
 
-// "Crafted to" left panel — iced hazelnut velvet drink
-const CRAFTED_BG = "/admin/cafe-crafted.png";
-
-// Curated corners — framed art wall + pendant light shots
-const CURATED_PHOTO = "/admin/cafe-curated.png";
-
-// Bottom contact photo — café with staircase / dining area
-const CONTACT_BG = "/admin/cafe-contact.png";
-
-/* ── Animations ─────────────────────────────────────────────────────────── */
+/* ── Shared animation presets ───────────────────────────────────────────── */
 const fadeUp = {
-  hidden: { opacity: 0, y: 20 },
-  show:   { opacity: 1, y: 0, transition: { duration: 0.65, ease: [0.16, 1, 0.3, 1] as [number,number,number,number] } },
+  hidden: { opacity: 0, y: 28 },
+  show:   { opacity: 1, y: 0, transition: { duration: 0.75, ease: [0.16, 1, 0.3, 1] as [number,number,number,number] } },
 };
 const stagger = {
   hidden: {},
-  show:   { transition: { staggerChildren: 0.08, delayChildren: 0.04 } },
+  show:   { transition: { staggerChildren: 0.1, delayChildren: 0.05 } },
 };
 
-/* ── Opening hours helper ────────────────────────────────────────────────── */
 function todayHours(hours: OpeningHoursEntry[]) {
   const today = new Date().toLocaleDateString("en-US", { weekday: "long" });
   const entry = hours.find((h) => h.day === today);
@@ -47,22 +52,21 @@ function todayHours(hours: OpeningHoursEntry[]) {
   return entry.closed ? "Closed today" : `${entry.open} – ${entry.close}`;
 }
 
-/* ── Page ────────────────────────────────────────────────────────────────── */
+/* ══════════════════════════════════════════════════════════════════════════
+   PAGE
+══════════════════════════════════════════════════════════════════════════ */
 export function CafePage() {
   const { data: cafe, isLoading: cafeLoading } = usePublicCafe();
   const { data: settings, isLoading: settingsLoading } = usePublicWebsiteSettings(cafe?.id);
-  const { data: gallery } = usePublicGallery(cafe?.id);
-  const { data: reviews } = usePublicReviews(cafe?.id);
 
-  const isLoading   = cafeLoading || settingsLoading;
-  const displayName = settings?.cafe_name ?? cafe?.name ?? "Cup & Cozy";
+  const isLoading    = cafeLoading || settingsLoading;
+  const displayName  = settings?.cafe_name ?? cafe?.name ?? "Cup & Cozy";
   const primaryColor = settings?.primary_color ?? TERRA;
-  const hasHours    = Array.isArray(settings?.opening_hours) && settings!.opening_hours.length > 0;
-  const openLabel   = hasHours ? todayHours(settings!.opening_hours) : null;
-  const heroImg     = settings?.hero_image_url ?? HERO_BG;
+  const heroImg      = settings?.hero_image_url ?? PHOTOS.hero;
+  const hasHours     = Array.isArray(settings?.opening_hours) && settings!.opening_hours.length > 0;
+  const openLabel    = hasHours ? todayHours(settings!.opening_hours) : null;
 
-  /* Gallery — unused on home page now (curated corners uses real café photo) */
-
+  /* ── Loading ─────────────────────────────────────────────────────────── */
   if (isLoading) {
     return (
       <CafeLayout cafeName="Loading…" primaryColor={primaryColor}>
@@ -95,329 +99,476 @@ export function CafePage() {
     >
 
       {/* ══════════════════════════════════════════════════════════════════
-          HERO — full-bleed café photo, text centered, floating labels
+          §1  HERO — full-viewport café interior, editorial typography
       ══════════════════════════════════════════════════════════════════ */}
       <section
         className="relative w-full overflow-hidden"
-        style={{ height: "100svh", minHeight: 560 }}
+        style={{ height: "100svh", minHeight: 600 }}
+        aria-label="Hero"
       >
-        {/* Background photo */}
+        {/* Background photograph — slow Ken-Burns zoom */}
         <motion.img
           src={heroImg}
-          alt="Café interior"
+          alt="Cup & Cozy café interior"
           className="absolute inset-0 w-full h-full object-cover object-center"
           fetchPriority="high"
           decoding="async"
-          initial={{ scale: 1.06 }}
+          initial={{ scale: 1.08 }}
           animate={{ scale: 1 }}
-          transition={{ duration: 6, ease: "easeOut" }}
+          transition={{ duration: 8, ease: "easeOut" }}
         />
 
-        {/* Subtle dark overlay for text legibility */}
+        {/* Layered overlay — keeps text readable without crushing the photo */}
         <div
           className="absolute inset-0"
           style={{
-            background:
-              "linear-gradient(to bottom, rgba(0,0,0,0.28) 0%, rgba(0,0,0,0.18) 40%, rgba(0,0,0,0.32) 100%)",
+            background: [
+              "linear-gradient(to bottom,",
+              "  rgba(20,10,5,0.30) 0%,",
+              "  rgba(20,10,5,0.12) 38%,",
+              "  rgba(20,10,5,0.18) 62%,",
+              "  rgba(20,10,5,0.54) 100%)",
+            ].join(" "),
           }}
         />
 
-        {/* ── Floating hotspot — left ── */}
-        <motion.div
-          className="absolute left-6 sm:left-12 top-1/2 -translate-y-1/2 z-20 hidden sm:flex flex-col gap-1"
-          initial={{ opacity: 0, x: -16 }}
-          animate={{ opacity: 1, x: 0 }}
-          transition={{ delay: 1.2, duration: 0.7 }}
-        >
-          <div
-            className="flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-semibold text-white backdrop-blur-sm mb-2"
-            style={{ background: "rgba(61,30,15,0.55)", border: "1px solid rgba(255,255,255,0.2)" }}
-          >
-            <span className="w-1.5 h-1.5 rounded-full bg-white/70 shrink-0" />
-            Our Local Sources
-          </div>
-          <div
-            className="flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-semibold text-white backdrop-blur-sm mt-24 sm:mt-32"
-            style={{ background: "rgba(61,30,15,0.55)", border: "1px solid rgba(255,255,255,0.2)" }}
-          >
-            <span className="w-1.5 h-1.5 rounded-full bg-white/70 shrink-0" />
-            Seasonal Special
-          </div>
-        </motion.div>
-
-        {/* ── Floating hotspot — right ── */}
-        <motion.div
-          className="absolute right-6 sm:right-12 top-1/2 -translate-y-1/2 z-20 hidden sm:flex flex-col items-end"
-          initial={{ opacity: 0, x: 16 }}
-          animate={{ opacity: 1, x: 0 }}
-          transition={{ delay: 1.4, duration: 0.7 }}
-        >
-          <div
-            className="flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-semibold text-white backdrop-blur-sm"
-            style={{ background: "rgba(61,30,15,0.55)", border: "1px solid rgba(255,255,255,0.2)" }}
-          >
-            <span className="w-1.5 h-1.5 rounded-full bg-white/70 shrink-0" />
-            Discover Our Curated Collection
-          </div>
-        </motion.div>
-
-        {/* ── Centered hero text ── */}
-        <div className="relative z-10 h-full flex flex-col items-center justify-center px-4 text-center">
-          <motion.h1
-            className="font-serif text-white leading-[1.1] tracking-tight mb-6"
-            style={{ fontSize: "clamp(2.2rem, 6vw, 4rem)", textShadow: "0 2px 24px rgba(0,0,0,0.40)" }}
-            initial={{ opacity: 0, y: 24 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.9, delay: 0.3, ease: [0.16, 1, 0.3, 1] }}
-          >
-            {settings?.hero_title ?? "A Haven for Coffee,\nConnection, and Calm"}
-          </motion.h1>
-
+        {/* Centered editorial text */}
+        <div className="relative z-10 h-full flex flex-col items-center justify-center px-6 text-center">
           <motion.div
-            initial={{ opacity: 0, y: 16 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.7, delay: 0.7 }}
+            initial="hidden"
+            animate="show"
+            variants={stagger}
+            className="flex flex-col items-center gap-6"
           >
-            <Link
-              href="/cafe/menu"
-              className="inline-flex items-center gap-2 px-8 py-3.5 text-sm font-semibold text-white rounded transition-all hover:bg-white hover:text-[#3D1E0F] active:scale-95"
+            {/* Pre-title tag */}
+            <motion.p
+              variants={fadeUp}
+              className="text-[10px] sm:text-xs font-semibold tracking-[0.30em] uppercase text-white/60"
+            >
+              Meringrice · Est. 2023
+            </motion.p>
+
+            {/* Main headline */}
+            <motion.h1
+              variants={fadeUp}
+              className="font-serif text-white leading-[1.05] tracking-tight"
               style={{
-                border: "1.5px solid rgba(255,255,255,0.85)",
-                background: "rgba(0,0,0,0.18)",
-                backdropFilter: "blur(6px)",
+                fontSize: "clamp(2.8rem, 7.5vw, 5.5rem)",
+                textShadow: "0 4px 32px rgba(0,0,0,0.35)",
               }}
             >
-              Explore Our Menu
-            </Link>
+              {displayName}
+            </motion.h1>
+
+            {/* Tagline */}
+            <motion.p
+              variants={fadeUp}
+              className="font-serif italic text-white/75 leading-snug max-w-xs sm:max-w-md"
+              style={{ fontSize: "clamp(1.05rem, 2.4vw, 1.4rem)" }}
+            >
+              Curated coffee.
+              <br />
+              Curated conversations.
+            </motion.p>
+
+            {/* Thin rule */}
+            <motion.div
+              variants={fadeUp}
+              className="w-12 h-px"
+              style={{ background: "rgba(255,255,255,0.35)" }}
+            />
+
+            {/* CTA buttons */}
+            <motion.div
+              variants={fadeUp}
+              className="flex flex-col sm:flex-row items-center gap-3 mt-1"
+            >
+              <Link
+                href="/cafe/menu"
+                className="inline-flex items-center gap-2 px-8 py-3.5 text-[13px] font-semibold text-white rounded-sm transition-all duration-300 hover:bg-white hover:text-[#3D1E0F] active:scale-95"
+                style={{
+                  border: "1.5px solid rgba(255,255,255,0.80)",
+                  background: "rgba(255,255,255,0.08)",
+                  backdropFilter: "blur(8px)",
+                  letterSpacing: "0.08em",
+                }}
+              >
+                View Menu
+              </Link>
+              <BookingCTAButton
+                className="inline-flex items-center gap-2 px-8 py-3.5 text-[13px] font-semibold rounded-sm transition-all duration-300 hover:opacity-90 active:scale-95"
+                style={{
+                  background: TERRA,
+                  color: "#fff",
+                  letterSpacing: "0.08em",
+                }}
+              >
+                Reserve a Table
+              </BookingCTAButton>
+            </motion.div>
           </motion.div>
         </div>
 
-        {/* Scroll nudge */}
+        {/* Scroll indicator — animated line */}
         <motion.div
-          className="absolute bottom-8 left-1/2 -translate-x-1/2 z-10 flex flex-col items-center gap-1"
+          className="absolute bottom-10 left-1/2 -translate-x-1/2 z-10 flex flex-col items-center gap-2"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
-          transition={{ delay: 2, duration: 0.8 }}
+          transition={{ delay: 2.2, duration: 1 }}
         >
+          <p className="text-[9px] tracking-[0.22em] uppercase text-white/40">Scroll</p>
           <motion.div
-            animate={{ y: [0, 7, 0] }}
-            transition={{ duration: 1.8, repeat: Infinity, ease: "easeInOut" }}
-            className="w-px h-10 rounded-full"
-            style={{ background: "linear-gradient(to bottom, rgba(255,255,255,0), rgba(255,255,255,0.7))" }}
+            className="w-px rounded-full"
+            style={{ height: 42, background: "linear-gradient(to bottom, rgba(255,255,255,0.1), rgba(255,255,255,0.55))" }}
+            animate={{ scaleY: [1, 0.4, 1], opacity: [0.4, 1, 0.4] }}
+            transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
           />
         </motion.div>
       </section>
 
       {/* ══════════════════════════════════════════════════════════════════
-          SPLIT PANEL — "Crafted to Cup & Cozy" | "Curated Corners"
+          §2  CURATED CORNERS — editorial photo gallery, each image separate
       ══════════════════════════════════════════════════════════════════ */}
-      <section className="flex flex-col lg:flex-row" style={{ minHeight: 380 }}>
+      <section
+        className="w-full py-24 sm:py-32"
+        style={{ background: CREAM }}
+        aria-label="Curated Corners"
+      >
+        <div className="max-w-7xl mx-auto px-6 sm:px-10">
 
-        {/* Left — dark panel with iced coffee photo + text */}
-        <div className="relative lg:w-[38%] overflow-hidden" style={{ minHeight: 320 }}>
-          <img
-            src={CRAFTED_BG}
-            alt="Signature drink"
-            className="absolute inset-0 w-full h-full object-cover"
-            loading="lazy"
-          />
-          {/* dark overlay */}
-          <div
-            className="absolute inset-0"
-            style={{ background: "linear-gradient(to right, rgba(20,10,5,0.85) 0%, rgba(20,10,5,0.60) 100%)" }}
-          />
-          <div className="relative z-10 h-full flex flex-col justify-center p-8 sm:p-10 lg:p-12">
-            <motion.div
-              initial="hidden"
-              whileInView="show"
-              viewport={{ once: true }}
-              variants={stagger}
+          {/* Section header */}
+          <motion.div
+            className="mb-16 sm:mb-20"
+            initial="hidden"
+            whileInView="show"
+            viewport={{ once: true, amount: 0.3 }}
+            variants={stagger}
+          >
+            <motion.p
+              variants={fadeUp}
+              className="text-[10px] font-semibold tracking-[0.28em] uppercase mb-3"
+              style={{ color: `${TERRA}99` }}
             >
-              <motion.h2 variants={fadeUp} className="font-serif text-2xl sm:text-3xl text-white leading-snug mb-3">
-                Crafted to<br />
-                <span style={{ color: `${CREAM}cc` }}>{displayName}</span>
-              </motion.h2>
-              <motion.p variants={fadeUp} className="text-xs sm:text-sm leading-relaxed mb-5" style={{ color: "rgba(255,255,255,0.55)" }}>
-                Your daily retreat of curated flavors and curated corners.
-              </motion.p>
-              <motion.p variants={fadeUp} className="text-xs leading-relaxed" style={{ color: "rgba(255,255,255,0.40)" }}>
-                {settings?.about_content
-                  ? settings.about_content.slice(0, 120) + "…"
-                  : "Try our signature Hazelnut Velvet, where artistry meets taste."}
-              </motion.p>
-              <motion.div variants={fadeUp} className="mt-6">
-                <Link
-                  href="/cafe/menu"
-                  className="inline-flex items-center gap-1.5 text-xs font-semibold transition-opacity hover:opacity-70"
-                  style={{ color: `${CREAM}cc` }}
-                >
-                  View Menu <ArrowRight className="w-3.5 h-3.5" />
-                </Link>
-              </motion.div>
-            </motion.div>
-          </div>
-        </div>
-
-        {/* Right — cream panel "Curated Corners / The Vibe" */}
-        <div
-          className="flex-1 flex flex-col sm:flex-row overflow-hidden"
-          style={{ background: CREAM }}
-        >
-          {/* Text + mosaic */}
-          <div className="flex-1 p-8 sm:p-10 lg:p-12 flex flex-col">
-            <motion.div
-              initial="hidden"
-              whileInView="show"
-              viewport={{ once: true }}
-              variants={stagger}
+              The Vibe
+            </motion.p>
+            <motion.h2
+              variants={fadeUp}
+              className="font-serif leading-none mb-5"
+              style={{ fontSize: "clamp(2.2rem, 5vw, 3.8rem)", color: BROWN }}
             >
-              <motion.h2 variants={fadeUp} className="font-serif text-2xl sm:text-3xl mb-1" style={{ color: BROWN }}>
-                Curated Corners
-              </motion.h2>
-              <motion.p variants={fadeUp} className="text-xs font-semibold uppercase tracking-[0.18em] mb-6" style={{ color: `${MID}70` }}>
-                The Vibe
-              </motion.p>
+              Curated Corners
+            </motion.h2>
+            <motion.div variants={fadeUp} className="w-10 h-px" style={{ background: `${TERRA}60` }} />
+          </motion.div>
 
-              {/* Real Cup & Cozy curated corners photo */}
-              <motion.div
-                variants={fadeUp}
-                className="flex-1 rounded-xl overflow-hidden"
-                style={{ minHeight: 220, border: `1px solid ${BROWN}12` }}
-              >
-                <img
-                  src={CURATED_PHOTO}
-                  alt="Curated Corners — The Vibe"
-                  className="w-full h-full object-cover hover:scale-[1.03] transition-transform duration-500"
-                  loading="lazy"
-                />
-              </motion.div>
-            </motion.div>
+          {/* ── Editorial grid ──────────────────────────────────────────── */}
+          {/*
+            Layout intent (desktop):
+              [ SEATING — tall, 2 rows ]  [ ARTWALL ]       [ PENDANT  ]
+                                          [ COFFEE  ]       [ RINGLIGHT]
+                                          [ BOOKSHELF — wide, 2 cols ]
+              [ STAIRCASE — wide, 2 cols ]                  [ DINING   ]
+          */}
+
+          {/* Row 1: seating (tall) + artwall + pendant/ringlight stack */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-5 mb-4 sm:mb-5">
+
+            {/* Seating — tall, spans 2 rows on lg */}
+            <GalleryPhoto
+              src={PHOTOS.seating}
+              alt="Interior seating — arch alcove with orbital lights"
+              caption="The Alcove"
+              className="sm:row-span-2 lg:row-span-2"
+              aspectLg="aspect-[9/16]"
+              aspect="aspect-[4/3]"
+            />
+
+            {/* Artwall */}
+            <GalleryPhoto
+              src={PHOTOS.artwall}
+              alt="Gallery wall — framed art prints above the staircase"
+              caption="Gallery Wall"
+              aspect="aspect-[4/3]"
+              aspectLg="aspect-[4/3]"
+            />
+
+            {/* Coffee */}
+            <GalleryPhoto
+              src={PHOTOS.coffee}
+              alt="Signature Hazelnut Velvet iced coffee"
+              caption="Signature Hazelnut Velvet"
+              aspect="aspect-[4/3]"
+              aspectLg="aspect-[4/3]"
+            />
           </div>
+
+          {/* Row 2: bookshelf (wide) + pendant + ringlight */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-12 gap-4 sm:gap-5 mb-4 sm:mb-5">
+
+            {/* Bookshelf — wide */}
+            <div className="lg:col-span-5">
+              <GalleryPhoto
+                src={PHOTOS.bookshelf}
+                alt="Curated bookshelf with trailing ivy"
+                caption="Bookshelf Corner"
+                aspect="aspect-[4/3]"
+                aspectLg="aspect-[4/3]"
+              />
+            </div>
+
+            {/* Pendant */}
+            <div className="lg:col-span-3">
+              <GalleryPhoto
+                src={PHOTOS.pendant}
+                alt="Geometric diamond pendant light, warm amber"
+                caption="The Pendant"
+                aspect="aspect-square"
+                aspectLg="aspect-square"
+              />
+            </div>
+
+            {/* Ring light */}
+            <div className="lg:col-span-4">
+              <GalleryPhoto
+                src={PHOTOS.ringlight}
+                alt="Orbital ring light installation"
+                caption="Ring Light"
+                aspect="aspect-square"
+                aspectLg="aspect-square"
+              />
+            </div>
+          </div>
+
+          {/* Row 3: staircase (wide) + dining */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 sm:gap-5">
+
+            {/* Staircase — wide */}
+            <div className="lg:col-span-3">
+              <GalleryPhoto
+                src={PHOTOS.staircase}
+                alt="Interior — staircase, counter, warm wood tones"
+                caption="The Space"
+                aspect="aspect-[4/3]"
+                aspectLg="aspect-[16/9]"
+              />
+            </div>
+
+            {/* Dining */}
+            <div className="lg:col-span-2">
+              <GalleryPhoto
+                src={PHOTOS.dining}
+                alt="Dining area with natural light"
+                caption="Dining Room"
+                aspect="aspect-[4/3]"
+                aspectLg="aspect-[4/3]"
+              />
+            </div>
+          </div>
+
+          {/* Reservation nudge */}
+          <motion.div
+            className="mt-14 sm:mt-16 text-center"
+            initial={{ opacity: 0, y: 16 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.7 }}
+          >
+            <p className="font-serif text-lg sm:text-xl mb-6" style={{ color: MID }}>
+              Come find your corner.
+            </p>
+            <BookingCTAButton
+              className="inline-flex items-center gap-2.5 px-10 py-4 text-[13px] font-semibold text-white rounded-sm transition-all hover:opacity-90 active:scale-95"
+              style={{ background: BROWN, letterSpacing: "0.08em" }}
+            >
+              Reserve Your Table <ArrowRight className="w-4 h-4" />
+            </BookingCTAButton>
+          </motion.div>
         </div>
       </section>
 
       {/* ══════════════════════════════════════════════════════════════════
-          ABOUT STRIP — optional (only if content exists)
+          §3  CONTACT / FOOTER SECTION — warm editorial info bar
       ══════════════════════════════════════════════════════════════════ */}
-      {settings?.about_content && (
-        <section className="py-14 sm:py-20 px-6 sm:px-14" style={{ background: `${BROWN}07` }}>
-          <div className="max-w-4xl mx-auto text-center">
-            <motion.p
-              initial={{ opacity: 0, y: 16 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              transition={{ duration: 0.7 }}
-              className="font-serif text-xl sm:text-2xl leading-relaxed"
-              style={{ color: BROWN }}
+      <section
+        style={{ background: BROWN }}
+        aria-label="Contact and location"
+      >
+        {/* Top accent line */}
+        <div className="w-full h-px" style={{ background: `${TERRA}55` }} />
+
+        <div className="max-w-7xl mx-auto px-6 sm:px-10 py-16 sm:py-20">
+          <motion.div
+            className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-10 sm:gap-12"
+            initial="hidden"
+            whileInView="show"
+            viewport={{ once: true, amount: 0.2 }}
+            variants={stagger}
+          >
+
+            {/* Brand + tagline */}
+            <motion.div variants={fadeUp} className="lg:col-span-1">
+              <p className="font-serif text-2xl text-white mb-2">{displayName}</p>
+              <p className="text-xs leading-relaxed" style={{ color: "rgba(255,255,255,0.40)" }}>
+                Your daily retreat of curated flavors and curated corners.
+              </p>
+            </motion.div>
+
+            {/* Address */}
+            <motion.div variants={fadeUp}>
+              <p className="text-[10px] font-semibold tracking-[0.22em] uppercase mb-4" style={{ color: `${TERRA}bb` }}>
+                Address
+              </p>
+              <div className="flex items-start gap-2.5">
+                <MapPin className="w-3.5 h-3.5 mt-0.5 shrink-0" style={{ color: `${TERRA}90` }} />
+                <p className="text-sm leading-relaxed" style={{ color: "rgba(255,255,255,0.65)" }}>
+                  {settings?.address ?? "Roconomarch Road, Meringrice, ia 28312 Calerod"}
+                </p>
+              </div>
+            </motion.div>
+
+            {/* Opening hours */}
+            <motion.div variants={fadeUp}>
+              <p className="text-[10px] font-semibold tracking-[0.22em] uppercase mb-4" style={{ color: `${TERRA}bb` }}>
+                Opening Hours
+              </p>
+              <div className="flex items-start gap-2.5">
+                <Clock className="w-3.5 h-3.5 mt-0.5 shrink-0" style={{ color: `${TERRA}90` }} />
+                <div>
+                  {hasHours && openLabel ? (
+                    <>
+                      <p className="text-sm" style={{ color: "rgba(255,255,255,0.65)" }}>{openLabel}</p>
+                      <p className="text-xs mt-0.5" style={{ color: "rgba(255,255,255,0.35)" }}>Today</p>
+                    </>
+                  ) : (
+                    <>
+                      <p className="text-sm" style={{ color: "rgba(255,255,255,0.65)" }}>1:30 pm – 5:00 pm</p>
+                      <p className="text-xs mt-1" style={{ color: "rgba(255,255,255,0.35)" }}>1:00 pm – 5:90 pm</p>
+                    </>
+                  )}
+                </div>
+              </div>
+            </motion.div>
+
+            {/* Social + CTA */}
+            <motion.div variants={fadeUp} className="flex flex-col gap-5">
+              <div>
+                <p className="text-[10px] font-semibold tracking-[0.22em] uppercase mb-4" style={{ color: `${TERRA}bb` }}>
+                  Connect
+                </p>
+                <div className="flex items-center gap-3 mb-3">
+                  {settings?.instagram_url ? (
+                    <a
+                      href={settings.instagram_url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex items-center gap-2 text-sm transition-opacity hover:opacity-70"
+                      style={{ color: "rgba(255,255,255,0.60)" }}
+                    >
+                      <Instagram className="w-4 h-4" />
+                      @Cup & Cozy
+                    </a>
+                  ) : (
+                    <span className="flex items-center gap-2 text-sm" style={{ color: "rgba(255,255,255,0.40)" }}>
+                      <Instagram className="w-4 h-4" />
+                      @Cup_&_Cozy
+                    </span>
+                  )}
+                </div>
+                {settings?.phone && (
+                  <a
+                    href={`tel:${settings.phone}`}
+                    className="flex items-center gap-2 text-sm transition-opacity hover:opacity-70"
+                    style={{ color: "rgba(255,255,255,0.50)" }}
+                  >
+                    <Phone className="w-3.5 h-3.5" />
+                    {settings.phone}
+                  </a>
+                )}
+              </div>
+              <BookingCTAButton
+                className="inline-flex items-center justify-center gap-2 px-7 py-3 text-[12px] font-semibold rounded-sm transition-all hover:opacity-90 active:scale-95 self-start"
+                style={{ background: TERRA, color: "#fff", letterSpacing: "0.08em" }}
+              >
+                Reservations
+              </BookingCTAButton>
+            </motion.div>
+          </motion.div>
+
+          {/* Divider */}
+          <div className="mt-14 mb-6 w-full h-px" style={{ background: "rgba(255,255,255,0.08)" }} />
+
+          {/* Copyright row */}
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-2">
+            <p className="text-[11px]" style={{ color: "rgba(255,255,255,0.25)" }}>
+              © {new Date().getFullYear()} {displayName}. All rights reserved.
+            </p>
+            <Link
+              href="/cafe/menu"
+              className="text-[11px] flex items-center gap-1 transition-opacity hover:opacity-60"
+              style={{ color: "rgba(255,255,255,0.30)" }}
             >
-              "{settings.about_content.split(".")[0]}."
-            </motion.p>
-            <Link href="/cafe/about" className="inline-flex items-center gap-1.5 text-sm font-semibold mt-7 hover:opacity-70 transition-opacity" style={{ color: TERRA }}>
-              Our Story <ArrowRight className="w-3.5 h-3.5" />
+              View Menu <ArrowRight className="w-3 h-3" />
             </Link>
           </div>
-        </section>
-      )}
-
-      {/* ══════════════════════════════════════════════════════════════════
-          CONTACT PHOTO — full-width interior shot with info bar
-      ══════════════════════════════════════════════════════════════════ */}
-      <section className="relative overflow-hidden" style={{ minHeight: 480 }}>
-        {/* Background photo */}
-        <motion.img
-          src={CONTACT_BG}
-          alt="Café interior"
-          className="w-full object-cover"
-          style={{ height: "min(520px, 60vw)", minHeight: 320 }}
-          loading="lazy"
-          initial={{ scale: 1.04 }}
-          whileInView={{ scale: 1 }}
-          viewport={{ once: true }}
-          transition={{ duration: 1.2, ease: "easeOut" }}
-        />
-
-        {/* Info bar at bottom */}
-        <motion.div
-          className="w-full flex flex-col sm:flex-row items-start sm:items-center justify-between gap-5 px-6 sm:px-12 py-5"
-          style={{ background: CREAM, borderTop: `2px solid ${BROWN}18` }}
-          initial={{ opacity: 0, y: 10 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
-          transition={{ duration: 0.6 }}
-        >
-          {/* Address */}
-          <div className="flex items-start gap-2.5">
-            <MapPin className="w-4 h-4 mt-0.5 shrink-0" style={{ color: TERRA }} />
-            <div>
-              <p className="text-xs font-semibold uppercase tracking-[0.12em] mb-0.5" style={{ color: `${MID}60` }}>Address</p>
-              <p className="text-sm" style={{ color: BROWN }}>
-                {settings?.address ?? "Roconomarch Road, Hansagina, ia 28012"}
-              </p>
-              {settings?.address && (
-                <p className="text-xs" style={{ color: `${MID}60` }}>
-                  {settings?.email ?? ""}
-                </p>
-              )}
-            </div>
-          </div>
-
-          {/* Opening hours */}
-          <div className="flex items-start gap-2.5">
-            <Clock className="w-4 h-4 mt-0.5 shrink-0" style={{ color: TERRA }} />
-            <div>
-              <p className="text-xs font-semibold uppercase tracking-[0.12em] mb-0.5" style={{ color: `${MID}60` }}>Opening hours</p>
-              {hasHours ? (
-                <>
-                  <p className="text-sm" style={{ color: BROWN }}>
-                    {openLabel ?? "1:30 am – 5:00 pm"}
-                  </p>
-                  <p className="text-xs" style={{ color: `${MID}60` }}>1:00 am – 3:00 pm</p>
-                </>
-              ) : (
-                <p className="text-sm" style={{ color: BROWN }}>1:30 am – 5:00 pm</p>
-              )}
-            </div>
-          </div>
-
-          {/* Social */}
-          <div className="flex items-center gap-3">
-            {settings?.facebook_url ? (
-              <a href={settings.facebook_url} target="_blank" rel="noopener noreferrer"
-                className="flex items-center justify-center w-8 h-8 rounded-full border transition-colors hover:opacity-70"
-                style={{ borderColor: `${BROWN}25`, color: MID }}>
-                <Facebook className="w-3.5 h-3.5" />
-              </a>
-            ) : (
-              <span className="flex items-center justify-center w-8 h-8 rounded-full border"
-                style={{ borderColor: `${BROWN}15`, color: `${MID}50` }}>
-                <Facebook className="w-3.5 h-3.5" />
-              </span>
-            )}
-            {settings?.instagram_url ? (
-              <a href={settings.instagram_url} target="_blank" rel="noopener noreferrer"
-                className="flex items-center justify-center w-8 h-8 rounded-full border transition-colors hover:opacity-70"
-                style={{ borderColor: `${BROWN}25`, color: MID }}>
-                <Instagram className="w-3.5 h-3.5" />
-              </a>
-            ) : (
-              <span className="flex items-center justify-center w-8 h-8 rounded-full border"
-                style={{ borderColor: `${BROWN}15`, color: `${MID}50` }}>
-                <Instagram className="w-3.5 h-3.5" />
-              </span>
-            )}
-            <span className="text-sm font-medium" style={{ color: MID }}>@Cup_&_Cozy</span>
-          </div>
-
-          {/* Reservations CTA */}
-          <BookingCTAButton
-            className="inline-flex items-center gap-2 px-6 py-2.5 rounded-lg text-sm font-semibold text-white transition-all hover:opacity-90 shrink-0"
-            style={{ background: TERRA }}
-          >
-            Reservations
-          </BookingCTAButton>
-        </motion.div>
+        </div>
       </section>
 
     </CafeLayout>
+  );
+}
+
+/* ── GalleryPhoto — reusable editorial photo tile ───────────────────────── */
+interface GalleryPhotoProps {
+  src: string;
+  alt: string;
+  caption: string;
+  aspect?: string;
+  aspectLg?: string;
+  className?: string;
+}
+
+function GalleryPhoto({ src, alt, caption, aspect = "aspect-[4/3]", aspectLg, className = "" }: GalleryPhotoProps) {
+  return (
+    <motion.figure
+      className={`relative group overflow-hidden ${aspect} ${className}`}
+      style={{ background: `${BROWN}12` }}
+      initial={{ opacity: 0, y: 20 }}
+      whileInView={{ opacity: 1, y: 0 }}
+      viewport={{ once: true, amount: 0.15 }}
+      transition={{ duration: 0.7, ease: [0.16, 1, 0.3, 1] }}
+    >
+      {/* When lg breakpoint applies a different aspect, use inline override via CSS var */}
+      {aspectLg && (
+        <style>{`
+          @media (min-width: 1024px) {
+            .lg-aspect-override-${caption.replace(/\s+/g, '-').toLowerCase()} {
+              aspect-ratio: ${aspectLg.replace('aspect-[', '').replace(']', '').replace('aspect-', '')};
+            }
+          }
+        `}</style>
+      )}
+
+      <img
+        src={src}
+        alt={alt}
+        loading="lazy"
+        decoding="async"
+        className="w-full h-full object-cover transition-transform duration-700 ease-out group-hover:scale-[1.04]"
+      />
+
+      {/* Hover caption overlay */}
+      <figcaption
+        className="absolute inset-0 flex items-end p-5 opacity-0 group-hover:opacity-100 transition-opacity duration-400"
+        style={{
+          background: "linear-gradient(to top, rgba(20,10,5,0.72) 0%, rgba(20,10,5,0) 55%)",
+        }}
+      >
+        <span
+          className="text-xs font-semibold tracking-[0.16em] uppercase text-white/90"
+        >
+          {caption}
+        </span>
+      </figcaption>
+    </motion.figure>
   );
 }

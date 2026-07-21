@@ -10,8 +10,8 @@ A premium digital ordering, table booking, QR ordering, and café management pla
 - `pnpm run build` — typecheck + build all packages
 - `pnpm --filter @workspace/api-spec run codegen` — regenerate API hooks and Zod schemas from the OpenAPI spec
 - `pnpm --filter @workspace/db run push` — push DB schema changes (dev only)
-- Required env: `DATABASE_URL` — Postgres connection string (Drizzle / api-server only)
-- Required secrets: `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY` — Supabase project credentials for admin dashboard
+- Required secrets: `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY` — Supabase project credentials for admin dashboard ✅
+- Required secret: `SUPABASE_DATABASE_URL` — Supabase Transaction pooler URL (port 6543) for API server; `lib/db/src/index.ts` prefers this over the Replit-managed `DATABASE_URL`
 
 ## Stack
 
