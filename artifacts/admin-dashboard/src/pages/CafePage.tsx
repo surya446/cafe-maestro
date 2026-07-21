@@ -271,118 +271,85 @@ export function CafePage() {
       </section>
 
       {/* ══════════════════════════════════════════════════════════════════
-          §3  CURATED CORNERS — editorial gallery
-               Large feature image → pull quote → two asymmetric images.
-               Contained in a max-w wrapper — not edge-to-edge.
+          §3  CURATED CORNERS — editorial split, mirrored from §2
+               Text LEFT · Image RIGHT  (complement to §2's Image Left · Text Right)
       ══════════════════════════════════════════════════════════════════ */}
       <section
         style={{ background: CREAM, borderTop: `1px solid ${BROWN}14` }}
         aria-label="Curated Corners"
       >
-        {/* Section header */}
-        <div className="max-w-screen-xl mx-auto px-6 sm:px-12 lg:px-20 pt-24 sm:pt-32 pb-10 sm:pb-14">
-          <motion.div
-            initial="hidden"
-            whileInView="show"
-            viewport={{ once: true, amount: 0.4 }}
-            variants={stagger}
-          >
-            <motion.p
-              variants={fadeUp}
-              className="text-[10px] font-semibold tracking-[0.22em] uppercase mb-3"
-              style={{ color: `${MID}65` }}
-            >
-              The Vibe
-            </motion.p>
-            <motion.h2
-              variants={fadeUp}
-              className="font-serif leading-none"
-              style={{ fontSize: "clamp(2rem, 4.5vw, 3.4rem)", color: BROWN }}
-            >
-              Curated Corners
-            </motion.h2>
-          </motion.div>
-        </div>
+        <div className="max-w-screen-xl mx-auto px-6 sm:px-12 lg:px-20 py-24 sm:py-32 lg:py-40">
+          <div className="flex flex-col sm:flex-row gap-14 lg:gap-24 items-center">
 
-        {/* Large feature image — contained, not edge-to-edge */}
-        <div className="max-w-screen-xl mx-auto px-6 sm:px-12 lg:px-20">
-          <motion.div
-            className="w-full overflow-hidden"
-            style={{ height: "min(520px, 56vw)", minHeight: 240 }}
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true, amount: 0.1 }}
-            transition={{ duration: 0.9, ease: [0.16, 1, 0.3, 1] }}
-          >
-            <img
-              src={PHOTOS.artwall}
-              alt="Gallery wall — framed art prints beside the staircase"
-              className="w-full h-full object-cover object-center transition-transform duration-700 hover:scale-[1.02]"
-              loading="lazy"
-              decoding="async"
-            />
-          </motion.div>
-        </div>
-
-        {/* Pull quote — breathing room between the two image rows */}
-        <div className="max-w-screen-xl mx-auto px-6 sm:px-12 lg:px-20">
-          <motion.div
-            className="py-14 sm:py-20 max-w-sm"
-            initial="hidden"
-            whileInView="show"
-            viewport={{ once: true, amount: 0.3 }}
-            variants={stagger}
-          >
+            {/* Text panel — LEFT */}
             <motion.div
-              variants={fadeUp}
-              className="w-8 h-px mb-7"
-              style={{ background: `${BROWN}28` }}
-            />
-            <motion.p
-              variants={fadeUp}
-              className="font-serif italic leading-snug"
-              style={{ fontSize: "clamp(1.1rem, 2vw, 1.35rem)", color: BROWN }}
+              className="flex-1 flex flex-col justify-center"
+              initial="hidden"
+              whileInView="show"
+              viewport={{ once: true, amount: 0.2 }}
+              variants={stagger}
             >
-              Every corner of this space was chosen with intention — the light, the art, the quiet.
-            </motion.p>
-          </motion.div>
-        </div>
+              <motion.p
+                variants={fadeUp}
+                className="text-[10px] font-semibold tracking-[0.22em] uppercase mb-5"
+                style={{ color: `${MID}65` }}
+              >
+                The Vibe
+              </motion.p>
 
-        {/* Two supporting images — asymmetric proportions, aligned to bottom */}
-        <div className="max-w-screen-xl mx-auto px-6 sm:px-12 lg:px-20 pb-28 sm:pb-36">
-          <div className="flex flex-col sm:flex-row gap-4 sm:gap-5 items-end">
+              <motion.h2
+                variants={fadeUp}
+                className="font-serif leading-[1.08] mb-5"
+                style={{ fontSize: "clamp(2rem, 4vw, 3.2rem)", color: BROWN }}
+              >
+                Curated<br />Corners
+              </motion.h2>
 
-            {/* Pendant — portrait, narrower */}
-            <motion.div
-              className="w-full sm:w-[38%] shrink-0 overflow-hidden"
-              style={{ height: "min(360px, 46vw)", minHeight: 200 }}
-              initial={{ opacity: 0, x: -18 }}
-              whileInView={{ opacity: 1, x: 0 }}
-              viewport={{ once: true, amount: 0.1 }}
-              transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
-            >
-              <img
-                src={PHOTOS.pendant}
-                alt="Geometric diamond pendant light, warm amber glow"
-                className="w-full h-full object-cover object-center transition-transform duration-700 hover:scale-[1.03]"
-                loading="lazy"
-                decoding="async"
+              <motion.p
+                variants={fadeUp}
+                className="text-sm leading-relaxed mb-7"
+                style={{ color: MID, maxWidth: 320 }}
+              >
+                Every corner of this space was chosen with intention — the light, the art, the quiet. A place to slow down and simply be.
+              </motion.p>
+
+              <motion.div
+                variants={fadeUp}
+                style={{ width: 48, height: 1, background: `${BROWN}30`, marginBottom: 28 }}
               />
+
+              <motion.p
+                variants={fadeUp}
+                className="font-serif leading-snug"
+                style={{ fontSize: "clamp(1.05rem, 1.9vw, 1.3rem)", color: BROWN, maxWidth: 310 }}
+              >
+                Warm lighting, curated art, and carefully designed spaces — crafted for those who appreciate the details.
+              </motion.p>
+
+              <motion.div variants={fadeUp} className="mt-8">
+                <Link
+                  href="/cafe/gallery"
+                  className="inline-flex items-center gap-1.5 text-xs font-semibold tracking-[0.10em] uppercase transition-opacity hover:opacity-60"
+                  style={{ color: TERRA }}
+                >
+                  Explore Gallery <ArrowRight className="w-3.5 h-3.5" />
+                </Link>
+              </motion.div>
             </motion.div>
 
-            {/* Ring light — landscape, wider and shorter */}
+            {/* Image — RIGHT, same size as §2 */}
             <motion.div
-              className="w-full sm:flex-1 overflow-hidden"
-              style={{ height: "min(280px, 36vw)", minHeight: 160 }}
-              initial={{ opacity: 0, x: 18 }}
+              className="w-full sm:w-[44%] shrink-0 overflow-hidden"
+              style={{ height: "min(440px, 58vw)", minHeight: 260 }}
+              initial={{ opacity: 0, x: 24 }}
               whileInView={{ opacity: 1, x: 0 }}
-              viewport={{ once: true, amount: 0.1 }}
-              transition={{ duration: 0.8, delay: 0.1, ease: [0.16, 1, 0.3, 1] }}
+              viewport={{ once: true, amount: 0.2 }}
+              transition={{ duration: 0.9, ease: [0.16, 1, 0.3, 1] }}
             >
               <img
-                src={PHOTOS.ringlight}
-                alt="Orbital ring light installation"
-                className="w-full h-full object-cover object-center transition-transform duration-700 hover:scale-[1.03]"
+                src={PHOTOS.artwall}
+                alt="Curated interior — gallery wall and warm lighting"
+                className="w-full h-full object-cover object-center"
                 loading="lazy"
                 decoding="async"
               />
