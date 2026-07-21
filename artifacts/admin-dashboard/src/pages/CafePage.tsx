@@ -184,183 +184,226 @@ export function CafePage() {
       </section>
 
       {/* ══════════════════════════════════════════════════════════════════
-          §2  CRAFTED — coffee photo left, editorial text right
-          Reference: image_1784647790831
+          §2  CRAFTED — editorial split: contained image beside text
+               Breathing room via max-w container + generous vertical padding.
+               Image has a defined height — not filling the entire column.
       ══════════════════════════════════════════════════════════════════ */}
-      <section
-        className="w-full flex flex-col sm:flex-row overflow-hidden"
-        style={{ minHeight: 460 }}
-        aria-label="Crafted to Cup & Cozy"
-      >
-        {/* Left — photograph */}
-        <motion.div
-          className="sm:w-[48%] relative overflow-hidden"
-          style={{ minHeight: 300 }}
-          initial={{ opacity: 0, x: -20 }}
-          whileInView={{ opacity: 1, x: 0 }}
-          viewport={{ once: true, amount: 0.2 }}
-          transition={{ duration: 0.9, ease: [0.16, 1, 0.3, 1] }}
-        >
-          <img
-            src={PHOTOS.coffee}
-            alt="Signature Hazelnut Velvet iced coffee"
-            className="absolute inset-0 w-full h-full object-cover object-center"
-            loading="lazy"
-            decoding="async"
-          />
-        </motion.div>
+      <section style={{ background: CREAM }} aria-label="Crafted to Cup & Cozy">
+        <div className="max-w-screen-xl mx-auto px-6 sm:px-12 lg:px-20 py-24 sm:py-32 lg:py-40">
+          <div className="flex flex-col sm:flex-row gap-14 lg:gap-24 items-center">
 
-        {/* Right — cream text panel */}
-        <motion.div
-          className="flex-1 flex flex-col justify-center px-10 sm:px-14 lg:px-20 py-16 sm:py-20"
-          style={{ background: CREAM }}
-          initial="hidden"
-          whileInView="show"
-          viewport={{ once: true, amount: 0.2 }}
-          variants={stagger}
-        >
-          <motion.h2
-            variants={fadeUp}
-            className="font-serif leading-[1.08] mb-5"
-            style={{ fontSize: "clamp(2rem, 4vw, 3.2rem)", color: BROWN }}
-          >
-            Crafted to<br />{displayName}
-          </motion.h2>
-
-          <motion.p
-            variants={fadeUp}
-            className="text-sm leading-relaxed mb-7"
-            style={{ color: MID, maxWidth: 320 }}
-          >
-            Your daily retreat of curated flavors and curved corners.
-          </motion.p>
-
-          <motion.div
-            variants={fadeUp}
-            style={{ width: 48, height: 1, background: `${BROWN}30`, marginBottom: 28 }}
-          />
-
-          <motion.p
-            variants={fadeUp}
-            className="font-serif leading-snug"
-            style={{ fontSize: "clamp(1.05rem, 1.9vw, 1.3rem)", color: BROWN, maxWidth: 310 }}
-          >
-            Try our signature Hazelnut Velvet, where artistry meets taste.
-          </motion.p>
-
-          <motion.div variants={fadeUp} className="mt-8">
-            <Link
-              href="/cafe/menu"
-              className="inline-flex items-center gap-1.5 text-xs font-semibold tracking-[0.10em] uppercase transition-opacity hover:opacity-60"
-              style={{ color: TERRA }}
+            {/* Image — contained height, not filling the viewport */}
+            <motion.div
+              className="w-full sm:w-[44%] shrink-0 overflow-hidden"
+              style={{ height: "min(440px, 58vw)", minHeight: 260 }}
+              initial={{ opacity: 0, x: -24 }}
+              whileInView={{ opacity: 1, x: 0 }}
+              viewport={{ once: true, amount: 0.2 }}
+              transition={{ duration: 0.9, ease: [0.16, 1, 0.3, 1] }}
             >
-              View Menu <ArrowRight className="w-3.5 h-3.5" />
-            </Link>
-          </motion.div>
-        </motion.div>
+              <img
+                src={PHOTOS.coffee}
+                alt="Signature Hazelnut Velvet iced coffee"
+                className="w-full h-full object-cover object-center"
+                loading="lazy"
+                decoding="async"
+              />
+            </motion.div>
+
+            {/* Text panel */}
+            <motion.div
+              className="flex-1 flex flex-col justify-center"
+              initial="hidden"
+              whileInView="show"
+              viewport={{ once: true, amount: 0.2 }}
+              variants={stagger}
+            >
+              <motion.p
+                variants={fadeUp}
+                className="text-[10px] font-semibold tracking-[0.22em] uppercase mb-5"
+                style={{ color: `${MID}65` }}
+              >
+                Our Craft
+              </motion.p>
+
+              <motion.h2
+                variants={fadeUp}
+                className="font-serif leading-[1.08] mb-5"
+                style={{ fontSize: "clamp(2rem, 4vw, 3.2rem)", color: BROWN }}
+              >
+                Crafted to<br />{displayName}
+              </motion.h2>
+
+              <motion.p
+                variants={fadeUp}
+                className="text-sm leading-relaxed mb-7"
+                style={{ color: MID, maxWidth: 320 }}
+              >
+                Your daily retreat of curated flavors and curved corners.
+              </motion.p>
+
+              <motion.div
+                variants={fadeUp}
+                style={{ width: 48, height: 1, background: `${BROWN}30`, marginBottom: 28 }}
+              />
+
+              <motion.p
+                variants={fadeUp}
+                className="font-serif leading-snug"
+                style={{ fontSize: "clamp(1.05rem, 1.9vw, 1.3rem)", color: BROWN, maxWidth: 310 }}
+              >
+                Try our signature Hazelnut Velvet, where artistry meets taste.
+              </motion.p>
+
+              <motion.div variants={fadeUp} className="mt-8">
+                <Link
+                  href="/cafe/menu"
+                  className="inline-flex items-center gap-1.5 text-xs font-semibold tracking-[0.10em] uppercase transition-opacity hover:opacity-60"
+                  style={{ color: TERRA }}
+                >
+                  View Menu <ArrowRight className="w-3.5 h-3.5" />
+                </Link>
+              </motion.div>
+            </motion.div>
+
+          </div>
+        </div>
       </section>
 
       {/* ══════════════════════════════════════════════════════════════════
-          §3  CURATED CORNERS — art wall large left, lights stacked right
-          Reference: image_1784647798915
+          §3  CURATED CORNERS — editorial gallery
+               Large feature image → pull quote → two asymmetric images.
+               Contained in a max-w wrapper — not edge-to-edge.
       ══════════════════════════════════════════════════════════════════ */}
       <section
-        style={{ background: CREAM }}
+        style={{ background: CREAM, borderTop: `1px solid ${BROWN}14` }}
         aria-label="Curated Corners"
       >
-        {/* Section label — flush left, generous top padding */}
-        <div className="px-8 sm:px-12 lg:px-14 pt-14 pb-7">
+        {/* Section header */}
+        <div className="max-w-screen-xl mx-auto px-6 sm:px-12 lg:px-20 pt-24 sm:pt-32 pb-10 sm:pb-14">
           <motion.div
             initial="hidden"
             whileInView="show"
             viewport={{ once: true, amount: 0.4 }}
             variants={stagger}
           >
+            <motion.p
+              variants={fadeUp}
+              className="text-[10px] font-semibold tracking-[0.22em] uppercase mb-3"
+              style={{ color: `${MID}65` }}
+            >
+              The Vibe
+            </motion.p>
             <motion.h2
               variants={fadeUp}
-              className="font-serif leading-none mb-1.5"
+              className="font-serif leading-none"
               style={{ fontSize: "clamp(2rem, 4.5vw, 3.4rem)", color: BROWN }}
             >
               Curated Corners
             </motion.h2>
-            <motion.p
-              variants={fadeUp}
-              className="text-sm"
-              style={{ color: `${MID}75` }}
-            >
-              The Vibe
-            </motion.p>
           </motion.div>
         </div>
 
-        {/* Photo grid — edge-to-edge with small gaps */}
-        <div className="flex flex-col sm:flex-row gap-1.5 px-1.5 pb-1.5">
-
-          {/* Large left — art/gallery wall */}
+        {/* Large feature image — contained, not edge-to-edge */}
+        <div className="max-w-screen-xl mx-auto px-6 sm:px-12 lg:px-20">
           <motion.div
-            className="sm:w-[63%] overflow-hidden"
-            style={{ minHeight: 280 }}
-            initial={{ opacity: 0, y: 18 }}
+            className="w-full overflow-hidden"
+            style={{ height: "min(520px, 56vw)", minHeight: 240 }}
+            initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true, amount: 0.12 }}
-            transition={{ duration: 0.85, ease: [0.16, 1, 0.3, 1] }}
+            viewport={{ once: true, amount: 0.1 }}
+            transition={{ duration: 0.9, ease: [0.16, 1, 0.3, 1] }}
           >
             <img
               src={PHOTOS.artwall}
               alt="Gallery wall — framed art prints beside the staircase"
-              className="w-full h-full object-cover object-center transition-transform duration-700 hover:scale-[1.025]"
-              style={{ aspectRatio: "4/3", display: "block" }}
+              className="w-full h-full object-cover object-center transition-transform duration-700 hover:scale-[1.02]"
               loading="lazy"
               decoding="async"
             />
           </motion.div>
+        </div>
 
-          {/* Right column — pendant (top) + ring light (bottom) */}
-          <div className="flex-1 flex flex-col gap-1.5">
+        {/* Pull quote — breathing room between the two image rows */}
+        <div className="max-w-screen-xl mx-auto px-6 sm:px-12 lg:px-20">
+          <motion.div
+            className="py-14 sm:py-20 max-w-sm"
+            initial="hidden"
+            whileInView="show"
+            viewport={{ once: true, amount: 0.3 }}
+            variants={stagger}
+          >
             <motion.div
-              className="overflow-hidden"
-              initial={{ opacity: 0, x: 18 }}
+              variants={fadeUp}
+              className="w-8 h-px mb-7"
+              style={{ background: `${BROWN}28` }}
+            />
+            <motion.p
+              variants={fadeUp}
+              className="font-serif italic leading-snug"
+              style={{ fontSize: "clamp(1.1rem, 2vw, 1.35rem)", color: BROWN }}
+            >
+              Every corner of this space was chosen with intention — the light, the art, the quiet.
+            </motion.p>
+          </motion.div>
+        </div>
+
+        {/* Two supporting images — asymmetric proportions, aligned to bottom */}
+        <div className="max-w-screen-xl mx-auto px-6 sm:px-12 lg:px-20 pb-28 sm:pb-36">
+          <div className="flex flex-col sm:flex-row gap-4 sm:gap-5 items-end">
+
+            {/* Pendant — portrait, narrower */}
+            <motion.div
+              className="w-full sm:w-[38%] shrink-0 overflow-hidden"
+              style={{ height: "min(360px, 46vw)", minHeight: 200 }}
+              initial={{ opacity: 0, x: -18 }}
               whileInView={{ opacity: 1, x: 0 }}
-              viewport={{ once: true, amount: 0.12 }}
-              transition={{ duration: 0.8, delay: 0.07, ease: [0.16, 1, 0.3, 1] }}
+              viewport={{ once: true, amount: 0.1 }}
+              transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
             >
               <img
                 src={PHOTOS.pendant}
                 alt="Geometric diamond pendant light, warm amber glow"
-                className="w-full object-cover object-center transition-transform duration-700 hover:scale-[1.035]"
-                style={{ aspectRatio: "1/1", display: "block" }}
+                className="w-full h-full object-cover object-center transition-transform duration-700 hover:scale-[1.03]"
                 loading="lazy"
                 decoding="async"
               />
             </motion.div>
+
+            {/* Ring light — landscape, wider and shorter */}
             <motion.div
-              className="overflow-hidden"
+              className="w-full sm:flex-1 overflow-hidden"
+              style={{ height: "min(280px, 36vw)", minHeight: 160 }}
               initial={{ opacity: 0, x: 18 }}
               whileInView={{ opacity: 1, x: 0 }}
-              viewport={{ once: true, amount: 0.12 }}
-              transition={{ duration: 0.8, delay: 0.16, ease: [0.16, 1, 0.3, 1] }}
+              viewport={{ once: true, amount: 0.1 }}
+              transition={{ duration: 0.8, delay: 0.1, ease: [0.16, 1, 0.3, 1] }}
             >
               <img
                 src={PHOTOS.ringlight}
                 alt="Orbital ring light installation"
-                className="w-full object-cover object-center transition-transform duration-700 hover:scale-[1.035]"
-                style={{ aspectRatio: "1/1", display: "block" }}
+                className="w-full h-full object-cover object-center transition-transform duration-700 hover:scale-[1.03]"
                 loading="lazy"
                 decoding="async"
               />
             </motion.div>
+
           </div>
         </div>
       </section>
 
       {/* ══════════════════════════════════════════════════════════════════
-          §4  CONTACT — full-width interior photo + info bar
-          Reference: image_1784647802773
+          §4  VISIT — editorial close: reduced photo + spacious info bar
       ══════════════════════════════════════════════════════════════════ */}
-      <section aria-label="Visit us" className="w-full">
-
-        {/* Full-width interior photograph */}
-        <div className="w-full overflow-hidden" style={{ height: "min(580px, 62vw)", minHeight: 280 }}>
+      <section
+        aria-label="Visit us"
+        style={{ borderTop: `1px solid ${BROWN}14` }}
+      >
+        {/* Interior photograph — reduced height, not overwhelming */}
+        <div
+          className="w-full overflow-hidden"
+          style={{ height: "min(460px, 50vw)", minHeight: 240 }}
+        >
           <motion.img
             src={PHOTOS.dining}
             alt="Cup & Cozy — interior dining area with staircase and counter"
@@ -374,97 +417,103 @@ export function CafePage() {
           />
         </div>
 
-        {/* Info bar — cream strip */}
+        {/* Info bar — generous padding, max-w container */}
         <motion.div
-          className="w-full flex flex-wrap items-start justify-between gap-x-8 gap-y-5 px-6 sm:px-10 lg:px-14 py-6 sm:py-7"
-          style={{ background: CREAM, borderTop: `1.5px solid ${BROWN}18` }}
+          style={{ background: CREAM }}
           initial={{ opacity: 0, y: 8 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
           transition={{ duration: 0.6 }}
         >
-          {/* Address */}
-          <div>
-            <p className="text-[10px] font-semibold uppercase tracking-[0.16em] mb-1.5" style={{ color: `${MID}65` }}>
-              Address
-            </p>
-            <div className="flex items-start gap-2">
-              <MapPin className="w-3.5 h-3.5 mt-[2px] shrink-0" style={{ color: TERRA }} />
-              <p className="text-sm leading-snug" style={{ color: BROWN }}>
-                {settings?.address
-                  ? settings.address
-                  : <>Rocnowasan Road,<br />Meringrice, ia 28312<br />Calerod</>}
-              </p>
-            </div>
-          </div>
+          <div
+            className="max-w-screen-xl mx-auto px-6 sm:px-12 lg:px-20 py-14 sm:py-20 flex flex-wrap items-start justify-between gap-x-10 gap-y-10"
+            style={{ borderTop: `1px solid ${BROWN}18` }}
+          >
 
-          {/* Opening hours */}
-          <div>
-            <p className="text-[10px] font-semibold uppercase tracking-[0.16em] mb-1.5" style={{ color: `${MID}65` }}>
-              Opening hours
-            </p>
-            <div className="flex items-start gap-2">
-              <Clock className="w-3.5 h-3.5 mt-[2px] shrink-0" style={{ color: TERRA }} />
-              <div className="text-sm leading-snug" style={{ color: BROWN }}>
-                {hasHours && openLabel ? (
-                  <p>{openLabel}</p>
-                ) : (
-                  <>
-                    <p>1:30 am – 5:00 pm</p>
-                    <p>1:00 am – 5:90 pm</p>
-                  </>
-                )}
+            {/* Address */}
+            <div>
+              <p className="text-[10px] font-semibold uppercase tracking-[0.16em] mb-2.5" style={{ color: `${MID}65` }}>
+                Address
+              </p>
+              <div className="flex items-start gap-2">
+                <MapPin className="w-3.5 h-3.5 mt-[2px] shrink-0" style={{ color: TERRA }} />
+                <p className="text-sm leading-snug" style={{ color: BROWN }}>
+                  {settings?.address
+                    ? settings.address
+                    : <>Rocnowasan Road,<br />Meringrice, ia 28312<br />Calerod</>}
+                </p>
               </div>
             </div>
-          </div>
 
-          {/* Social icons + handle */}
-          <div className="flex items-center gap-2.5">
-            {/* Facebook */}
-            <a
-              href={settings?.facebook_url ?? "#"}
-              target="_blank"
-              rel="noopener noreferrer"
-              aria-label="Facebook"
-              className="flex items-center justify-center w-8 h-8 rounded-full border transition-all hover:border-[#3D1E0F]"
-              style={{ borderColor: `${BROWN}30`, color: MID }}
-            >
-              <svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 24 24">
-                <path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z" />
-              </svg>
-            </a>
-            {/* Instagram */}
-            <a
-              href={settings?.instagram_url ?? "#"}
-              target="_blank"
-              rel="noopener noreferrer"
-              aria-label="Instagram"
-              className="flex items-center justify-center w-8 h-8 rounded-full border transition-all hover:border-[#3D1E0F]"
-              style={{ borderColor: `${BROWN}30`, color: MID }}
-            >
-              <Instagram className="w-3.5 h-3.5" />
-            </a>
-            {/* YouTube */}
-            <a
-              href="#"
-              aria-label="YouTube"
-              className="flex items-center justify-center w-8 h-8 rounded-full border transition-all hover:border-[#3D1E0F]"
-              style={{ borderColor: `${BROWN}30`, color: MID }}
-            >
-              <svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 24 24">
-                <path d="M22.54 6.42a2.78 2.78 0 0 0-1.95-1.97C18.88 4 12 4 12 4s-6.88 0-8.59.45A2.78 2.78 0 0 0 1.46 6.42 29 29 0 0 0 1 12a29 29 0 0 0 .46 5.58 2.78 2.78 0 0 0 1.95 1.97C5.12 20 12 20 12 20s6.88 0 8.59-.45a2.78 2.78 0 0 0 1.95-1.97A29 29 0 0 0 23 12a29 29 0 0 0-.46-5.58zM9.75 15.02V8.98L15.5 12l-5.75 3.02z" />
-              </svg>
-            </a>
-            <span className="text-sm ml-0.5" style={{ color: MID }}>@Cup &amp; Cozy</span>
-          </div>
+            {/* Opening hours */}
+            <div>
+              <p className="text-[10px] font-semibold uppercase tracking-[0.16em] mb-2.5" style={{ color: `${MID}65` }}>
+                Opening hours
+              </p>
+              <div className="flex items-start gap-2">
+                <Clock className="w-3.5 h-3.5 mt-[2px] shrink-0" style={{ color: TERRA }} />
+                <div className="text-sm leading-snug" style={{ color: BROWN }}>
+                  {hasHours && openLabel ? (
+                    <p>{openLabel}</p>
+                  ) : (
+                    <>
+                      <p>1:30 am – 5:00 pm</p>
+                      <p>1:00 am – 5:90 pm</p>
+                    </>
+                  )}
+                </div>
+              </div>
+            </div>
 
-          {/* Reservations CTA */}
-          <BookingCTAButton
-            className="inline-flex items-center gap-2 px-7 py-2.5 rounded-sm text-[13px] font-semibold text-white transition-all hover:opacity-90 active:scale-95 shrink-0"
-            style={{ background: TERRA, letterSpacing: "0.06em" }}
-          >
-            Reservations
-          </BookingCTAButton>
+            {/* Social icons */}
+            <div className="flex items-center gap-2.5">
+              {/* Facebook */}
+              <a
+                href={settings?.facebook_url ?? "#"}
+                target="_blank"
+                rel="noopener noreferrer"
+                aria-label="Facebook"
+                className="flex items-center justify-center w-8 h-8 rounded-full border transition-all hover:border-[#3D1E0F]"
+                style={{ borderColor: `${BROWN}30`, color: MID }}
+              >
+                <svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 24 24">
+                  <path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z" />
+                </svg>
+              </a>
+              {/* Instagram */}
+              <a
+                href={settings?.instagram_url ?? "#"}
+                target="_blank"
+                rel="noopener noreferrer"
+                aria-label="Instagram"
+                className="flex items-center justify-center w-8 h-8 rounded-full border transition-all hover:border-[#3D1E0F]"
+                style={{ borderColor: `${BROWN}30`, color: MID }}
+              >
+                <Instagram className="w-3.5 h-3.5" />
+              </a>
+              {/* YouTube */}
+              <a
+                href="#"
+                aria-label="YouTube"
+                className="flex items-center justify-center w-8 h-8 rounded-full border transition-all hover:border-[#3D1E0F]"
+                style={{ borderColor: `${BROWN}30`, color: MID }}
+              >
+                <svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 24 24">
+                  <path d="M22.54 6.42a2.78 2.78 0 0 0-1.95-1.97C18.88 4 12 4 12 4s-6.88 0-8.59.45A2.78 2.78 0 0 0 1.46 6.42 29 29 0 0 0 1 12a29 29 0 0 0 .46 5.58 2.78 2.78 0 0 0 1.95 1.97C5.12 20 12 20 12 20s6.88 0 8.59-.45a2.78 2.78 0 0 0 1.95-1.97A29 29 0 0 0 23 12a29 29 0 0 0-.46-5.58zM9.75 15.02V8.98L15.5 12l-5.75 3.02z" />
+                </svg>
+              </a>
+              <span className="text-sm ml-0.5" style={{ color: MID }}>@Cup &amp; Cozy</span>
+            </div>
+
+            {/* Reservations CTA */}
+            <BookingCTAButton
+              className="inline-flex items-center gap-2 px-7 py-2.5 rounded-sm text-[13px] font-semibold text-white transition-all hover:opacity-90 active:scale-95 shrink-0"
+              style={{ background: TERRA, letterSpacing: "0.06em" }}
+            >
+              Reservations
+            </BookingCTAButton>
+
+          </div>
         </motion.div>
       </section>
 
