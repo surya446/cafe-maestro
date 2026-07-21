@@ -262,63 +262,56 @@ function CafeLayoutInner({
 
         {/* ── FOOTER ─────────────────────────────────────────────────────── */}
         <footer
-          style={{ background: `${BROWN}f8`, color: "#fff", borderTop: `2px solid ${TERRA}30` }}
+          style={{ background: `${BROWN}f8`, color: "#fff", borderTop: `1px solid rgba(255,255,255,0.07)` }}
           aria-label="Site footer"
         >
-          <div className="max-w-7xl mx-auto px-6 sm:px-10 py-8">
-            <div className="flex flex-col sm:flex-row items-center justify-between gap-5">
+          <div className="max-w-7xl mx-auto px-6 sm:px-10 h-[58px] flex items-center justify-between gap-4">
 
-              {/* Social icons */}
-              <div className="flex items-center gap-3">
-                {settings?.facebook_url ? (
-                  <a href={settings.facebook_url} target="_blank" rel="noopener noreferrer"
-                    className="flex items-center justify-center w-9 h-9 rounded-full border border-white/20 text-white/60 hover:text-white hover:border-white/50 transition-colors"
-                    aria-label="Facebook">
-                    <Facebook className="w-4 h-4" />
-                  </a>
-                ) : (
-                  <span className="flex items-center justify-center w-9 h-9 rounded-full border border-white/20 text-white/30">
-                    <Facebook className="w-4 h-4" />
-                  </span>
-                )}
-                {settings?.instagram_url ? (
-                  <a href={settings.instagram_url} target="_blank" rel="noopener noreferrer"
-                    className="flex items-center justify-center w-9 h-9 rounded-full border border-white/20 text-white/60 hover:text-white hover:border-white/50 transition-colors"
-                    aria-label="Instagram">
-                    <Instagram className="w-4 h-4" />
-                  </a>
-                ) : (
-                  <span className="flex items-center justify-center w-9 h-9 rounded-full border border-white/20 text-white/30">
-                    <Instagram className="w-4 h-4" />
-                  </span>
-                )}
-              </div>
+            {/* Left — copyright */}
+            <p className="text-[11px] text-white/30 shrink-0">
+              © {new Date().getFullYear()} {displayName}
+            </p>
 
-              {/* Center — copyright */}
-              <p className="text-xs text-white/35 text-center">
-                © {new Date().getFullYear()} {displayName}. All rights reserved.
-              </p>
-
-              {/* Right — contact info */}
-              <div className="flex items-center gap-5">
-                {settings?.phone && (
-                  <a href={`tel:${settings.phone}`} className="flex items-center gap-1.5 text-xs text-white/50 hover:text-white transition-colors">
-                    <Phone className="w-3.5 h-3.5" />
-                    {settings.phone}
-                  </a>
-                )}
-                {settings?.address && !settings?.phone && (
-                  <div className="flex items-center gap-1.5 text-xs text-white/50">
-                    <MapPin className="w-3.5 h-3.5" />
-                    {settings.address.split(",")[0]}
-                  </div>
-                )}
-                <div className="flex items-center gap-1.5 text-xs text-white/40">
-                  <Globe className="w-3.5 h-3.5" />
-                  www.cupandcozy.com
-                </div>
+            {/* Center — phone + website */}
+            <div className="flex items-center gap-4 overflow-hidden">
+              {settings?.phone && (
+                <a href={`tel:${settings.phone}`} className="flex items-center gap-1 text-[11px] text-white/40 hover:text-white/70 transition-colors">
+                  <Phone className="w-3 h-3 shrink-0" />
+                  <span className="truncate">{settings.phone}</span>
+                </a>
+              )}
+              <div className="hidden sm:flex items-center gap-1 text-[11px] text-white/30">
+                <Globe className="w-3 h-3 shrink-0" />
+                <span>www.cupandcozy.com</span>
               </div>
             </div>
+
+            {/* Right — social icons */}
+            <div className="flex items-center gap-2 shrink-0">
+              {settings?.facebook_url ? (
+                <a href={settings.facebook_url} target="_blank" rel="noopener noreferrer"
+                  className="flex items-center justify-center w-7 h-7 rounded-full border border-white/15 text-white/40 hover:text-white/80 hover:border-white/35 transition-colors"
+                  aria-label="Facebook">
+                  <Facebook className="w-3 h-3" />
+                </a>
+              ) : (
+                <span className="flex items-center justify-center w-7 h-7 rounded-full border border-white/10 text-white/20">
+                  <Facebook className="w-3 h-3" />
+                </span>
+              )}
+              {settings?.instagram_url ? (
+                <a href={settings.instagram_url} target="_blank" rel="noopener noreferrer"
+                  className="flex items-center justify-center w-7 h-7 rounded-full border border-white/15 text-white/40 hover:text-white/80 hover:border-white/35 transition-colors"
+                  aria-label="Instagram">
+                  <Instagram className="w-3 h-3" />
+                </a>
+              ) : (
+                <span className="flex items-center justify-center w-7 h-7 rounded-full border border-white/10 text-white/20">
+                  <Instagram className="w-3 h-3" />
+                </span>
+              )}
+            </div>
+
           </div>
         </footer>
 
