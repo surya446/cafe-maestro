@@ -23,7 +23,6 @@
  */
 
 import { Capacitor } from "@capacitor/core";
-import { Browser } from "@capacitor/browser";
 
 /** True when running inside the Capacitor WebView on Android (mobile OR TV). */
 export function isNativeAndroid(): boolean {
@@ -36,22 +35,29 @@ export function isNativePlatform(): boolean {
 }
 
 /**
- * Open a URL in the appropriate browser for the current platform.
+ * Open a URL in the actual system browser for the current platform.
  *
- * - Native (Android/iOS): uses @capacitor/browser to open the URL in the
- *   system browser (Chrome, Safari, etc.), never inside the Capacitor WebView.
- * - Web: opens in a new tab via window.open().
+ * - Native (Android/iOS): uses window.open with the "_system" target, which
+ *   Capacitor maps to Intent.ACTION_VIEW on Android (launches the default
+ *   browser app — Chrome or user-set default, NOT a Custom Tab) and to
+ *   UIApplication.openURL on iOS (launches Safari or the user-set default,
+ *   NOT SFSafariViewController). The URL must be absolute (https://…).
+ * - Web: opens in a new tab via window.open with "_blank".
  *
- * Always prefer this over bare window.open() for URLs that should leave the
- * app, so the link is never trapped inside the WebView on mobile.
+ * Do NOT use @capacitor/browser here — Browser.open() renders a Chrome Custom
+ * Tab on Android and SFSafariViewController on iOS, both of which overlay the
+ * app rather than launching an independent browser process.
  *
- * NOTE: on native the URL must be absolute (https://…). If you are linking to
- * a route within the web deployment, set VITE_APP_URL to the deployed base URL
- * (e.g. https://yourapp.replit.app/admin/) and prepend it to the path.
+ * NOTE: on native the URL must be absolute (https://…). Set VITE_APP_URL to
+ * the root public domain (e.g. https://yourapp.replit.app) and build the full
+ * path at the call site.
  */
 export function openExternalUrl(url: string): void {
   if (Capacitor.isNativePlatform()) {
-    void Browser.open({ url });
+    // "_system" is handled by Capacitor's bridge:
+    //   Android → startActivity(Intent(ACTION_VIEW, uri))  → default browser
+    //   iOS     → UIApplication.shared.open(url)          → Safari / default
+    window.open(url, "_system");
   } else {
     window.open(url, "_blank", "noopener,noreferrer");
   }

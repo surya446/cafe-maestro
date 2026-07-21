@@ -191,15 +191,15 @@ function ImageUploadField({
  * Web: built from window.location.origin + BASE_URL so it always points to
  *      the correct deployed origin regardless of the preview domain.
  *
- * Native (Capacitor): the WebView is served from a local origin
- *      (https://localhost), so we use VITE_APP_URL — the deployed web base URL
- *      (e.g. https://yourapp.replit.app/admin/) — to form an absolute URL that
- *      the system browser can actually reach.
+ * Native (Capacitor): the WebView is served from https://localhost, which the
+ *      system browser cannot reach. VITE_APP_URL must be the root public domain
+ *      (e.g. https://yourapp.replit.app). The /admin/ prefix and cafe path are
+ *      appended here because the web deployment serves this app at /admin/.
  */
 function getPublicWebsiteUrl(): string {
   if (isNativePlatform()) {
     const appUrl = (import.meta.env.VITE_APP_URL as string | undefined) ?? "";
-    return `${appUrl.replace(/\/$/, "")}/cafe`;
+    return `${appUrl.replace(/\/$/, "")}/admin/cafe`;
   }
   return `${window.location.origin}${import.meta.env.BASE_URL}cafe`;
 }
