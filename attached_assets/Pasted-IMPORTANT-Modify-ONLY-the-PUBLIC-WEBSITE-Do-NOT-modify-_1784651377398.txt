@@ -1,0 +1,293 @@
+IMPORTANT
+
+Modify ONLY the PUBLIC WEBSITE.
+
+Do NOT modify:
+
+- Admin Dashboard
+- Staff Dashboard
+- Kitchen Display System
+- Table Ordering
+- QR Ordering
+- Backend
+- Database
+- Shared Components
+- Authentication
+
+Only improve the PUBLIC WEBSITE.
+
+====================================================
+
+The overall design direction is now correct.
+
+DO NOT redesign the website.
+
+DO NOT change the typography.
+
+DO NOT change the color palette.
+
+DO NOT change the animations.
+
+DO NOT change the overall aesthetic.
+
+The problem is ONLY the layout composition.
+
+====================================================
+
+CURRENT PROBLEMS
+
+The sections currently feel like large images dropped onto the page.
+
+They do not feel intentionally designed.
+
+Everything blends together.
+
+There is very little visual hierarchy.
+
+There is not enough breathing room.
+
+Images are oversized.
+
+The page feels heavy.
+
+====================================================
+
+GOAL
+
+Transform the homepage into a premium editorial website.
+
+Think:
+
+Apple
+
+Aesop
+
+Blue Tokai
+
+Starbucks Reserve
+
+Boutique Hotel
+
+Luxury magazine
+
+====================================================
+
+1. EVERY SECTION MUST FEEL SEPARATE
+
+Each section needs its own identity.
+
+Use generous vertical spacing between sections.
+
+Each section should clearly begin and end.
+
+Do NOT let one section visually merge into the next.
+
+Introduce breathing room.
+
+Use padding.
+
+Use margins.
+
+Create visual rhythm.
+
+The user should immediately recognize:
+
+"This is a new section."
+
+====================================================
+
+2. DO NOT USE OVERSIZED IMAGES
+
+The current images are far too large.
+
+They dominate the page.
+
+Reduce their visual weight.
+
+Images should support the content,
+not overwhelm it.
+
+Keep high quality.
+
+Maintain aspect ratio.
+
+====================================================
+
+3. CREATE EDITORIAL COMPOSITION
+
+Instead of placing huge images beside each other,
+
+design intentional layouts.
+
+For example:
+
+Large image
+
+↓
+
+Small supporting image
+
+↓
+
+Text block
+
+↓
+
+Whitespace
+
+↓
+
+Another image
+
+↓
+
+Quote
+
+↓
+
+Button
+
+Every section should feel curated.
+
+Not randomly assembled.
+
+====================================================
+
+4. CURATED CORNERS SECTION
+
+The current implementation looks like one giant image beside another giant image.
+
+This is incorrect.
+
+Instead:
+
+Create a sophisticated editorial gallery.
+
+Examples:
+
+Large feature image.
+
+Two supporting images.
+
+Small text block.
+
+Whitespace.
+
+Elegant alignment.
+
+Different image sizes.
+
+Balanced composition.
+
+Avoid symmetry everywhere.
+
+====================================================
+
+5. WHITESPACE
+
+Increase whitespace significantly.
+
+Luxury websites use space intentionally.
+
+Do NOT try to fill every pixel.
+
+Whitespace creates elegance.
+
+====================================================
+
+6. TYPOGRAPHY HIERARCHY
+
+Keep the typography.
+
+But improve spacing.
+
+Section titles should have room to breathe.
+
+Descriptions should not sit too close to images.
+
+Buttons should have clear spacing.
+
+====================================================
+
+7. IMAGE GRID
+
+Avoid:
+
+Image
+Image
+Image
+Image
+
+Instead use:
+
+Large feature image
+
+Small vertical image
+
+Landscape image
+
+Portrait image
+
+Alternating layouts
+
+Editorial rhythm
+
+Different proportions.
+
+====================================================
+
+8. VISUAL FLOW
+
+As the user scrolls:
+
+Each section should naturally lead into the next.
+
+The page should tell a story.
+
+Not feel like independent image blocks.
+
+====================================================
+
+9. RESPONSIVENESS
+
+Desktop should feel premium.
+
+Tablet should remain elegant.
+
+Mobile should not simply stack everything.
+
+Redesign the mobile layout thoughtfully.
+
+====================================================
+
+10. DO NOT
+
+❌ Redesign the homepage.
+
+❌ Change colors.
+
+❌ Change fonts.
+
+❌ Change branding.
+
+❌ Replace images.
+
+❌ Make images larger.
+
+❌ Use equal-sized cards everywhere.
+
+❌ Make it look like a gallery template.
+
+====================================================
+
+SUCCESS CRITERIA
+
+When someone scrolls through the homepage, it should feel like reading a premium editorial magazine about the café.
+
+Every section should have breathing room.
+
+Every image should feel intentionally placed.
+
+The eye should naturally move through the page.
+
+The website should communicate luxury, craftsmanship, and calmness—not simply display photographs.
