@@ -393,44 +393,39 @@ export function CafePage() {
       ══════════════════════════════════════════════════════════════════ */}
       <section aria-label="Visit us" className="relative">
 
-        {/* ── Image container ──────────────────────────────────────── */}
+        {/* Image + glass bar — single container for all breakpoints */}
         <div
-          className="w-full relative"
-          style={{ height: "min(580px, 62vw)", minHeight: 280 }}
+          className="w-full overflow-hidden relative"
+          style={{ height: "min(580px, 62vw)", minHeight: 320 }}
         >
-          {/* overflow-hidden scoped to inner wrapper so the mobile card
-              can sit outside without being clipped */}
-          <div className="absolute inset-0 overflow-hidden">
-            <motion.img
-              src={PHOTOS.dining}
-              alt="Cup & Cozy — interior dining area with staircase and counter"
-              className="w-full h-full object-cover object-center"
-              loading="lazy"
-              decoding="async"
-              initial={{ scale: 1.04 }}
-              whileInView={{ scale: 1 }}
-              viewport={{ once: true }}
-              transition={{ duration: 1.4, ease: "easeOut" }}
-            />
-          </div>
+          <motion.img
+            src={PHOTOS.dining}
+            alt="Cup & Cozy — interior dining area with staircase and counter"
+            className="w-full h-full object-cover object-center"
+            loading="lazy"
+            decoding="async"
+            initial={{ scale: 1.04 }}
+            whileInView={{ scale: 1 }}
+            viewport={{ once: true }}
+            transition={{ duration: 1.4, ease: "easeOut" }}
+          />
 
           {/* gradient veil */}
           <div
             className="absolute inset-x-0 bottom-0 pointer-events-none"
-            style={{ height: "55%", background: `linear-gradient(to top, rgba(30,14,5,0.42) 0%, transparent 100%)` }}
+            style={{ height: "60%", background: `linear-gradient(to top, rgba(30,14,5,0.48) 0%, transparent 100%)` }}
           />
 
-          {/* ── DESKTOP / TABLET glass bar (sm+) — overlaid on the image ── */}
+          {/* ── GLASS INFO BAR — unified, responsive internals ─────── */}
           <motion.div
-            className="hidden sm:block absolute inset-x-0 bottom-0 px-8 pb-7"
+            className="absolute inset-x-0 bottom-0 px-3 sm:px-8 pb-3 sm:pb-7"
             initial={{ opacity: 0, y: 16 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
             transition={{ duration: 0.7, ease: [0.16, 1, 0.3, 1] }}
           >
             <div
-              className="max-w-screen-xl mx-auto rounded-2xl px-8 py-5
-                          flex flex-row items-center gap-0"
+              className="max-w-screen-xl mx-auto rounded-xl sm:rounded-2xl px-4 sm:px-8 py-3 sm:py-5"
               style={{
                 background: "rgba(242,232,213,0.72)",
                 backdropFilter: "blur(18px)",
@@ -439,132 +434,113 @@ export function CafePage() {
                 boxShadow: "0 4px 32px rgba(30,14,5,0.14), inset 0 1px 0 rgba(255,255,255,0.35)",
               }}
             >
-              {/* Address */}
-              <div className="flex items-start gap-2 pr-6 border-r" style={{ borderColor: `${BROWN}22` }}>
-                <MapPin className="w-3.5 h-3.5 mt-[3px] shrink-0" style={{ color: TERRA }} />
-                <div>
-                  <p className="text-[9px] font-semibold uppercase tracking-[0.14em] mb-0.5" style={{ color: `${MID}80` }}>Address</p>
-                  <p className="text-[12px] leading-snug font-medium" style={{ color: BROWN }}>
-                    {settings?.address ? settings.address : <>Rocnowasan Road, Meringrice</>}
-                  </p>
+
+              {/* ── Desktop / tablet (sm+): single horizontal row ── */}
+              <div className="hidden sm:flex flex-row items-center gap-0">
+                <div className="flex items-start gap-2 pr-6 border-r" style={{ borderColor: `${BROWN}22` }}>
+                  <MapPin className="w-3.5 h-3.5 mt-[3px] shrink-0" style={{ color: TERRA }} />
+                  <div>
+                    <p className="text-[9px] font-semibold uppercase tracking-[0.14em] mb-0.5" style={{ color: `${MID}80` }}>Address</p>
+                    <p className="text-[12px] leading-snug font-medium" style={{ color: BROWN }}>
+                      {settings?.address ? settings.address : <>Rocnowasan Road, Meringrice</>}
+                    </p>
+                  </div>
+                </div>
+                <div className="flex items-start gap-2 px-6 border-r" style={{ borderColor: `${BROWN}22` }}>
+                  <Clock className="w-3.5 h-3.5 mt-[3px] shrink-0" style={{ color: TERRA }} />
+                  <div>
+                    <p className="text-[9px] font-semibold uppercase tracking-[0.14em] mb-0.5" style={{ color: `${MID}80` }}>Hours</p>
+                    <p className="text-[12px] leading-snug font-medium" style={{ color: BROWN }}>
+                      {hasHours && openLabel ? openLabel : "Mon–Sun · 8:00 am – 6:00 pm"}
+                    </p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2 px-6 border-r" style={{ borderColor: `${BROWN}22` }}>
+                  <a href={settings?.facebook_url ?? "#"} target="_blank" rel="noopener noreferrer" aria-label="Facebook"
+                    className="flex items-center justify-center w-7 h-7 rounded-full border transition-all hover:bg-white/40"
+                    style={{ borderColor: `${BROWN}35`, color: MID }}>
+                    <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 24 24"><path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z" /></svg>
+                  </a>
+                  <a href={settings?.instagram_url ?? "#"} target="_blank" rel="noopener noreferrer" aria-label="Instagram"
+                    className="flex items-center justify-center w-7 h-7 rounded-full border transition-all hover:bg-white/40"
+                    style={{ borderColor: `${BROWN}35`, color: MID }}>
+                    <Instagram className="w-3 h-3" />
+                  </a>
+                  <a href="#" aria-label="YouTube"
+                    className="flex items-center justify-center w-7 h-7 rounded-full border transition-all hover:bg-white/40"
+                    style={{ borderColor: `${BROWN}35`, color: MID }}>
+                    <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 24 24"><path d="M22.54 6.42a2.78 2.78 0 0 0-1.95-1.97C18.88 4 12 4 12 4s-6.88 0-8.59.45A2.78 2.78 0 0 0 1.46 6.42 29 29 0 0 0 1 12a29 29 0 0 0 .46 5.58 2.78 2.78 0 0 0 1.95 1.97C5.12 20 12 20 12 20s6.88 0 8.59-.45a2.78 2.78 0 0 0 1.95-1.97A29 29 0 0 0 23 12a29 29 0 0 0-.46-5.58zM9.75 15.02V8.98L15.5 12l-5.75 3.02z" /></svg>
+                  </a>
+                </div>
+                <div className="ml-auto pl-6 flex items-center">
+                  <BookingCTAButton
+                    className="inline-flex items-center gap-1.5 px-5 py-2 rounded-lg text-[11px] font-semibold text-white transition-all hover:opacity-90 active:scale-95 shrink-0 tracking-wide uppercase"
+                    style={{ background: TERRA, letterSpacing: "0.08em" }}
+                  >
+                    Reservations
+                  </BookingCTAButton>
                 </div>
               </div>
-              {/* Hours */}
-              <div className="flex items-start gap-2 px-6 border-r" style={{ borderColor: `${BROWN}22` }}>
-                <Clock className="w-3.5 h-3.5 mt-[3px] shrink-0" style={{ color: TERRA }} />
-                <div>
-                  <p className="text-[9px] font-semibold uppercase tracking-[0.14em] mb-0.5" style={{ color: `${MID}80` }}>Hours</p>
-                  <p className="text-[12px] leading-snug font-medium" style={{ color: BROWN }}>
-                    {hasHours && openLabel ? openLabel : "Mon–Sun · 8:00 am – 6:00 pm"}
-                  </p>
+
+              {/* ── Mobile (< sm): 2-row compact grid, same glass card ── */}
+              <div className="sm:hidden flex flex-col gap-2.5">
+
+                {/* Row 1 — Address (left) | Hours (right) */}
+                <div className="grid grid-cols-2">
+                  <div className="flex items-start gap-2 pr-3 border-r" style={{ borderColor: `${BROWN}22` }}>
+                    <MapPin className="w-3 h-3 mt-[3px] shrink-0" style={{ color: TERRA }} />
+                    <div>
+                      <p className="text-[8px] font-semibold uppercase tracking-[0.14em] mb-0.5" style={{ color: `${MID}80` }}>Address</p>
+                      <p className="text-[11px] leading-snug font-medium" style={{ color: BROWN }}>
+                        {settings?.address ? settings.address : <>Rocnowasan Road, Meringrice</>}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex items-start gap-2 pl-3">
+                    <Clock className="w-3 h-3 mt-[3px] shrink-0" style={{ color: TERRA }} />
+                    <div>
+                      <p className="text-[8px] font-semibold uppercase tracking-[0.14em] mb-0.5" style={{ color: `${MID}80` }}>Hours</p>
+                      <p className="text-[11px] leading-snug font-medium" style={{ color: BROWN }}>
+                        {hasHours && openLabel ? openLabel : "Mon–Sun · 8 am – 6 pm"}
+                      </p>
+                    </div>
+                  </div>
                 </div>
-              </div>
-              {/* Social icons */}
-              <div className="flex items-center gap-2 px-6 border-r" style={{ borderColor: `${BROWN}22` }}>
-                <a href={settings?.facebook_url ?? "#"} target="_blank" rel="noopener noreferrer" aria-label="Facebook"
-                  className="flex items-center justify-center w-7 h-7 rounded-full border transition-all hover:bg-white/40"
-                  style={{ borderColor: `${BROWN}35`, color: MID }}>
-                  <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 24 24"><path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z" /></svg>
-                </a>
-                <a href={settings?.instagram_url ?? "#"} target="_blank" rel="noopener noreferrer" aria-label="Instagram"
-                  className="flex items-center justify-center w-7 h-7 rounded-full border transition-all hover:bg-white/40"
-                  style={{ borderColor: `${BROWN}35`, color: MID }}>
-                  <Instagram className="w-3 h-3" />
-                </a>
-                <a href="#" aria-label="YouTube"
-                  className="flex items-center justify-center w-7 h-7 rounded-full border transition-all hover:bg-white/40"
-                  style={{ borderColor: `${BROWN}35`, color: MID }}>
-                  <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 24 24"><path d="M22.54 6.42a2.78 2.78 0 0 0-1.95-1.97C18.88 4 12 4 12 4s-6.88 0-8.59.45A2.78 2.78 0 0 0 1.46 6.42 29 29 0 0 0 1 12a29 29 0 0 0 .46 5.58 2.78 2.78 0 0 0 1.95 1.97C5.12 20 12 20 12 20s6.88 0 8.59-.45a2.78 2.78 0 0 0 1.95-1.97A29 29 0 0 0 23 12a29 29 0 0 0-.46-5.58zM9.75 15.02V8.98L15.5 12l-5.75 3.02z" /></svg>
-                </a>
-              </div>
-              {/* Reserve CTA */}
-              <div className="ml-auto pl-6 flex items-center">
-                <BookingCTAButton
-                  className="inline-flex items-center gap-1.5 px-5 py-2 rounded-lg text-[11px] font-semibold text-white transition-all hover:opacity-90 active:scale-95 shrink-0 tracking-wide uppercase"
-                  style={{ background: TERRA, letterSpacing: "0.08em" }}
-                >
-                  Reservations
-                </BookingCTAButton>
+
+                {/* Thin divider */}
+                <div className="h-px" style={{ background: `${BROWN}18` }} />
+
+                {/* Row 2 — Socials (left) | Reserve button (right) */}
+                <div className="flex items-center justify-between gap-3">
+                  <div className="flex items-center gap-1.5">
+                    <a href={settings?.facebook_url ?? "#"} target="_blank" rel="noopener noreferrer" aria-label="Facebook"
+                      className="flex items-center justify-center w-7 h-7 rounded-full border transition-all hover:bg-white/40 active:scale-95"
+                      style={{ borderColor: `${BROWN}35`, color: MID }}>
+                      <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 24 24"><path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z" /></svg>
+                    </a>
+                    <a href={settings?.instagram_url ?? "#"} target="_blank" rel="noopener noreferrer" aria-label="Instagram"
+                      className="flex items-center justify-center w-7 h-7 rounded-full border transition-all hover:bg-white/40 active:scale-95"
+                      style={{ borderColor: `${BROWN}35`, color: MID }}>
+                      <Instagram className="w-3 h-3" />
+                    </a>
+                    <a href="#" aria-label="YouTube"
+                      className="flex items-center justify-center w-7 h-7 rounded-full border transition-all hover:bg-white/40 active:scale-95"
+                      style={{ borderColor: `${BROWN}35`, color: MID }}>
+                      <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 24 24"><path d="M22.54 6.42a2.78 2.78 0 0 0-1.95-1.97C18.88 4 12 4 12 4s-6.88 0-8.59.45A2.78 2.78 0 0 0 1.46 6.42 29 29 0 0 0 1 12a29 29 0 0 0 .46 5.58 2.78 2.78 0 0 0 1.95 1.97C5.12 20 12 20 12 20s6.88 0 8.59-.45a2.78 2.78 0 0 0 1.95-1.97A29 29 0 0 0 23 12a29 29 0 0 0-.46-5.58zM9.75 15.02V8.98L15.5 12l-5.75 3.02z" /></svg>
+                    </a>
+                  </div>
+                  <BookingCTAButton
+                    className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg text-[10px] font-semibold text-white transition-all hover:opacity-90 active:scale-95 tracking-wide uppercase"
+                    style={{ background: TERRA, letterSpacing: "0.08em" }}
+                  >
+                    Reservations
+                  </BookingCTAButton>
+                </div>
+
               </div>
             </div>
           </motion.div>
         </div>
-
-        {/* ── MOBILE glass card (< sm) — flows below the image ──────── */}
-        <motion.div
-          className="sm:hidden mx-auto -mt-5 relative z-10 pb-5"
-          style={{ width: "92%" }}
-          initial={{ opacity: 0, y: 12 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
-          transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
-        >
-          <div
-            className="rounded-2xl px-5 py-5 flex flex-col gap-4"
-            style={{
-              background: "rgba(242,232,213,0.92)",
-              backdropFilter: "blur(18px)",
-              WebkitBackdropFilter: "blur(18px)",
-              border: "1px solid rgba(242,232,213,0.7)",
-              boxShadow: "0 6px 28px rgba(30,14,5,0.16), inset 0 1px 0 rgba(255,255,255,0.45)",
-            }}
-          >
-            {/* Address */}
-            <div className="flex items-start gap-3">
-              <MapPin className="w-4 h-4 mt-[2px] shrink-0" style={{ color: TERRA }} />
-              <div>
-                <p className="text-[9px] font-semibold uppercase tracking-[0.14em] mb-0.5" style={{ color: `${MID}80` }}>Address</p>
-                <p className="text-[13px] leading-snug font-medium" style={{ color: BROWN }}>
-                  {settings?.address ? settings.address : <>Rocnowasan Road, Meringrice</>}
-                </p>
-              </div>
-            </div>
-
-            {/* Divider */}
-            <div className="h-px w-full" style={{ background: `${BROWN}18` }} />
-
-            {/* Hours */}
-            <div className="flex items-start gap-3">
-              <Clock className="w-4 h-4 mt-[2px] shrink-0" style={{ color: TERRA }} />
-              <div>
-                <p className="text-[9px] font-semibold uppercase tracking-[0.14em] mb-0.5" style={{ color: `${MID}80` }}>Opening Hours</p>
-                <p className="text-[13px] leading-snug font-medium" style={{ color: BROWN }}>
-                  {hasHours && openLabel ? openLabel : "Mon–Sun · 8:00 am – 6:00 pm"}
-                </p>
-              </div>
-            </div>
-
-            {/* Divider */}
-            <div className="h-px w-full" style={{ background: `${BROWN}18` }} />
-
-            {/* Social icons — centered */}
-            <div className="flex items-center justify-center gap-3">
-              <a href={settings?.facebook_url ?? "#"} target="_blank" rel="noopener noreferrer" aria-label="Facebook"
-                className="flex items-center justify-center w-9 h-9 rounded-full border transition-all hover:bg-white/50 active:scale-95"
-                style={{ borderColor: `${BROWN}30`, color: MID }}>
-                <svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 24 24"><path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z" /></svg>
-              </a>
-              <a href={settings?.instagram_url ?? "#"} target="_blank" rel="noopener noreferrer" aria-label="Instagram"
-                className="flex items-center justify-center w-9 h-9 rounded-full border transition-all hover:bg-white/50 active:scale-95"
-                style={{ borderColor: `${BROWN}30`, color: MID }}>
-                <Instagram className="w-3.5 h-3.5" />
-              </a>
-              <a href="#" aria-label="YouTube"
-                className="flex items-center justify-center w-9 h-9 rounded-full border transition-all hover:bg-white/50 active:scale-95"
-                style={{ borderColor: `${BROWN}30`, color: MID }}>
-                <svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 24 24"><path d="M22.54 6.42a2.78 2.78 0 0 0-1.95-1.97C18.88 4 12 4 12 4s-6.88 0-8.59.45A2.78 2.78 0 0 0 1.46 6.42 29 29 0 0 0 1 12a29 29 0 0 0 .46 5.58 2.78 2.78 0 0 0 1.95 1.97C5.12 20 12 20 12 20s6.88 0 8.59-.45a2.78 2.78 0 0 0 1.95-1.97A29 29 0 0 0 23 12a29 29 0 0 0-.46-5.58zM9.75 15.02V8.98L15.5 12l-5.75 3.02z" /></svg>
-              </a>
-            </div>
-
-            {/* Reserve button — full width */}
-            <BookingCTAButton
-              className="w-full flex items-center justify-center gap-2 py-3 rounded-xl text-[12px] font-semibold text-white transition-all hover:opacity-90 active:scale-[0.98] tracking-wider uppercase"
-              style={{ background: TERRA, letterSpacing: "0.10em" }}
-            >
-              Make a Reservation
-            </BookingCTAButton>
-          </div>
-        </motion.div>
 
       </section>
 
