@@ -1,4 +1,5 @@
 import { Link } from "wouter";
+import curatedCornersImg from "@assets/ChatGPT_Image_Jul_22,_2026,_06_10_09_PM_1784724040000.png";
 import { ArrowRight, MapPin, Clock, Instagram, Coffee } from "lucide-react";
 import { motion } from "framer-motion";
 import { CafeLayout } from "@/components/layout/CafeLayout";
@@ -17,7 +18,7 @@ const MID   = "#6B3A2A";
 const PHOTOS = {
   hero:      "/admin/cafe-hero.png",
   coffee:    "/admin/cafe-crafted.png",
-  artwall:   "/admin/cafe-artwall.png",
+  artwall:   curatedCornersImg,
   pendant:   "/admin/cafe-pendant.png",
   ringlight: "/admin/cafe-ringlight.png",
   dining:    "/admin/cafe-contact.png",
