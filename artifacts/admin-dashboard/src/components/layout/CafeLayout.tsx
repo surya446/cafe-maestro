@@ -274,7 +274,8 @@ function CafeLayoutInner({
           style={{ background: `${BROWN}f8`, color: "#fff", borderTop: `1px solid rgba(255,255,255,0.07)` }}
           aria-label="Site footer"
         >
-          <div className="max-w-7xl mx-auto px-6 sm:px-10 h-[58px] flex items-center justify-between gap-4">
+          {/* ── Desktop / tablet (sm+) — single horizontal bar ── */}
+          <div className="hidden sm:flex max-w-7xl mx-auto px-10 h-[58px] items-center justify-between gap-4">
 
             {/* Left — copyright */}
             <p className="text-[11px] text-white/30 shrink-0">
@@ -289,7 +290,7 @@ function CafeLayoutInner({
                   <span className="truncate">{settings.phone}</span>
                 </a>
               )}
-              <div className="hidden sm:flex items-center gap-1 text-[11px] text-white/30">
+              <div className="flex items-center gap-1 text-[11px] text-white/30">
                 <Globe className="w-3 h-3 shrink-0" />
                 <span>www.cupandcozy.com</span>
               </div>
@@ -297,6 +298,56 @@ function CafeLayoutInner({
 
             {/* Right — social icons */}
             <div className="flex items-center gap-2 shrink-0">
+              {settings?.facebook_url ? (
+                <a href={settings.facebook_url} target="_blank" rel="noopener noreferrer"
+                  className="flex items-center justify-center w-7 h-7 rounded-full border border-white/15 text-white/40 hover:text-white/80 hover:border-white/35 transition-colors"
+                  aria-label="Facebook">
+                  <Facebook className="w-3 h-3" />
+                </a>
+              ) : (
+                <span className="flex items-center justify-center w-7 h-7 rounded-full border border-white/10 text-white/20">
+                  <Facebook className="w-3 h-3" />
+                </span>
+              )}
+              {settings?.instagram_url ? (
+                <a href={settings.instagram_url} target="_blank" rel="noopener noreferrer"
+                  className="flex items-center justify-center w-7 h-7 rounded-full border border-white/15 text-white/40 hover:text-white/80 hover:border-white/35 transition-colors"
+                  aria-label="Instagram">
+                  <Instagram className="w-3 h-3" />
+                </a>
+              ) : (
+                <span className="flex items-center justify-center w-7 h-7 rounded-full border border-white/10 text-white/20">
+                  <Instagram className="w-3 h-3" />
+                </span>
+              )}
+            </div>
+
+          </div>
+
+          {/* ── Mobile (< sm) — vertical centered stack ── */}
+          <div className="sm:hidden flex flex-col items-center gap-3 py-5 px-6">
+
+            {/* Copyright */}
+            <p className="text-[11px] text-white/30">
+              © {new Date().getFullYear()} {displayName}
+            </p>
+
+            {/* Phone + website */}
+            <div className="flex items-center gap-4">
+              {settings?.phone && (
+                <a href={`tel:${settings.phone}`} className="flex items-center gap-1.5 text-[11px] text-white/40 hover:text-white/70 transition-colors">
+                  <Phone className="w-3 h-3 shrink-0" />
+                  <span>{settings.phone}</span>
+                </a>
+              )}
+              <div className="flex items-center gap-1.5 text-[11px] text-white/30">
+                <Globe className="w-3 h-3 shrink-0" />
+                <span>www.cupandcozy.com</span>
+              </div>
+            </div>
+
+            {/* Social icons */}
+            <div className="flex items-center gap-2">
               {settings?.facebook_url ? (
                 <a href={settings.facebook_url} target="_blank" rel="noopener noreferrer"
                   className="flex items-center justify-center w-7 h-7 rounded-full border border-white/15 text-white/40 hover:text-white/80 hover:border-white/35 transition-colors"
