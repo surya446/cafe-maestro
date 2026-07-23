@@ -955,12 +955,17 @@ export function MenuPage() {
                             // Guard: if any item (active OR archived) in this category has
                             // order history, the DB will block the CASCADE delete via
                             // order_items FK RESTRICT. Show a friendly error instead of crashing.
-                            const catItems = [
-                              ...items.filter((i) => i.category_id === cat.id),
-                              ...archivedItems.filter((i) => i.category_id === cat.id),
-                            ];
-                            const blockedItem = catItems.find((i) => orderHistory.has(i.id));
-                            if (blockedItem) {
+                            // Pre-flight: only check ACTIVE items. Archived items are
+                            // intentionally excluded — a category showing "0 items" must
+                            // always open the confirm dialog. If archived items cause a
+                            // DB-level 23503, the onConfirm try/catch handles it cleanly.
+                            const activeItemsInCat = items.filter(
+                              (i) => i.category_id === cat.id
+                            );
+                            const hasOrderHistory =
+                              activeItemsInCat.length > 0 &&
+                              activeItemsInCat.some((i) => orderHistory.has(i.id));
+                            if (hasOrderHistory) {
                               toast({
                                 title: "Cannot delete category",
                                 description:
