@@ -951,7 +951,24 @@ export function MenuPage() {
                           <Pencil className="w-3.5 h-3.5" />
                         </button>
                         <button
-                          onClick={() => setDeleteCatId(cat.id)}
+                          onClick={() => {
+                            // Guard: if any item in this category has order history,
+                            // the DB will block the CASCADE delete (order_items FK RESTRICT).
+                            // Show a friendly error instead of crashing.
+                            const catItems = items.filter((i) => i.category_id === cat.id);
+                            const blockedItem = catItems.find((i) => orderHistory.has(i.id));
+                            if (blockedItem) {
+                              toast({
+                                title: "Cannot delete category",
+                                description:
+                                  `"${cat.name}" contains items with order history. ` +
+                                  "Archive those items first, then delete the category.",
+                                variant: "destructive",
+                              });
+                              return;
+                            }
+                            setDeleteCatId(cat.id);
+                          }}
                           className="p-1.5 rounded-lg text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors"
                         >
                           <Trash2 className="w-3.5 h-3.5" />
