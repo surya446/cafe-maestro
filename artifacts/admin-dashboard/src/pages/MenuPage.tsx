@@ -952,10 +952,13 @@ export function MenuPage() {
                         </button>
                         <button
                           onClick={() => {
-                            // Guard: if any item in this category has order history,
-                            // the DB will block the CASCADE delete (order_items FK RESTRICT).
-                            // Show a friendly error instead of crashing.
-                            const catItems = items.filter((i) => i.category_id === cat.id);
+                            // Guard: if any item (active OR archived) in this category has
+                            // order history, the DB will block the CASCADE delete via
+                            // order_items FK RESTRICT. Show a friendly error instead of crashing.
+                            const catItems = [
+                              ...items.filter((i) => i.category_id === cat.id),
+                              ...archivedItems.filter((i) => i.category_id === cat.id),
+                            ];
                             const blockedItem = catItems.find((i) => orderHistory.has(i.id));
                             if (blockedItem) {
                               toast({
@@ -1143,9 +1146,23 @@ export function MenuPage() {
           confirmLabel="Delete"
           loading={deleteCat.isPending}
           onConfirm={async () => {
-            if (deleteCatId) {
+            if (!deleteCatId) return;
+            try {
               await deleteCat.mutateAsync(deleteCatId);
+              // Clear stale filter so the items tab never references a deleted category
+              if (filterCat === deleteCatId) setFilterCat("all");
               setDeleteCatId(null);
+            } catch (err) {
+              setDeleteCatId(null);
+              const raw = (err as { message?: string; code?: string }) ?? {};
+              const isLinkedToOrders =
+                raw.code === "23503" ||
+                (typeof raw.message === "string" &&
+                  raw.message.toLowerCase().includes("order_items"));
+              const description = isLinkedToOrders
+                ? "This category contains items with order history. Archive those items first, then delete the category."
+                : (raw.message ?? "Failed to delete category.");
+              toast({ title: "Cannot delete category", description, variant: "destructive" });
             }
           }}
         />
