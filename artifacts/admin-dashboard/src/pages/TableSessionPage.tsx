@@ -386,7 +386,6 @@ function QRMenuItemCard({
 
   return (
     <motion.div
-      layout
       className="rounded-2xl overflow-hidden group cursor-pointer"
       animate={justAdded ? { scale: [1, 1.02, 1] } : { scale: 1 }}
       transition={{ duration: 0.28, ease: "easeOut" }}
@@ -404,7 +403,7 @@ function QRMenuItemCard({
       {item.image_url ? (
         <div className="relative overflow-hidden aspect-[4/3] sm:aspect-square lg:aspect-[4/3]">
           <img
-            src={item.image_url} alt={item.name} loading="eager"
+            src={item.image_url} alt={item.name} loading="eager" decoding="sync"
             className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-[1.04]"
           />
           <div className="absolute inset-0" style={{ background: "linear-gradient(to top, rgba(12,10,9,0.65) 0%, transparent 55%)" }} />
@@ -615,7 +614,7 @@ function QRFoodDetailModal({
           {item.image_url ? (
             <div className="relative w-full h-[190px] sm:h-auto sm:aspect-[4/3]">
               <img
-                src={item.image_url} alt={item.name}
+                src={item.image_url} alt={item.name} loading="eager" decoding="sync"
                 className="w-full h-full object-cover"
               />
               <div
@@ -896,14 +895,16 @@ function ActiveSession({
   sessionInfo, orders, billRequested,
   placeOrder, requestBill,
   isPlacingOrder, isRequestingBill, placeOrderError, requestBillError,
+  categories, menuItems,
 }: {
   sessionInfo: SessionInfo; orders: GuestOrder[]; billRequested: boolean;
   placeOrder: (items: CartItem[]) => Promise<string>;
   requestBill: () => Promise<void>;
   isPlacingOrder: boolean; isRequestingBill: boolean;
   placeOrderError: string | null; requestBillError: string | null;
+  categories: MenuCategory[]; menuItems: MenuItem[];
 }) {
-  const { cafeId, cafeName, tableNumber, tableName, expiresAt, sessionId, customerName } = sessionInfo;
+  const { cafeName, tableNumber, tableName, expiresAt, sessionId, customerName } = sessionInfo;
 
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [selectedItem, setSelectedItem] = useState<MenuItem | null>(null);
@@ -922,55 +923,9 @@ function ActiveSession({
     return () => clearInterval(id);
   }, [expiresAt]);
 
-  // ── Menu queries ───────────────────────────────────────────
-  const { data: categories = [], isLoading: catsLoading } = useQuery<MenuCategory[]>({
-    queryKey: ["menu_categories", cafeId],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("menu_categories").select("id, name, description, position")
-        .eq("cafe_id", cafeId).eq("is_visible", true).order("position");
-      if (error) throw error;
-      return (data ?? []) as MenuCategory[];
-    },
-    staleTime: 60_000,
-  });
-
-  const { data: menuItems = [], isLoading: itemsLoading } = useQuery<MenuItem[]>({
-    queryKey: ["menu_items", cafeId],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("menu_items")
-        .select("id, category_id, name, description, price, image_url, tags, prep_time_min, allergens, ingredients, is_available, is_archived")
-        .eq("cafe_id", cafeId).eq("is_archived", false).order("position");
-      if (error) throw error;
-      return (data ?? []) as MenuItem[];
-    },
-    staleTime: Infinity,
-  });
-
-  // Realtime menu updates
-  const qc = useQueryClient();
-  useEffect(() => {
-    if (!cafeId) return;
-    const ch = supabase.channel(`menu_items:${cafeId}`)
-      .on("postgres_changes", { event: "*", schema: "public", table: "menu_items", filter: `cafe_id=eq.${cafeId}` }, (payload) => {
-        const KEY = ["menu_items", cafeId];
-        const nr = payload.new as unknown as MenuItem & { is_archived?: boolean };
-        if (payload.eventType === "DELETE") {
-          const id = (payload.old as { id: string }).id;
-          qc.setQueryData<MenuItem[]>(KEY, (old) => old?.filter((i) => i.id !== id) ?? old);
-        } else if (payload.eventType === "INSERT") {
-          if (!nr.is_archived) qc.setQueryData<MenuItem[]>(KEY, (old) => old ? [...old, nr] : old);
-        } else if (payload.eventType === "UPDATE") {
-          if (nr.is_archived) qc.setQueryData<MenuItem[]>(KEY, (old) => old?.filter((i) => i.id !== nr.id) ?? old);
-          else qc.setQueryData<MenuItem[]>(KEY, (old) => {
-            if (!old) return old;
-            return old.some((i) => i.id === nr.id) ? old.map((i) => i.id === nr.id ? { ...i, ...nr } : i) : [...old, nr];
-          });
-        }
-      }).subscribe();
-    return () => { supabase.removeChannel(ch); };
-  }, [cafeId, qc]);
+  // ── Menu queries and realtime are now hoisted to TableSessionPage ──
+  // categories and menuItems arrive as props, already loaded before loader hid.
+  const isMenuLoading = false; // always false here — loader waited for this data
 
   // "__all__" is the sentinel for the "All" tab; defaults on first render (selectedCategory is null)
   const activeCategoryId = selectedCategory ?? "__all__";
@@ -1061,7 +1016,6 @@ function ActiveSession({
   const hasBillableOrder = orders.some((o) => o.status === "served" || o.status === "ready");
   const pendingCount = orders.filter((o) => ["pending_approval", "approved", "in_kitchen", "ready"].includes(o.status)).length;
   const tableLabel = tableName ? `${tableName} · Table ${tableNumber}` : `Table ${tableNumber}`;
-  const isMenuLoading = catsLoading || itemsLoading;
 
   return (
     <div className="min-h-screen flex flex-col" style={{ background: C.bg }}>
@@ -1473,6 +1427,101 @@ export function TableSessionPage() {
   const cafeName = cafeNameQuery.data ?? null;
   const cafeNameLoading = cafeNameQuery.isLoading;
 
+  // ── Menu queries hoisted here so they fire WHILE the loader is still showing.
+  //    As soon as cafeId is known (session validated) these run in parallel,
+  //    so data is ready before the loader ever hides.
+  const cafeId = sessionInfo?.cafeId ?? null;
+
+  const { data: categories = [], isLoading: catsLoading } = useQuery<MenuCategory[]>({
+    queryKey: ["menu_categories", cafeId ?? ""],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("menu_categories").select("id, name, description, position")
+        .eq("cafe_id", cafeId!).eq("is_visible", true).order("position");
+      if (error) throw error;
+      return (data ?? []) as MenuCategory[];
+    },
+    enabled: !!cafeId,
+    staleTime: 60_000,
+  });
+
+  const { data: menuItems = [], isLoading: itemsLoading } = useQuery<MenuItem[]>({
+    queryKey: ["menu_items", cafeId ?? ""],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("menu_items")
+        .select("id, category_id, name, description, price, image_url, tags, prep_time_min, allergens, ingredients, is_available, is_archived")
+        .eq("cafe_id", cafeId!).eq("is_archived", false).order("position");
+      if (error) throw error;
+      return (data ?? []) as MenuItem[];
+    },
+    enabled: !!cafeId,
+    staleTime: Infinity,
+  });
+
+  // ── Realtime menu updates (hoisted with the queries) ──────────────────────
+  const qc = useQueryClient();
+  useEffect(() => {
+    if (!cafeId) return;
+    const ch = supabase.channel(`menu_items:${cafeId}`)
+      .on("postgres_changes", { event: "*", schema: "public", table: "menu_items", filter: `cafe_id=eq.${cafeId}` }, (payload) => {
+        const KEY = ["menu_items", cafeId];
+        const nr = payload.new as unknown as MenuItem & { is_archived?: boolean };
+        if (payload.eventType === "DELETE") {
+          const id = (payload.old as { id: string }).id;
+          qc.setQueryData<MenuItem[]>(KEY, (old) => old?.filter((i) => i.id !== id) ?? old);
+        } else if (payload.eventType === "INSERT") {
+          if (!nr.is_archived) qc.setQueryData<MenuItem[]>(KEY, (old) => old ? [...old, nr] : old);
+        } else if (payload.eventType === "UPDATE") {
+          if (nr.is_archived) qc.setQueryData<MenuItem[]>(KEY, (old) => old?.filter((i) => i.id !== nr.id) ?? old);
+          else qc.setQueryData<MenuItem[]>(KEY, (old) => {
+            if (!old) return old;
+            return old.some((i) => i.id === nr.id) ? old.map((i) => i.id === nr.id ? { ...i, ...nr } : i) : [...old, nr];
+          });
+        }
+      }).subscribe();
+    return () => { supabase.removeChannel(ch); };
+  }, [cafeId, qc]);
+
+  // ── Image preload gate ────────────────────────────────────────────────────
+  // After menu items load, preload every image into the browser cache before
+  // the loader hides. This ensures scrolling never triggers a network request.
+  // A 5-second safety timeout prevents hanging on slow connections.
+  const [imagesPreloaded, setImagesPreloaded] = useState(false);
+  useEffect(() => {
+    // Only run once items have loaded and there's a cafe to load for
+    if (itemsLoading || !cafeId) return;
+
+    const urls = menuItems
+      .map((i) => i.image_url)
+      .filter((u): u is string => Boolean(u));
+
+    if (urls.length === 0) {
+      setImagesPreloaded(true);
+      return;
+    }
+
+    let settled = false;
+    const timer = setTimeout(() => {
+      if (!settled) { settled = true; setImagesPreloaded(true); }
+    }, 5000);
+
+    Promise.all(
+      urls.map((src) =>
+        new Promise<void>((resolve) => {
+          const img = new Image();
+          img.onload = () => resolve();
+          img.onerror = () => resolve(); // never block on a failed image
+          img.src = src;
+        })
+      )
+    ).then(() => {
+      if (!settled) { settled = true; clearTimeout(timer); setImagesPreloaded(true); }
+    });
+
+    return () => { settled = true; clearTimeout(timer); };
+  }, [menuItems, itemsLoading, cafeId]);
+
   const handleScanNavigate = (path: string) => {
     resetToNameEntry();
     navigate(path);
@@ -1486,7 +1535,13 @@ export function TableSessionPage() {
     return () => clearTimeout(id);
   }, []);
 
-  const showLoader = !minLoadDone || sessionState === "loading";
+  // Loader hides only when:
+  //   1. The minimum branded time has elapsed (MIN_MS)
+  //   2. The session has resolved (not "loading")
+  //   3. If the session is active: menu data has arrived AND all images are preloaded
+  const menuPreloadDone =
+    sessionState !== "active" || (!catsLoading && !itemsLoading && imagesPreloaded);
+  const showLoader = !minLoadDone || sessionState === "loading" || !menuPreloadDone;
 
   if (showLoader) {
     return (
@@ -1576,6 +1631,7 @@ export function TableSessionPage() {
         placeOrder={placeOrder} requestBill={requestBill}
         isPlacingOrder={isPlacingOrder} isRequestingBill={isRequestingBill}
         placeOrderError={placeOrderError} requestBillError={requestBillError}
+        categories={categories} menuItems={menuItems}
       />
     </motion.div>
   );
