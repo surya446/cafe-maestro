@@ -53,6 +53,7 @@ export interface MenuCategory {
   image_url: string | null;
   position: number;
   is_visible: boolean;
+  is_system: boolean;
   created_at: string;
   updated_at: string;
 }

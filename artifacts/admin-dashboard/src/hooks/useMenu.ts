@@ -8,6 +8,44 @@ const ITEMS_KEY = (cafeId: string) => ["menu-items", cafeId];
 const ARCHIVED_ITEMS_KEY = (cafeId: string) => ["menu-items-archived", cafeId];
 const ORDER_HISTORY_KEY = (cafeId: string) => ["menu-item-order-history", cafeId];
 
+// ─── Shared helper ────────────────────────────────────────────────────────────
+/**
+ * Returns the ID of the "Archived Items" system category for a given cafe.
+ * Creates the category if it is somehow missing (defensive; the migration
+ * should have created it for every existing cafe).
+ */
+export async function getArchivedCategoryId(cafeId: string): Promise<string> {
+  const { data } = await supabase
+    .from("menu_categories")
+    .select("id")
+    .eq("cafe_id", cafeId)
+    .eq("is_system", true)
+    .limit(1)
+    .maybeSingle();
+
+  if (data?.id) return data.id;
+
+  // Defensive fallback — create if missing
+  const { data: created, error } = await supabase
+    .from("menu_categories")
+    .insert({
+      cafe_id: cafeId,
+      name: "Archived Items",
+      description:
+        "System category. Holds archived menu items that have order history, " +
+        "preserving data integrity without blocking deletion of normal categories.",
+      position: 999999,
+      is_visible: false,
+      is_system: true,
+    })
+    .select("id")
+    .single();
+  if (error) throw error;
+  return created.id;
+}
+
+// ─── Queries ──────────────────────────────────────────────────────────────────
+
 export function useMenuCategories() {
   const { user } = useAuth();
 
@@ -79,7 +117,9 @@ export function useMenuItemOrderHistory() {
         .select("menu_item_id")
         .eq("cafe_id", user.cafeId);
       if (error) throw error;
-      const unique = Array.from(new Set((data ?? []).map((r: { menu_item_id: string }) => r.menu_item_id)));
+      const unique = Array.from(
+        new Set((data ?? []).map((r: { menu_item_id: string }) => r.menu_item_id))
+      );
       return unique;
     },
     enabled: !!user,
@@ -87,18 +127,20 @@ export function useMenuItemOrderHistory() {
   });
 }
 
+// ─── Category mutations ───────────────────────────────────────────────────────
+
 export function useCreateCategory() {
   const { user } = useAuth();
   const qc = useQueryClient();
 
   return useMutation({
     mutationFn: async (
-      input: Omit<MenuCategory, "id" | "cafe_id" | "created_at" | "updated_at">
+      input: Omit<MenuCategory, "id" | "cafe_id" | "is_system" | "created_at" | "updated_at">
     ) => {
       if (!user) throw new Error("Not authenticated");
       const { data, error } = await supabase
         .from("menu_categories")
-        .insert({ ...input, cafe_id: user.cafeId })
+        .insert({ ...input, cafe_id: user.cafeId, is_system: false })
         .select()
         .single();
       if (error) throw error;
@@ -118,6 +160,20 @@ export function useUpdateCategory() {
       id,
       ...updates
     }: Partial<MenuCategory> & { id: string }) => {
+      // Guard: system categories cannot be modified
+      const { data: cat } = await supabase
+        .from("menu_categories")
+        .select("is_system")
+        .eq("id", id)
+        .maybeSingle();
+      if (cat?.is_system) {
+        const err = new Error("System categories cannot be modified.") as Error & {
+          code: string;
+        };
+        err.code = "SYSTEM_CATEGORY";
+        throw err;
+      }
+
       const { data, error } = await supabase
         .from("menu_categories")
         .update(updates)
@@ -138,42 +194,43 @@ export function useDeleteCategory() {
 
   return useMutation({
     mutationFn: async (id: string) => {
-      // Live DB check: fetch every menu_item that still belongs to this category
-      // (active and archived). The anon key cannot see order_items due to RLS, but
-      // this mutation runs under the authenticated staff JWT which can.
-      const { data: categoryItems, error: itemsError } = await supabase
-        .from("menu_items")
-        .select("id, name, is_archived")
-        .eq("category_id", id);
-      if (itemsError) throw itemsError;
-
-      if (categoryItems && categoryItems.length > 0) {
-        const itemIds = (categoryItems as { id: string }[]).map((i) => i.id);
-
-        // Check whether any of those items are referenced by order_items.
-        // A single match is enough to know the cascade will be RESTRICT-blocked.
-        const { data: blocked, error: orderError } = await supabase
-          .from("order_items")
-          .select("menu_item_id")
-          .in("menu_item_id", itemIds)
-          .limit(1);
-        if (orderError) throw orderError;
-
-        if (blocked && blocked.length > 0) {
-          // Some items have order history — build a clear, accurate message.
-          const hasArchivedOnly = (categoryItems as { is_archived: boolean }[]).every(
-            (i) => i.is_archived
-          );
-          const msg = hasArchivedOnly
-            ? "This category has archived items with order history. Reassign those archived items to another category before deleting."
-            : "This category has items with order history. Archive those items first, then delete the category.";
-          const err = new Error(msg) as Error & { code: string };
-          err.code = "CATEGORY_HAS_ORDER_HISTORY";
-          throw err;
-        }
+      // Guard: system categories cannot be deleted
+      const { data: cat } = await supabase
+        .from("menu_categories")
+        .select("is_system")
+        .eq("id", id)
+        .maybeSingle();
+      if (cat?.is_system) {
+        const err = new Error("System categories cannot be deleted.") as Error & {
+          code: string;
+        };
+        err.code = "SYSTEM_CATEGORY";
+        throw err;
       }
 
-      // No order history blocking the cascade — safe to delete.
+      // Guard: block if any active (non-archived) items still belong to this category.
+      // Archived items are automatically moved to "Archived Items" on archive, so any
+      // remaining items here are active and block deletion.
+      const { data: activeItems, error: itemsError } = await supabase
+        .from("menu_items")
+        .select("id")
+        .eq("category_id", id)
+        .eq("is_archived", false)
+        .limit(1);
+      if (itemsError) throw itemsError;
+
+      if (activeItems && activeItems.length > 0) {
+        const err = new Error(
+          "This category still contains active menu items."
+        ) as Error & { code: string };
+        err.code = "CATEGORY_HAS_ITEMS";
+        throw err;
+      }
+
+      // Safe to delete — no active items remain.
+      // (Any archived items should already be in "Archived Items"; if somehow any
+      // remain here and have order history, the DB will throw 23503 which the UI
+      // catches and surfaces.)
       const { error } = await supabase
         .from("menu_categories")
         .delete()
@@ -183,12 +240,12 @@ export function useDeleteCategory() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: CATEGORIES_KEY(user?.cafeId ?? "") });
       qc.invalidateQueries({ queryKey: ITEMS_KEY(user?.cafeId ?? "") });
-      // Archived items belonging to the deleted category are now gone — invalidate
-      // the archived cache so the UI doesn't show stale entries.
       qc.invalidateQueries({ queryKey: ARCHIVED_ITEMS_KEY(user?.cafeId ?? "") });
     },
   });
 }
+
+// ─── Item mutations ───────────────────────────────────────────────────────────
 
 export function useCreateMenuItem() {
   const { user } = useAuth();
@@ -196,7 +253,10 @@ export function useCreateMenuItem() {
 
   return useMutation({
     mutationFn: async (
-      input: Omit<MenuItem, "id" | "cafe_id" | "created_at" | "updated_at" | "is_archived" | "menu_categories">
+      input: Omit<
+        MenuItem,
+        "id" | "cafe_id" | "created_at" | "updated_at" | "is_archived" | "menu_categories"
+      >
     ) => {
       if (!user) throw new Error("Not authenticated");
       const { data, error } = await supabase
@@ -245,8 +305,10 @@ export function useDeleteMenuItem() {
       if (error) throw error;
     },
     onError: () => {},
-    onSuccess: () =>
-      qc.invalidateQueries({ queryKey: ITEMS_KEY(user?.cafeId ?? "") }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ITEMS_KEY(user?.cafeId ?? "") });
+      qc.invalidateQueries({ queryKey: ARCHIVED_ITEMS_KEY(user?.cafeId ?? "") });
+    },
   });
 }
 
@@ -256,9 +318,18 @@ export function useArchiveMenuItem() {
 
   return useMutation({
     mutationFn: async (id: string) => {
+      if (!user) throw new Error("Not authenticated");
+      // Move the item into the "Archived Items" system category so that its
+      // original category can be deleted without hitting the FK RESTRICT on
+      // order_items.menu_item_id.
+      const archivedCategoryId = await getArchivedCategoryId(user.cafeId);
       const { error } = await supabase
         .from("menu_items")
-        .update({ is_archived: true, is_available: false })
+        .update({
+          is_archived: true,
+          is_available: false,
+          category_id: archivedCategoryId,
+        })
         .eq("id", id);
       if (error) throw error;
     },
@@ -266,6 +337,8 @@ export function useArchiveMenuItem() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ITEMS_KEY(user?.cafeId ?? "") });
       qc.invalidateQueries({ queryKey: ARCHIVED_ITEMS_KEY(user?.cafeId ?? "") });
+      // Category item counts change when an item moves to Archived Items
+      qc.invalidateQueries({ queryKey: CATEGORIES_KEY(user?.cafeId ?? "") });
     },
   });
 }
@@ -275,10 +348,21 @@ export function useRestoreMenuItem() {
   const qc = useQueryClient();
 
   return useMutation({
-    mutationFn: async (id: string) => {
+    /**
+     * Restores an archived item into the specified destination category.
+     * The admin must explicitly choose a valid active category — items are
+     * never automatically restored back into "Archived Items".
+     */
+    mutationFn: async ({
+      id,
+      category_id,
+    }: {
+      id: string;
+      category_id: string;
+    }) => {
       const { error } = await supabase
         .from("menu_items")
-        .update({ is_archived: false })
+        .update({ is_archived: false, category_id })
         .eq("id", id);
       if (error) throw error;
     },
@@ -286,6 +370,7 @@ export function useRestoreMenuItem() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ITEMS_KEY(user?.cafeId ?? "") });
       qc.invalidateQueries({ queryKey: ARCHIVED_ITEMS_KEY(user?.cafeId ?? "") });
+      qc.invalidateQueries({ queryKey: CATEGORIES_KEY(user?.cafeId ?? "") });
     },
   });
 }
