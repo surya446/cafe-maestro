@@ -404,7 +404,7 @@ function QRMenuItemCard({
       {item.image_url ? (
         <div className="relative overflow-hidden aspect-[4/3] sm:aspect-square lg:aspect-[4/3]">
           <img
-            src={item.image_url} alt={item.name} loading="lazy"
+            src={item.image_url} alt={item.name} loading="eager"
             className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-[1.04]"
           />
           <div className="absolute inset-0" style={{ background: "linear-gradient(to top, rgba(12,10,9,0.65) 0%, transparent 55%)" }} />
