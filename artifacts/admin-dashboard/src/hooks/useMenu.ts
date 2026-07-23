@@ -138,6 +138,42 @@ export function useDeleteCategory() {
 
   return useMutation({
     mutationFn: async (id: string) => {
+      // Live DB check: fetch every menu_item that still belongs to this category
+      // (active and archived). The anon key cannot see order_items due to RLS, but
+      // this mutation runs under the authenticated staff JWT which can.
+      const { data: categoryItems, error: itemsError } = await supabase
+        .from("menu_items")
+        .select("id, name, is_archived")
+        .eq("category_id", id);
+      if (itemsError) throw itemsError;
+
+      if (categoryItems && categoryItems.length > 0) {
+        const itemIds = (categoryItems as { id: string }[]).map((i) => i.id);
+
+        // Check whether any of those items are referenced by order_items.
+        // A single match is enough to know the cascade will be RESTRICT-blocked.
+        const { data: blocked, error: orderError } = await supabase
+          .from("order_items")
+          .select("menu_item_id")
+          .in("menu_item_id", itemIds)
+          .limit(1);
+        if (orderError) throw orderError;
+
+        if (blocked && blocked.length > 0) {
+          // Some items have order history — build a clear, accurate message.
+          const hasArchivedOnly = (categoryItems as { is_archived: boolean }[]).every(
+            (i) => i.is_archived
+          );
+          const msg = hasArchivedOnly
+            ? "This category has archived items with order history. Reassign those archived items to another category before deleting."
+            : "This category has items with order history. Archive those items first, then delete the category.";
+          const err = new Error(msg) as Error & { code: string };
+          err.code = "CATEGORY_HAS_ORDER_HISTORY";
+          throw err;
+        }
+      }
+
+      // No order history blocking the cascade — safe to delete.
       const { error } = await supabase
         .from("menu_categories")
         .delete()
@@ -147,6 +183,9 @@ export function useDeleteCategory() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: CATEGORIES_KEY(user?.cafeId ?? "") });
       qc.invalidateQueries({ queryKey: ITEMS_KEY(user?.cafeId ?? "") });
+      // Archived items belonging to the deleted category are now gone — invalidate
+      // the archived cache so the UI doesn't show stale entries.
+      qc.invalidateQueries({ queryKey: ARCHIVED_ITEMS_KEY(user?.cafeId ?? "") });
     },
   });
 }
