@@ -61,14 +61,21 @@ export function CafeMenuPage() {
     }, 5_000);
 
     Promise.all(
-      urls.map((src) =>
-        new Promise<void>((resolve) => {
-          const img = new Image();
-          img.onload = () => resolve();
-          img.onerror = () => resolve(); // never block on a failed image
-          img.src = src;
-        })
-      )
+      urls.map((src) => {
+        const img = new Image();
+        img.src = src;
+        // decode() waits for download AND full pixel-buffer decode in one step.
+        // After it resolves the browser holds the decompressed bitmap; painting
+        // the <img> element requires only a GPU upload — zero main-thread work.
+        // This eliminates blank sections and images appearing while scrolling.
+        // onload (the previous approach) only waited for the HTTP download;
+        // the browser still decoded lazily on scroll, blocking the compositor.
+        return img.decode().catch(() => {
+          // decode() rejects for SVGs, broken URLs, or images with no intrinsic
+          // size — none of which need decoding anyway. The HTTP fetch is still in
+          // the browser cache so at minimum the download cost is paid upfront.
+        });
+      })
     ).then(() => {
       if (!settled) { settled = true; clearTimeout(timer); setImagesReady(true); }
     });
@@ -123,7 +130,7 @@ export function CafeMenuPage() {
       {/* ── Sticky category nav ─────────────────────────────── */}
       {menu && menu.length > 0 && (
         <div className="sticky top-[72px] z-30 border-b"
-          style={{ background: `rgba(248,243,234,0.96)`, backdropFilter: "blur(20px)", borderColor: BORDER }}>
+          style={{ background: BG1, borderColor: BORDER }}>
           <div className="max-w-5xl mx-auto px-4 sm:px-6 flex gap-1.5 sm:gap-2 overflow-x-auto py-2.5 sm:py-3">
             {menu.map((cat) => (
               <button key={cat.id} onClick={() => scrollTo(cat.id)}

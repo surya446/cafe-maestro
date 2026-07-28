@@ -1538,14 +1538,20 @@ export function TableSessionPage() {
     }, 5000);
 
     Promise.all(
-      urls.map((src) =>
-        new Promise<void>((resolve) => {
-          const img = new Image();
-          img.onload = () => resolve();
-          img.onerror = () => resolve(); // never block on a failed image
-          img.src = src;
-        })
-      )
+      urls.map((src) => {
+        const img = new Image();
+        img.src = src;
+        // decode() waits for download AND full pixel-buffer decode in one step.
+        // After it resolves the browser holds the decompressed bitmap; painting
+        // the <img> element requires only a GPU upload — zero main-thread work.
+        // This eliminates blank sections and images appearing while scrolling.
+        // onload (the previous approach) only waited for the HTTP download;
+        // the browser still decoded lazily on scroll, blocking the compositor.
+        return img.decode().catch(() => {
+          // decode() rejects for SVGs, broken URLs, or images with no intrinsic
+          // size — none of which need decoding anyway.
+        });
+      })
     ).then(() => {
       if (!settled) { settled = true; clearTimeout(timer); setImagesPreloaded(true); }
     });
