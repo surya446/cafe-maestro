@@ -867,7 +867,7 @@ export function MenuPage() {
                       : "bg-muted text-muted-foreground hover:text-foreground"
                   )}
                 >
-                  All
+                  All ({items.length})
                 </button>
                 {userCategories.map((c) => (
                   <button
@@ -880,7 +880,7 @@ export function MenuPage() {
                         : "bg-muted text-muted-foreground hover:text-foreground"
                     )}
                   >
-                    {c.name}
+                    {c.name} ({items.filter((i) => i.category_id === c.id).length})
                   </button>
                 ))}
               </div>
