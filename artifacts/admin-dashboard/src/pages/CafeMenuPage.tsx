@@ -107,11 +107,19 @@ function PriceBadge({ price }: { price: number }) {
   );
 }
 
+/* ── Layout constants ────────────────────────────────────────────────────── */
+// Must stay in sync with CafeLayout header (h-[68px]) and the sticky category
+// bar below. Used for both the IntersectionObserver rootMargin and scroll offset.
+const MAIN_NAV_H = 68;  // CafeLayout header height in px
+const CAT_NAV_H  = 48;  // Approximate sticky category bar height in px
+const SCROLL_OFFSET = MAIN_NAV_H + CAT_NAV_H + 8; // breathing room below cat bar
+
 export function CafeMenuPage() {
   const { data: cafe, isLoading: cafeLoading } = usePublicCafe();
   const { data: settings, isLoading: settingsLoading } = usePublicWebsiteSettings(cafe?.id);
   const { data: menu, isLoading: menuLoading } = usePublicMenu(cafe?.id);
   const sectionRefs = useRef<Record<string, HTMLElement | null>>({});
+  const [activeCategory, setActiveCategory] = useState<string | null>(null);
 
   // ── Image preload gate ────────────────────────────────────────────────────
   // Hold the skeleton until every menu image has been fetched and decoded.
@@ -172,11 +180,54 @@ export function CafeMenuPage() {
     [menu]
   );
 
+  // ── IntersectionObserver — scroll-driven active category ─────────────────
+  // Fires once per menu load. Observes every category <section>. The root
+  // margin clips the observation area to the band just below both sticky bars,
+  // so a category is only "seen" when its heading enters that band.
+  // When multiple categories intersect simultaneously we pick the topmost one
+  // (first in menu order) so the indicator never jumps erratically.
+  useEffect(() => {
+    if (!menu || menu.length === 0) return;
+
+    // Initialise to first category so the bar starts in a defined state.
+    setActiveCategory((prev) => prev ?? menu[0].id);
+
+    const observed = new Map<string, boolean>();
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          const id = (entry.target as HTMLElement).dataset.categoryId;
+          if (id) observed.set(id, entry.isIntersecting);
+        });
+
+        // First intersecting category in document order wins.
+        const first = menu.find((cat) => observed.get(cat.id));
+        if (first) setActiveCategory(first.id);
+      },
+      {
+        // Top margin: exclude the fixed main nav + sticky cat bar from the
+        // intersection root so only content below both bars triggers a change.
+        // Bottom margin: -50% means only the top half of the viewport counts,
+        // preventing the next category from stealing focus prematurely.
+        rootMargin: `-${MAIN_NAV_H + CAT_NAV_H}px 0px -50% 0px`,
+        threshold: 0,
+      }
+    );
+
+    Object.values(sectionRefs.current).forEach((el) => {
+      if (el) observer.observe(el);
+    });
+
+    return () => observer.disconnect();
+  }, [menu]);
+
   function scrollTo(catId: string) {
+    // Give instant visual feedback before the smooth scroll completes.
+    setActiveCategory(catId);
     const el = sectionRefs.current[catId];
     if (el) {
-      const offset = 140;
-      const top = el.getBoundingClientRect().top + window.scrollY - offset;
+      const top = el.getBoundingClientRect().top + window.scrollY - SCROLL_OFFSET;
       window.scrollTo({ top, behavior: "smooth" });
     }
   }
@@ -213,17 +264,27 @@ export function CafeMenuPage() {
       </div>
 
       {/* ── Sticky category nav ─────────────────────────────── */}
+      {/* top-[68px] matches CafeLayout h-[68px] exactly — no gap */}
       {menu && menu.length > 0 && (
-        <div className="sticky top-[72px] z-30 border-b"
+        <div className="sticky top-[68px] z-30 border-b"
           style={{ background: BG1, borderColor: BORDER }}>
           <div className="max-w-5xl mx-auto px-4 sm:px-6 flex gap-1.5 sm:gap-2 overflow-x-auto py-2.5 sm:py-3">
-            {menu.map((cat) => (
-              <button key={cat.id} onClick={() => scrollTo(cat.id)}
-                className="shrink-0 px-3.5 sm:px-4 py-1.5 rounded-full text-xs sm:text-[13px] font-medium transition-colors whitespace-nowrap border border-transparent hover:border-[#D9CBB7]"
-                style={{ color: BODY }}>
-                {cat.name}
-              </button>
-            ))}
+            {menu.map((cat) => {
+              const isActive = activeCategory === cat.id;
+              return (
+                <button
+                  key={cat.id}
+                  onClick={() => scrollTo(cat.id)}
+                  className="shrink-0 px-3.5 sm:px-4 py-1.5 rounded-full text-xs sm:text-[13px] font-medium transition-all duration-200 whitespace-nowrap border"
+                  style={isActive
+                    ? { background: primaryColor, color: "#fff", borderColor: primaryColor }
+                    : { color: BODY, borderColor: "transparent", background: "transparent" }
+                  }
+                >
+                  {cat.name}
+                </button>
+              );
+            })}
           </div>
         </div>
       )}
@@ -254,6 +315,7 @@ export function CafeMenuPage() {
             <section
               key={category.id}
               ref={(el) => { sectionRefs.current[category.id] = el; }}
+              data-category-id={category.id}
               className={cn("px-4 sm:px-6 pb-12 sm:pb-16", catIdx > 0 ? "pt-2" : "")}
               style={{ background: catIdx % 2 === 0 ? BG1 : BG2 }}
             >
