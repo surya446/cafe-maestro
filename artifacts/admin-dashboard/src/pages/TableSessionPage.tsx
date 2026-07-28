@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect, useRef, useCallback } from "react";
+import { useState, useMemo, useEffect, useRef, useCallback, memo } from "react";
 import { useParams, useLocation } from "wouter";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { motion, AnimatePresence } from "framer-motion";
@@ -385,9 +385,22 @@ function QRNameEntry({
 // simultaneously — compounding the compositing pressure from the (now-removed) backdrop-filter.
 // The bounce animation is handled via a CSS keyframe (see <style> in ActiveSession).
 // The hover shadow is handled via CSS class qr-menu-card (same <style> block).
-function QRMenuItemCard({
+//
+// React.memo: prevents re-renders when unrelated cart state changes (e.g. justAddedId
+// timeout firing for a DIFFERENT card). With 500+ items in All mode, this reduces
+// per-add re-renders from O(n) to O(1).
+//
+// Stable prop contract: onAdd/onDecrement/onOpenModal accept item/id as arguments
+// (not pre-bound closures) so React.memo's shallow-equality check can detect no-ops.
+const QRMenuItemCard = memo(function QRMenuItemCard({
   item, qty, onAdd, onDecrement, justAdded, onOpenModal,
-}: { item: MenuItem; qty: number; onAdd: () => void; onDecrement: () => void; justAdded: boolean; onOpenModal: () => void }) {
+}: {
+  item: MenuItem; qty: number;
+  onAdd: (item: MenuItem) => void;
+  onDecrement: (id: string, delta: number) => void;
+  justAdded: boolean;
+  onOpenModal: (item: MenuItem) => void;
+}) {
   const unavailable = !item.is_available;
 
   return (
@@ -401,13 +414,13 @@ function QRMenuItemCard({
         transition: "border-color 0.35s ease, box-shadow 0.25s ease",
         animation: justAdded ? "qr-card-bounce 0.28s ease-out" : undefined,
       }}
-      onClick={onOpenModal}
+      onClick={() => onOpenModal(item)}
     >
       {/* Food image — mobile: 4:3, tablet: 1:1 square, desktop: 4:3 at 3-col width (~310×233 px) */}
       {item.image_url ? (
         <div className="relative overflow-hidden aspect-[4/3] sm:aspect-square lg:aspect-[4/3]">
           <img
-            src={item.image_url} alt={item.name} loading="eager" decoding="sync"
+            src={item.image_url} alt={item.name} loading="eager" decoding="async"
             className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-[1.04]"
           />
           <div className="absolute inset-0" style={{ background: "linear-gradient(to top, rgba(12,10,9,0.65) 0%, transparent 55%)" }} />
@@ -422,7 +435,7 @@ function QRMenuItemCard({
                 style={{ background: C.bg, border: `1px solid ${C.goldBorder}` }}
                 onClick={(e) => e.stopPropagation()}
               >
-                <motion.button whileTap={{ scale: 0.85 }} onClick={(e) => { e.stopPropagation(); onDecrement(); }}
+                <motion.button whileTap={{ scale: 0.85 }} onClick={(e) => { e.stopPropagation(); onDecrement(item.id, -1); }}
                   className="w-7 h-7 flex items-center justify-center" style={{ color: C.gold }}>
                   <Minus className="w-3 h-3" />
                 </motion.button>
@@ -430,7 +443,7 @@ function QRMenuItemCard({
                   className="w-5 text-center text-xs font-bold" style={{ color: C.text }}>
                   {qty}
                 </motion.span>
-                <motion.button whileTap={{ scale: 0.85 }} onClick={(e) => { e.stopPropagation(); onAdd(); }}
+                <motion.button whileTap={{ scale: 0.85 }} onClick={(e) => { e.stopPropagation(); onAdd(item); }}
                   className="w-7 h-7 flex items-center justify-center" style={{ background: C.gold, color: C.bg }}>
                   <Plus className="w-3 h-3" />
                 </motion.button>
@@ -489,7 +502,7 @@ function QRMenuItemCard({
             qty === 0 ? (
               <motion.button
                 whileTap={{ scale: 0.88 }}
-                onClick={(e) => { e.stopPropagation(); onAdd(); }}
+                onClick={(e) => { e.stopPropagation(); onAdd(item); }}
                 className="flex items-center gap-1 px-3.5 py-1.5 rounded-full text-xs font-semibold"
                 style={{ background: C.goldDim, color: C.gold, border: `1px solid ${C.goldBorder}`, ...SANS }}
               >
@@ -502,13 +515,13 @@ function QRMenuItemCard({
                 style={{ border: `1px solid ${C.goldBorder}` }}
                 onClick={(e) => e.stopPropagation()}
               >
-                <motion.button whileTap={{ scale: 0.85 }} onClick={(e) => { e.stopPropagation(); onDecrement(); }}
+                <motion.button whileTap={{ scale: 0.85 }} onClick={(e) => { e.stopPropagation(); onDecrement(item.id, -1); }}
                   className="w-8 h-7 flex items-center justify-center" style={{ color: C.gold }}>
                   <Minus className="w-3 h-3" />
                 </motion.button>
                 <motion.span key={qty} initial={{ scale: 1.3 }} animate={{ scale: 1 }}
                   className="w-5 text-center text-xs font-bold" style={{ color: C.text, ...SANS }}>{qty}</motion.span>
-                <motion.button whileTap={{ scale: 0.85 }} onClick={(e) => { e.stopPropagation(); onAdd(); }}
+                <motion.button whileTap={{ scale: 0.85 }} onClick={(e) => { e.stopPropagation(); onAdd(item); }}
                   className="w-8 h-7 flex items-center justify-center" style={{ background: C.gold, color: C.bg }}>
                   <Plus className="w-3 h-3" />
                 </motion.button>
@@ -517,7 +530,7 @@ function QRMenuItemCard({
               /* Image item in cart → qty shown in overlay; add-more pill */
               <motion.button
                 whileTap={{ scale: 0.88 }}
-                onClick={(e) => { e.stopPropagation(); onAdd(); }}
+                onClick={(e) => { e.stopPropagation(); onAdd(item); }}
                 className="flex items-center gap-1 px-3.5 py-1.5 rounded-full text-xs font-semibold"
                 style={{ background: C.gold, color: C.bg, ...SANS }}
               >
@@ -529,7 +542,7 @@ function QRMenuItemCard({
       </div>
     </div>
   );
-}
+});
 
 // ─── Food detail modal ────────────────────────────────────────────────────────────
 function QRFoodDetailModal({
@@ -618,7 +631,7 @@ function QRFoodDetailModal({
           {item.image_url ? (
             <div className="relative w-full h-[190px] sm:h-auto sm:aspect-[4/3]">
               <img
-                src={item.image_url} alt={item.name} loading="eager" decoding="sync"
+                src={item.image_url} alt={item.name} loading="eager" decoding="async"
                 className="w-full h-full object-cover"
               />
               <div
@@ -1218,10 +1231,10 @@ function ActiveSession({
                             key={item.id}
                             item={item}
                             qty={cart.get(item.id)?.quantity ?? 0}
-                            onAdd={() => addToCart(item)}
-                            onDecrement={() => updateCartQty(item.id, -1)}
+                            onAdd={addToCart}
+                            onDecrement={updateCartQty}
                             justAdded={justAddedId === item.id}
-                            onOpenModal={() => setSelectedItem(item)}
+                            onOpenModal={setSelectedItem}
                           />
                         ))}
                       </div>
@@ -1249,10 +1262,10 @@ function ActiveSession({
                     key={item.id}
                     item={item}
                     qty={cart.get(item.id)?.quantity ?? 0}
-                    onAdd={() => addToCart(item)}
-                    onDecrement={() => updateCartQty(item.id, -1)}
+                    onAdd={addToCart}
+                    onDecrement={updateCartQty}
                     justAdded={justAddedId === item.id}
-                    onOpenModal={() => setSelectedItem(item)}
+                    onOpenModal={setSelectedItem}
                   />
                 ))}
               </motion.div>

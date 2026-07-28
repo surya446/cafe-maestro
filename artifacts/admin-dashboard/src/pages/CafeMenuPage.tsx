@@ -1,4 +1,4 @@
-import { useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { Coffee, ArrowLeft } from "lucide-react";
 import { motion } from "framer-motion";
 import { Link } from "wouter";
@@ -39,7 +39,44 @@ export function CafeMenuPage() {
   const { data: menu, isLoading: menuLoading } = usePublicMenu(cafe?.id);
   const sectionRefs = useRef<Record<string, HTMLElement | null>>({});
 
-  const isLoading = cafeLoading || settingsLoading || menuLoading;
+  // ── Image preload gate ────────────────────────────────────────────────────
+  // Hold the skeleton until every menu image has been fetched and decoded.
+  // This ensures the page is fully painted before the skeleton disappears,
+  // so scrolling never triggers a network request or image decode.
+  // A 5-second safety timeout prevents hanging on slow connections.
+  const [imagesReady, setImagesReady] = useState(false);
+  useEffect(() => {
+    if (menuLoading || !menu) return;
+
+    const urls = menu
+      .flatMap((cat) => cat.items ?? [])
+      .map((i) => i.image_url)
+      .filter((u): u is string => Boolean(u));
+
+    if (urls.length === 0) { setImagesReady(true); return; }
+
+    let settled = false;
+    const timer = setTimeout(() => {
+      if (!settled) { settled = true; setImagesReady(true); }
+    }, 5_000);
+
+    Promise.all(
+      urls.map((src) =>
+        new Promise<void>((resolve) => {
+          const img = new Image();
+          img.onload = () => resolve();
+          img.onerror = () => resolve(); // never block on a failed image
+          img.src = src;
+        })
+      )
+    ).then(() => {
+      if (!settled) { settled = true; clearTimeout(timer); setImagesReady(true); }
+    });
+
+    return () => { settled = true; clearTimeout(timer); };
+  }, [menu, menuLoading]);
+
+  const isLoading = cafeLoading || settingsLoading || menuLoading || !imagesReady;
   const displayName = settings?.cafe_name ?? cafe?.name ?? "Menu";
   const primaryColor = settings?.primary_color ?? ACCENT;
 
@@ -143,17 +180,21 @@ export function CafeMenuPage() {
                   )}
                 </motion.div>
 
-                {/* Items grid */}
-                <motion.div initial="hidden" whileInView="show" viewport={{ once: true, margin: "-30px" }} variants={stagger}
-                  className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
+                {/* Items grid — plain div (no per-item stagger).
+                    Images are preloaded above before this renders, so every card is
+                    fully painted on first paint. Staggering 50+ items at 70 ms/item
+                    (= 3.5 s for 50 items) was the main source of items appearing
+                    one-by-one during scroll. */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
                   {(category.items ?? []).map((item) => (
-                    <motion.div key={item.id} variants={fadeUp}
+                    <div key={item.id}
                       className="group flex gap-3 sm:gap-4 rounded-xl p-3.5 sm:p-4 border transition-all duration-300 hover:shadow-sm"
                       style={{ background: CARD, borderColor: BORDER }}>
                       {item.image_url && (
                         <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-lg overflow-hidden shrink-0">
                           <img src={item.image_url} alt={item.name}
-                            className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" loading="lazy" />
+                            className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
+                            loading="eager" decoding="async" />
                         </div>
                       )}
                       <div className="flex-1 min-w-0">
@@ -176,9 +217,9 @@ export function CafeMenuPage() {
                           </div>
                         )}
                       </div>
-                    </motion.div>
+                    </div>
                   ))}
-                </motion.div>
+                </div>
               </div>
             </section>
           ))}
