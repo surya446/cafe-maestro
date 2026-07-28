@@ -120,6 +120,11 @@ export function CafeMenuPage() {
   const { data: menu, isLoading: menuLoading } = usePublicMenu(cafe?.id);
   const sectionRefs = useRef<Record<string, HTMLElement | null>>({});
   const [activeCategory, setActiveCategory] = useState<string | null>(null);
+  // Suppresses the IntersectionObserver while a tap-driven programmatic scroll is
+  // in flight. Set to true in scrollTo(), cleared by the native `scrollend` event.
+  // This prevents the observer from flickering activeCategory back to the previous
+  // category as sections pass through the viewport during smooth scrolling.
+  const isProgrammaticScroll = useRef(false);
 
   // ── Image preload gate ────────────────────────────────────────────────────
   // Hold the skeleton until every menu image has been fetched and decoded.
@@ -180,29 +185,51 @@ export function CafeMenuPage() {
     [menu]
   );
 
+  // "All" is hidden from the QR Ordering UI. The category data and logic are
+  // untouched — only the visible navigation and rendered sections are filtered.
+  const visibleCategories = useMemo(
+    () => menu?.filter((cat) => cat.name.toLowerCase() !== "all") ?? [],
+    [menu]
+  );
+  const visibleCategoryGroups = useMemo(
+    () => categoryGroups.filter((cat) => cat.name.toLowerCase() !== "all"),
+    [categoryGroups]
+  );
+
   // ── IntersectionObserver — scroll-driven active category ─────────────────
-  // Fires once per menu load. Observes every category <section>. The root
-  // margin clips the observation area to the band just below both sticky bars,
-  // so a category is only "seen" when its heading enters that band.
+  // Fires once per menu load. Observes every visible category <section>. The
+  // root margin clips the observation area to the band just below both sticky
+  // bars, so a category is only "seen" when its heading enters that band.
   // When multiple categories intersect simultaneously we pick the topmost one
   // (first in menu order) so the indicator never jumps erratically.
+  //
+  // The isProgrammaticScroll guard is the fix for the category-highlight flicker.
+  // When the customer taps a category button, scrollTo() sets the ref to true and
+  // immediately updates activeCategory. The observer is suppressed for the entire
+  // duration of the smooth scroll so it cannot write a stale value back. The
+  // native `scrollend` event clears the guard once the scroll settles, at which
+  // point the observer resumes normal operation for subsequent user scrolls.
   useEffect(() => {
     if (!menu || menu.length === 0) return;
 
-    // Initialise to first category so the bar starts in a defined state.
-    setActiveCategory((prev) => prev ?? menu[0].id);
+    // Initialise to first *visible* category (never "All").
+    setActiveCategory((prev) => prev ?? visibleCategories[0]?.id ?? null);
 
     const observed = new Map<string, boolean>();
 
     const observer = new IntersectionObserver(
       (entries) => {
+        // While a tap-driven scroll is in flight, the observer must not
+        // override the category the customer explicitly chose.
+        if (isProgrammaticScroll.current) return;
+
         entries.forEach((entry) => {
           const id = (entry.target as HTMLElement).dataset.categoryId;
           if (id) observed.set(id, entry.isIntersecting);
         });
 
-        // First intersecting category in document order wins.
-        const first = menu.find((cat) => observed.get(cat.id));
+        // First intersecting visible category in document order wins.
+        const first = visibleCategories.find((cat) => observed.get(cat.id));
         if (first) setActiveCategory(first.id);
       },
       {
@@ -219,16 +246,30 @@ export function CafeMenuPage() {
       if (el) observer.observe(el);
     });
 
-    return () => observer.disconnect();
-  }, [menu]);
+    // Clear the programmatic-scroll guard once the browser finishes scrolling.
+    // `scrollend` is the correct event for this — no timeouts, no polling.
+    const onScrollEnd = () => { isProgrammaticScroll.current = false; };
+    window.addEventListener("scrollend", onScrollEnd);
+
+    return () => {
+      observer.disconnect();
+      window.removeEventListener("scrollend", onScrollEnd);
+    };
+  }, [menu, visibleCategories]);
 
   function scrollTo(catId: string) {
+    // Block the IntersectionObserver for the duration of this scroll so it
+    // cannot flicker activeCategory back to a previous category mid-scroll.
+    isProgrammaticScroll.current = true;
     // Give instant visual feedback before the smooth scroll completes.
     setActiveCategory(catId);
     const el = sectionRefs.current[catId];
     if (el) {
       const top = el.getBoundingClientRect().top + window.scrollY - SCROLL_OFFSET;
       window.scrollTo({ top, behavior: "smooth" });
+    } else {
+      // No element to scroll to — clear the guard immediately.
+      isProgrammaticScroll.current = false;
     }
   }
 
@@ -269,7 +310,7 @@ export function CafeMenuPage() {
         <div className="sticky top-[68px] z-30 border-b"
           style={{ background: BG1, borderColor: BORDER }}>
           <div className="max-w-5xl mx-auto px-4 sm:px-6 flex gap-1.5 sm:gap-2 overflow-x-auto py-2.5 sm:py-3">
-            {menu.map((cat) => {
+            {visibleCategories.map((cat) => {
               const isActive = activeCategory === cat.id;
               return (
                 <button
@@ -311,7 +352,7 @@ export function CafeMenuPage() {
         </div>
       ) : (
         <div className="py-10 sm:py-14" style={{ background: BG1 }}>
-          {categoryGroups.map((category, catIdx) => (
+          {visibleCategoryGroups.map((category, catIdx) => (
             <section
               key={category.id}
               ref={(el) => { sectionRefs.current[category.id] = el; }}
