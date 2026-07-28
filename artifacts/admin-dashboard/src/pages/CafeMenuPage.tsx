@@ -19,6 +19,24 @@ const ACCENT = "#A66A3F";
 const BORDER = "#D9CBB7";
 const GOLD   = "#C9A46C";
 
+// ── Internal render groups ────────────────────────────────────────────────
+// Items in each category are split into groups of this size. Each group is
+// an independent React subtree + CSS grid, so reconciliation and paint are
+// scoped to ~RENDER_GROUP_SIZE items rather than the full category.
+//
+// MUST be a multiple of the column count (2 for sm:grid-cols-2) so that
+// rows never split across group boundaries — the customer sees no difference.
+// The outer flex-col uses the same gap as the inner grids, making the
+// group dividers invisible: row-gap within group = gap between groups.
+const RENDER_GROUP_SIZE = 6;
+
+/** Split array into consecutive chunks of at most `size` elements. */
+function chunk<T>(arr: T[], size: number): T[][] {
+  const out: T[][] = [];
+  for (let i = 0; i < arr.length; i += size) out.push(arr.slice(i, i + size));
+  return out;
+}
+
 const fadeUp = {
   hidden: { opacity: 0, y: 22 },
   show: { opacity: 1, y: 0, transition: { duration: 0.68, ease: [0.16, 1, 0.3, 1] as [number, number, number, number] } },
@@ -187,43 +205,50 @@ export function CafeMenuPage() {
                   )}
                 </motion.div>
 
-                {/* Items grid — plain div (no per-item stagger).
-                    Images are preloaded above before this renders, so every card is
-                    fully painted on first paint. Staggering 50+ items at 70 ms/item
-                    (= 3.5 s for 50 items) was the main source of items appearing
-                    one-by-one during scroll. */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
-                  {(category.items ?? []).map((item) => (
-                    <div key={item.id}
-                      className="group flex gap-3 sm:gap-4 rounded-xl p-3.5 sm:p-4 border transition-all duration-300 hover:shadow-sm"
-                      style={{ background: CARD, borderColor: BORDER }}>
-                      {item.image_url && (
-                        <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-lg overflow-hidden shrink-0">
-                          <img src={item.image_url} alt={item.name}
-                            className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
-                            loading="eager" decoding="async" />
-                        </div>
-                      )}
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-start justify-between gap-2">
+                {/* Items render groups ──────────────────────────────────────────
+                    Items are split into chunks of RENDER_GROUP_SIZE so each group
+                    is an independent React subtree and CSS grid. The outer flex-col
+                    uses the same gap as the inner grids so the spacing between the
+                    last row of group N and the first row of group N+1 equals the
+                    row-gap within a group — the customer sees one unbroken section.
+                    RENDER_GROUP_SIZE=6 is a multiple of 2 (sm:grid-cols-2), so rows
+                    never split across a boundary. */}
+                <div className="flex flex-col gap-3 sm:gap-4">
+                  {chunk(category.items ?? [], RENDER_GROUP_SIZE).map((group, gi) => (
+                    <div key={gi} className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
+                      {group.map((item) => (
+                        <div key={item.id}
+                          className="group flex gap-3 sm:gap-4 rounded-xl p-3.5 sm:p-4 border transition-all duration-300 hover:shadow-sm"
+                          style={{ background: CARD, borderColor: BORDER }}>
+                          {item.image_url && (
+                            <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-lg overflow-hidden shrink-0">
+                              <img src={item.image_url} alt={item.name}
+                                className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
+                                loading="eager" decoding="async" />
+                            </div>
+                          )}
                           <div className="flex-1 min-w-0">
-                            <h3 className="font-semibold text-sm leading-snug" style={{ color: HEAD }}>{item.name}</h3>
-                            {item.description && (
-                              <p className="text-xs mt-1 leading-relaxed line-clamp-2" style={{ color: BODY }}>{item.description}</p>
+                            <div className="flex items-start justify-between gap-2">
+                              <div className="flex-1 min-w-0">
+                                <h3 className="font-semibold text-sm leading-snug" style={{ color: HEAD }}>{item.name}</h3>
+                                {item.description && (
+                                  <p className="text-xs mt-1 leading-relaxed line-clamp-2" style={{ color: BODY }}>{item.description}</p>
+                                )}
+                              </div>
+                              <PriceBadge price={item.price} />
+                            </div>
+                            {item.tags && item.tags.length > 0 && (
+                              <div className="flex flex-wrap gap-1.5 mt-2.5">
+                                {item.tags.map((tag: string) => (
+                                  <span key={tag} className="text-[10px] font-medium px-2 py-0.5 rounded-full border" style={{ color: BODY, borderColor: BORDER }}>
+                                    {tag}
+                                  </span>
+                                ))}
+                              </div>
                             )}
                           </div>
-                          <PriceBadge price={item.price} />
                         </div>
-                        {item.tags && item.tags.length > 0 && (
-                          <div className="flex flex-wrap gap-1.5 mt-2.5">
-                            {item.tags.map((tag: string) => (
-                              <span key={tag} className="text-[10px] font-medium px-2 py-0.5 rounded-full border" style={{ color: BODY, borderColor: BORDER }}>
-                                {tag}
-                              </span>
-                            ))}
-                          </div>
-                        )}
-                      </div>
+                      ))}
                     </div>
                   ))}
                 </div>

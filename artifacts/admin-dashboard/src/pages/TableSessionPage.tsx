@@ -378,6 +378,25 @@ function QRNameEntry({
   );
 }
 
+// ── Internal render groups ────────────────────────────────────────────────────────
+// Items within each category are split into groups of RENDER_GROUP_SIZE. Each group
+// is an independent React subtree + CSS grid so reconciliation and paint are scoped
+// to ~RENDER_GROUP_SIZE items rather than the full category list.
+//
+// MUST be a multiple of LCM(grid-cols-2, grid-cols-5) = 10 so that rows never split
+// across a group boundary at either mobile (2-col) or desktop (5-col). The outer
+// flex-col uses the same gap-3 as the inner grids so the gap between the last row of
+// group N and the first row of group N+1 equals the row-gap within a group — the
+// customer sees one unbroken grid.
+const RENDER_GROUP_SIZE = 10;
+
+/** Split array into consecutive chunks of at most `size` elements. */
+function chunk<T>(arr: T[], size: number): T[][] {
+  const out: T[][] = [];
+  for (let i = 0; i < arr.length; i += size) out.push(arr.slice(i, i + size));
+  return out;
+}
+
 // ─── Menu item card ───────────────────────────────────────────────────────────────
 // NOTE: outer wrapper is a plain <div>, NOT motion.div.
 // Previously: animate={{ scale: 1 }} (when !justAdded) caused Framer Motion to write
@@ -1224,18 +1243,25 @@ function ActiveSession({
                         </span>
                         <div className="flex-1 h-px" style={{ background: C.border }} />
                       </div>
-                      {/* Items grid — same responsive grid as single-category mode */}
-                      <div className="grid grid-cols-2 gap-3 lg:grid-cols-5">
-                        {cat.items.map((item) => (
-                          <QRMenuItemCard
-                            key={item.id}
-                            item={item}
-                            qty={cart.get(item.id)?.quantity ?? 0}
-                            onAdd={addToCart}
-                            onDecrement={updateCartQty}
-                            justAdded={justAddedId === item.id}
-                            onOpenModal={setSelectedItem}
-                          />
+                      {/* Items render groups — same responsive grid as single-category mode.
+                          RENDER_GROUP_SIZE=10 = LCM(2,5) so both breakpoints get whole
+                          rows per group; the outer flex-col gap-3 matches the inner
+                          grid gap-3, making group boundaries invisible. */}
+                      <div className="flex flex-col gap-3">
+                        {chunk(cat.items, RENDER_GROUP_SIZE).map((group, gi) => (
+                          <div key={gi} className="grid grid-cols-2 gap-3 lg:grid-cols-5">
+                            {group.map((item) => (
+                              <QRMenuItemCard
+                                key={item.id}
+                                item={item}
+                                qty={cart.get(item.id)?.quantity ?? 0}
+                                onAdd={addToCart}
+                                onDecrement={updateCartQty}
+                                justAdded={justAddedId === item.id}
+                                onOpenModal={setSelectedItem}
+                              />
+                            ))}
+                          </div>
                         ))}
                       </div>
                     </div>
@@ -1255,18 +1281,22 @@ function ActiveSession({
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 transition={{ duration: 0.18 }}
-                className="grid grid-cols-2 gap-3 lg:grid-cols-5"
+                className="flex flex-col gap-3"
               >
-                {visibleItems.map((item) => (
-                  <QRMenuItemCard
-                    key={item.id}
-                    item={item}
-                    qty={cart.get(item.id)?.quantity ?? 0}
-                    onAdd={addToCart}
-                    onDecrement={updateCartQty}
-                    justAdded={justAddedId === item.id}
-                    onOpenModal={setSelectedItem}
-                  />
+                {chunk(visibleItems, RENDER_GROUP_SIZE).map((group, gi) => (
+                  <div key={gi} className="grid grid-cols-2 gap-3 lg:grid-cols-5">
+                    {group.map((item) => (
+                      <QRMenuItemCard
+                        key={item.id}
+                        item={item}
+                        qty={cart.get(item.id)?.quantity ?? 0}
+                        onAdd={addToCart}
+                        onDecrement={updateCartQty}
+                        justAdded={justAddedId === item.id}
+                        onOpenModal={setSelectedItem}
+                      />
+                    ))}
+                  </div>
                 ))}
               </motion.div>
             )}
