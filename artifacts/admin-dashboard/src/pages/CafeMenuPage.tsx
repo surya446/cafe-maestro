@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useMemo, memo } from "react";
 import { Coffee, ArrowLeft } from "lucide-react";
 import { motion } from "framer-motion";
 import { Link } from "wouter";
@@ -8,6 +8,7 @@ import { usePublicWebsiteSettings } from "@/hooks/usePublicWebsiteSettings";
 import { usePublicMenu } from "@/hooks/usePublicMenu";
 import { BookingCTAButton } from "@/contexts/BookingModalContext";
 import { cn } from "@/lib/utils";
+import { MenuItem } from "@/types";
 
 /* ── Brand palette (cream theme) ────────────────────────────────────────── */
 const BG1    = "#F8F3EA";
@@ -19,16 +20,22 @@ const ACCENT = "#A66A3F";
 const BORDER = "#D9CBB7";
 const GOLD   = "#C9A46C";
 
-// ── Internal render groups ────────────────────────────────────────────────
-// Items in each category are split into groups of this size. Each group is
-// an independent React subtree + CSS grid, so reconciliation and paint are
-// scoped to ~RENDER_GROUP_SIZE items rather than the full category.
+// ── Internal category groups ──────────────────────────────────────────────
+// Items in each category are split into MEMO-WRAPPED React components called
+// PublicMenuItemGroup. Each group is a completely independent React subtree
+// with its own fiber node, reconciliation lifecycle, and CSS grid layout scope.
 //
-// MUST be a multiple of the column count (2 for sm:grid-cols-2) so that
-// rows never split across group boundaries — the customer sees no difference.
-// The outer flex-col uses the same gap as the inner grids, making the
-// group dividers invisible: row-gap within group = gap between groups.
-const RENDER_GROUP_SIZE = 6;
+// Why this differs from the previous <div> chunking:
+//   A <div> is a host element — React visits it on every parent re-render.
+//   A memo-wrapped component is a fiber boundary. React.memo's shallow-equality
+//   check on the stable `items` prop (memoized in categoryGroups below) means
+//   each group renders ONCE on initial mount and NEVER again for CafeMenuPage,
+//   which has no dynamic state after the menu loads.
+//
+// INTERNAL_CATEGORY_SIZE must be a multiple of 2 (sm:grid-cols-2) so rows
+// never split across group boundaries. The outer flex-col gap matches the
+// inner grid gap so group boundaries are invisible to the customer.
+const INTERNAL_CATEGORY_SIZE = 6;
 
 /** Split array into consecutive chunks of at most `size` elements. */
 function chunk<T>(arr: T[], size: number): T[][] {
@@ -36,6 +43,55 @@ function chunk<T>(arr: T[], size: number): T[][] {
   for (let i = 0; i < arr.length; i += size) out.push(arr.slice(i, i + size));
   return out;
 }
+
+// ── PublicMenuItemGroup ──────────────────────────────────────────────────
+// One internal category group for the public menu page.
+// Receives a stable items[] slice from categoryGroups useMemo below.
+// React.memo default shallow-equality: items reference never changes after
+// initial data load → this component renders once and is never reconciled again.
+const PublicMenuItemGroup = memo(function PublicMenuItemGroup({
+  items,
+}: {
+  items: MenuItem[];
+}) {
+  return (
+    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
+      {items.map((item) => (
+        <div key={item.id}
+          className="group flex gap-3 sm:gap-4 rounded-xl p-3.5 sm:p-4 border transition-all duration-300 hover:shadow-sm"
+          style={{ background: CARD, borderColor: BORDER }}>
+          {item.image_url && (
+            <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-lg overflow-hidden shrink-0">
+              <img src={item.image_url} alt={item.name}
+                className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
+                loading="eager" decoding="async" />
+            </div>
+          )}
+          <div className="flex-1 min-w-0">
+            <div className="flex items-start justify-between gap-2">
+              <div className="flex-1 min-w-0">
+                <h3 className="font-semibold text-sm leading-snug" style={{ color: HEAD }}>{item.name}</h3>
+                {item.description && (
+                  <p className="text-xs mt-1 leading-relaxed line-clamp-2" style={{ color: BODY }}>{item.description}</p>
+                )}
+              </div>
+              <PriceBadge price={item.price} />
+            </div>
+            {item.tags && item.tags.length > 0 && (
+              <div className="flex flex-wrap gap-1.5 mt-2.5">
+                {item.tags.map((tag: string) => (
+                  <span key={tag} className="text-[10px] font-medium px-2 py-0.5 rounded-full border" style={{ color: BODY, borderColor: BORDER }}>
+                    {tag}
+                  </span>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+});
 
 const fadeUp = {
   hidden: { opacity: 0, y: 22 },
@@ -104,6 +160,17 @@ export function CafeMenuPage() {
   const isLoading = cafeLoading || settingsLoading || menuLoading || !imagesReady;
   const displayName = settings?.cafe_name ?? cafe?.name ?? "Menu";
   const primaryColor = settings?.primary_color ?? ACCENT;
+
+  // Memoize chunk slices so PublicMenuItemGroup receives stable array references.
+  // If chunk() ran during render it would create new arrays every time, defeating
+  // React.memo's shallow-equality check. Computing once here gives permanent stability.
+  const categoryGroups = useMemo(
+    () => menu?.map((cat) => ({
+      ...cat,
+      groups: chunk(cat.items ?? [], INTERNAL_CATEGORY_SIZE),
+    })) ?? [],
+    [menu]
+  );
 
   function scrollTo(catId: string) {
     const el = sectionRefs.current[catId];
@@ -183,7 +250,7 @@ export function CafeMenuPage() {
         </div>
       ) : (
         <div className="py-10 sm:py-14" style={{ background: BG1 }}>
-          {menu.map((category, catIdx) => (
+          {categoryGroups.map((category, catIdx) => (
             <section
               key={category.id}
               ref={(el) => { sectionRefs.current[category.id] = el; }}
@@ -205,51 +272,12 @@ export function CafeMenuPage() {
                   )}
                 </motion.div>
 
-                {/* Items render groups ──────────────────────────────────────────
-                    Items are split into chunks of RENDER_GROUP_SIZE so each group
-                    is an independent React subtree and CSS grid. The outer flex-col
-                    uses the same gap as the inner grids so the spacing between the
-                    last row of group N and the first row of group N+1 equals the
-                    row-gap within a group — the customer sees one unbroken section.
-                    RENDER_GROUP_SIZE=6 is a multiple of 2 (sm:grid-cols-2), so rows
-                    never split across a boundary. */}
+                {/* Internal category groups — each is a memo-isolated React subtree.
+                    category.groups[] is a stable memoized reference from categoryGroups
+                    above. PublicMenuItemGroup.memo fires once at mount, never again. */}
                 <div className="flex flex-col gap-3 sm:gap-4">
-                  {chunk(category.items ?? [], RENDER_GROUP_SIZE).map((group, gi) => (
-                    <div key={gi} className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
-                      {group.map((item) => (
-                        <div key={item.id}
-                          className="group flex gap-3 sm:gap-4 rounded-xl p-3.5 sm:p-4 border transition-all duration-300 hover:shadow-sm"
-                          style={{ background: CARD, borderColor: BORDER }}>
-                          {item.image_url && (
-                            <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-lg overflow-hidden shrink-0">
-                              <img src={item.image_url} alt={item.name}
-                                className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
-                                loading="eager" decoding="async" />
-                            </div>
-                          )}
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-start justify-between gap-2">
-                              <div className="flex-1 min-w-0">
-                                <h3 className="font-semibold text-sm leading-snug" style={{ color: HEAD }}>{item.name}</h3>
-                                {item.description && (
-                                  <p className="text-xs mt-1 leading-relaxed line-clamp-2" style={{ color: BODY }}>{item.description}</p>
-                                )}
-                              </div>
-                              <PriceBadge price={item.price} />
-                            </div>
-                            {item.tags && item.tags.length > 0 && (
-                              <div className="flex flex-wrap gap-1.5 mt-2.5">
-                                {item.tags.map((tag: string) => (
-                                  <span key={tag} className="text-[10px] font-medium px-2 py-0.5 rounded-full border" style={{ color: BODY, borderColor: BORDER }}>
-                                    {tag}
-                                  </span>
-                                ))}
-                              </div>
-                            )}
-                          </div>
-                        </div>
-                      ))}
-                    </div>
+                  {category.groups.map((group, gi) => (
+                    <PublicMenuItemGroup key={gi} items={group} />
                   ))}
                 </div>
               </div>

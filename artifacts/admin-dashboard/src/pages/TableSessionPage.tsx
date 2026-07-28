@@ -378,17 +378,23 @@ function QRNameEntry({
   );
 }
 
-// ── Internal render groups ────────────────────────────────────────────────────────
-// Items within each category are split into groups of RENDER_GROUP_SIZE. Each group
-// is an independent React subtree + CSS grid so reconciliation and paint are scoped
-// to ~RENDER_GROUP_SIZE items rather than the full category list.
+// ── Internal category groups ─────────────────────────────────────────────────────
+// Items within each category are split into MEMO-WRAPPED React components called
+// QRMenuItemGroup. Each group is a completely independent React subtree with its
+// own fiber node, reconciliation lifecycle, and CSS grid layout scope.
 //
-// MUST be a multiple of LCM(grid-cols-2, grid-cols-5) = 10 so that rows never split
-// across a group boundary at either mobile (2-col) or desktop (5-col). The outer
-// flex-col uses the same gap-3 as the inner grids so the gap between the last row of
-// group N and the first row of group N+1 equals the row-gap within a group — the
-// customer sees one unbroken grid.
-const RENDER_GROUP_SIZE = 10;
+// Why this differs from the previous <div> chunking:
+//   A <div> is a host element — React visits it on every parent re-render and
+//   memo can only bail out at the leaf (QRMenuItemCard) level.
+//   A memo-wrapped component is a fiber boundary. The custom areEqual comparator
+//   checks whether any item in THIS group changed. Groups whose items are
+//   unaffected by a cart update bail out BEFORE reconciliation starts — the
+//   reconciler never enters the subtree at all.
+//   Result: adding one item to cart reconciles ONE group, not all groups.
+//
+// INTERNAL_CATEGORY_SIZE = LCM(2, 5) = 10 so both breakpoints get whole rows per
+// group — no row ever splits at a boundary at either grid-cols-2 or grid-cols-5.
+const INTERNAL_CATEGORY_SIZE = 10;
 
 /** Split array into consecutive chunks of at most `size` elements. */
 function chunk<T>(arr: T[], size: number): T[][] {
@@ -396,6 +402,60 @@ function chunk<T>(arr: T[], size: number): T[][] {
   for (let i = 0; i < arr.length; i += size) out.push(arr.slice(i, i + size));
   return out;
 }
+
+// ── QRMenuItemGroup ───────────────────────────────────────────────────────────────
+// One internal category group for the QR ordering page.
+//
+// Custom areEqual: re-renders ONLY when the specific cart quantities for items in
+// THIS group change, or when justAddedId refers to an item in this group.
+// All other groups bail out of reconciliation entirely on each cart update —
+// O(group_size) equality check replaces O(category_size) reconciliation walk.
+type QRMenuItemGroupProps = {
+  items: MenuItem[];
+  cart: Map<string, CartItem>;
+  justAddedId: string | null;
+  onAdd: (item: MenuItem) => void;
+  onDecrement: (id: string, delta: number) => void;
+  onOpenModal: (item: MenuItem) => void;
+};
+
+const QRMenuItemGroup = memo(function QRMenuItemGroup({
+  items, cart, justAddedId, onAdd, onDecrement, onOpenModal,
+}: QRMenuItemGroupProps) {
+  return (
+    <div className="grid grid-cols-2 gap-3 lg:grid-cols-5">
+      {items.map((item) => (
+        <QRMenuItemCard
+          key={item.id}
+          item={item}
+          qty={cart.get(item.id)?.quantity ?? 0}
+          onAdd={onAdd}
+          onDecrement={onDecrement}
+          justAdded={justAddedId === item.id}
+          onOpenModal={onOpenModal}
+        />
+      ))}
+    </div>
+  );
+}, function areGroupPropsEqual(prev: QRMenuItemGroupProps, next: QRMenuItemGroupProps): boolean {
+  // Item list itself changed (menu reload) → always re-render
+  if (prev.items !== next.items) return false;
+  // justAddedId changed — check whether the affected item is in this group
+  if (prev.justAddedId !== next.justAddedId) {
+    const inGroup = next.items.some(
+      (i) => i.id === next.justAddedId || i.id === prev.justAddedId
+    );
+    if (inGroup) return false;
+    // The added/cleared item is not in this group; fall through to qty check
+  }
+  // Check whether any quantity changed for an item in this group
+  for (const item of next.items) {
+    const pQty = prev.cart.get(item.id)?.quantity ?? 0;
+    const nQty = next.cart.get(item.id)?.quantity ?? 0;
+    if (pQty !== nQty) return false;
+  }
+  return true; // Nothing relevant changed — skip this group's reconciliation entirely
+});
 
 // ─── Menu item card ───────────────────────────────────────────────────────────────
 // NOTE: outer wrapper is a plain <div>, NOT motion.div.
@@ -979,12 +1039,22 @@ function ActiveSession({
     [menuItems, activeCategoryId, isAllMode]
   );
 
-  // Grouped items for All mode — reuses existing data, no duplication
+  // Grouped items for All mode — reuses existing data, no duplication.
+  // .groups is the memoized chunk slice required for QRMenuItemGroup.memo to work.
+  // Stable array references are the prerequisite for areGroupPropsEqual to bail out.
   const itemsByCategory = useMemo(
     () => categories
       .map((cat) => ({ ...cat, items: menuItems.filter((i) => i.category_id === cat.id) }))
-      .filter((cat) => cat.items.length > 0),
+      .filter((cat) => cat.items.length > 0)
+      .map((cat) => ({ ...cat, groups: chunk(cat.items, INTERNAL_CATEGORY_SIZE) })),
     [categories, menuItems]
+  );
+
+  // Memoized group slices for single-category mode.
+  // Stable references so QRMenuItemGroup receives the same array objects across renders.
+  const visibleGroups = useMemo(
+    () => chunk(visibleItems, INTERNAL_CATEGORY_SIZE),
+    [visibleItems]
   );
 
   const unavailableInCart = useMemo(() => {
@@ -1243,25 +1313,21 @@ function ActiveSession({
                         </span>
                         <div className="flex-1 h-px" style={{ background: C.border }} />
                       </div>
-                      {/* Items render groups — same responsive grid as single-category mode.
-                          RENDER_GROUP_SIZE=10 = LCM(2,5) so both breakpoints get whole
-                          rows per group; the outer flex-col gap-3 matches the inner
-                          grid gap-3, making group boundaries invisible. */}
+                      {/* Internal category groups — each a memo-isolated React subtree.
+                          cat.groups[] is a stable memoized reference (from itemsByCategory
+                          above). areGroupPropsEqual only re-renders the one group whose
+                          items were affected by the cart change. */}
                       <div className="flex flex-col gap-3">
-                        {chunk(cat.items, RENDER_GROUP_SIZE).map((group, gi) => (
-                          <div key={gi} className="grid grid-cols-2 gap-3 lg:grid-cols-5">
-                            {group.map((item) => (
-                              <QRMenuItemCard
-                                key={item.id}
-                                item={item}
-                                qty={cart.get(item.id)?.quantity ?? 0}
-                                onAdd={addToCart}
-                                onDecrement={updateCartQty}
-                                justAdded={justAddedId === item.id}
-                                onOpenModal={setSelectedItem}
-                              />
-                            ))}
-                          </div>
+                        {cat.groups.map((group, gi) => (
+                          <QRMenuItemGroup
+                            key={gi}
+                            items={group}
+                            cart={cart}
+                            justAddedId={justAddedId}
+                            onAdd={addToCart}
+                            onDecrement={updateCartQty}
+                            onOpenModal={setSelectedItem}
+                          />
                         ))}
                       </div>
                     </div>
@@ -1283,20 +1349,16 @@ function ActiveSession({
                 transition={{ duration: 0.18 }}
                 className="flex flex-col gap-3"
               >
-                {chunk(visibleItems, RENDER_GROUP_SIZE).map((group, gi) => (
-                  <div key={gi} className="grid grid-cols-2 gap-3 lg:grid-cols-5">
-                    {group.map((item) => (
-                      <QRMenuItemCard
-                        key={item.id}
-                        item={item}
-                        qty={cart.get(item.id)?.quantity ?? 0}
-                        onAdd={addToCart}
-                        onDecrement={updateCartQty}
-                        justAdded={justAddedId === item.id}
-                        onOpenModal={setSelectedItem}
-                      />
-                    ))}
-                  </div>
+                {visibleGroups.map((group, gi) => (
+                  <QRMenuItemGroup
+                    key={gi}
+                    items={group}
+                    cart={cart}
+                    justAddedId={justAddedId}
+                    onAdd={addToCart}
+                    onDecrement={updateCartQty}
+                    onOpenModal={setSelectedItem}
+                  />
                 ))}
               </motion.div>
             )}
