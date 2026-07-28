@@ -255,7 +255,12 @@ export function CafeMenuPage() {
       observer.disconnect();
       window.removeEventListener("scrollend", onScrollEnd);
     };
-  }, [menu, visibleCategories]);
+  // imagesReady is intentionally in deps: the <section> elements are behind the
+  // isLoading gate and don't exist in the DOM until imagesReady becomes true.
+  // Without this dep the effect runs when menu loads but sectionRefs.current is
+  // still empty, so the observer never attaches to any element and scroll-driven
+  // active-category detection is permanently dead.
+  }, [menu, visibleCategories, imagesReady]);
 
   function scrollTo(catId: string) {
     // Block the IntersectionObserver for the duration of this scroll so it

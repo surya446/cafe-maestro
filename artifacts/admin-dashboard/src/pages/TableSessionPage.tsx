@@ -1002,7 +1002,12 @@ function ActiveSession({
 }) {
   const { cafeName, tableNumber, tableName, expiresAt, sessionId, customerName } = sessionInfo;
 
-  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
+  // Default to the first real category (never null/All mode) so the QR ordering
+  // UI opens directly on the first category. The "All" mode logic is preserved
+  // in the code but the "All" button is not rendered — it is intentionally hidden.
+  const [selectedCategory, setSelectedCategory] = useState<string | null>(
+    () => categories.find((cat) => cat.name.toLowerCase() !== "all")?.id ?? null
+  );
   const [selectedItem, setSelectedItem] = useState<MenuItem | null>(null);
   const [cart, setCart] = useState<Map<string, CartItem>>(new Map());
   const [cartOpen, setCartOpen] = useState(false);
@@ -1020,6 +1025,11 @@ function ActiveSession({
   const sectionRefs = useRef<Record<string, HTMLDivElement | null>>({});
   // Ref for the full sticky header block so we can read its height dynamically.
   const headerRef = useRef<HTMLDivElement>(null);
+  // Suppresses the IntersectionObserver while a tap-driven programmatic scroll is
+  // in flight. Set to true in scrollToSection(), cleared by the native `scrollend`
+  // event. Prevents the observer from overwriting scrollHighlight back to the
+  // previously-visible category while the smooth scroll animation is playing.
+  const isProgrammaticScroll = useRef(false);
 
   useEffect(() => {
     const id = setInterval(() => setTimeLeft(formatTimeLeft(expiresAt)), 30_000);
@@ -1029,6 +1039,15 @@ function ActiveSession({
   // ── Menu queries and realtime are now hoisted to TableSessionPage ──
   // categories and menuItems arrive as props, already loaded before loader hid.
   const isMenuLoading = false; // always false here — loader waited for this data
+
+  // "All" database category is hidden from the QR ordering UI. The data, logic,
+  // and All-mode code are all preserved — only the rendered nav and sections are
+  // filtered. This also prevents the "All" db category from being selected as the
+  // default active category or from appearing as a section in All mode.
+  const visibleCategories = useMemo(
+    () => categories.filter((cat) => cat.name.toLowerCase() !== "all"),
+    [categories]
+  );
 
   // "__all__" is the sentinel for the "All" tab; defaults on first render (selectedCategory is null).
   // isAllMode is true for both null (initial) and "__all__" (explicitly tapped).
@@ -1054,14 +1073,15 @@ function ActiveSession({
   );
 
   // Grouped items for All mode — reuses existing data, no duplication.
+  // Uses visibleCategories so the "All" database category never appears as a section.
   // .groups is the memoized chunk slice required for QRMenuItemGroup.memo to work.
   // Stable array references are the prerequisite for areGroupPropsEqual to bail out.
   const itemsByCategory = useMemo(
-    () => categories
+    () => visibleCategories
       .map((cat) => ({ ...cat, items: menuItems.filter((i) => i.category_id === cat.id) }))
       .filter((cat) => cat.items.length > 0)
       .map((cat) => ({ ...cat, groups: chunk(cat.items, INTERNAL_CATEGORY_SIZE) })),
-    [categories, menuItems]
+    [visibleCategories, menuItems]
   );
 
   // Memoized group slices for single-category mode.
@@ -1078,6 +1098,14 @@ function ActiveSession({
   // visible content area triggers a change — preventing the next category from
   // stealing the highlight before the current one has scrolled away.
   // Re-runs whenever isAllMode or itemsByCategory changes (e.g. menu reloads).
+  //
+  // isProgrammaticScroll guard: when the user taps a category pill while in All
+  // mode, scrollToSection() sets this ref to true before calling window.scrollTo.
+  // The observer bails out early for the entire smooth-scroll duration, preventing
+  // it from overwriting scrollHighlight back to whichever section happens to be
+  // crossing the detection threshold mid-animation. The `scrollend` event clears
+  // the flag once the browser finishes scrolling, restoring normal observer-driven
+  // behaviour for subsequent manual scrolls.
   useEffect(() => {
     if (!isAllMode || itemsByCategory.length === 0) {
       // Leave scrollHighlight as-is when not in All mode — it's not displayed.
@@ -1088,6 +1116,10 @@ function ActiveSession({
 
     const observer = new IntersectionObserver(
       (entries) => {
+        // Bail out while a tap-driven scroll is in flight — the user already chose
+        // the target category; the observer must not override that choice.
+        if (isProgrammaticScroll.current) return;
+
         entries.forEach((entry) => {
           const id = (entry.target as HTMLElement).dataset.categoryId;
           if (id) observed.set(id, entry.isIntersecting);
@@ -1107,14 +1139,28 @@ function ActiveSession({
       if (el) observer.observe(el);
     });
 
-    return () => observer.disconnect();
+    // Clear the programmatic-scroll guard once the browser finishes scrolling.
+    const onScrollEnd = () => { isProgrammaticScroll.current = false; };
+    window.addEventListener("scrollend", onScrollEnd);
+
+    return () => {
+      observer.disconnect();
+      window.removeEventListener("scrollend", onScrollEnd);
+    };
   }, [isAllMode, itemsByCategory]);
 
   // Scroll a category section into view, accounting for the sticky header.
   // Called when a category pill is tapped while in All mode.
+  // Sets isProgrammaticScroll so the IntersectionObserver does not override the
+  // tap's scrollHighlight during the smooth-scroll animation.
   function scrollToSection(catId: string) {
     const el = sectionRefs.current[catId];
-    if (!el) return;
+    if (!el) {
+      // No element to scroll to — nothing is in flight; clear the guard.
+      isProgrammaticScroll.current = false;
+      return;
+    }
+    isProgrammaticScroll.current = true;
     const headerH = headerRef.current?.offsetHeight ?? 150;
     const top = el.getBoundingClientRect().top + window.scrollY - headerH - 8;
     window.scrollTo({ top, behavior: "smooth" });
@@ -1282,29 +1328,12 @@ function ActiveSession({
                 className="flex gap-2 overflow-x-auto"
                 style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}
               >
-                {/* "All" tab — always first.
-                    Active when activeCategoryId is "__all__" (= All mode with no
-                    scroll highlight yet, i.e. user is above the first section). */}
-                <motion.button
-                  ref={(el) => { btnRefs.current["__all__"] = el; }}
-                  onClick={() => {
-                    setSelectedCategory(null);
-                    setScrollHighlight(null);
-                  }}
-                  className="relative shrink-0 px-4 py-[7px] rounded-full text-xs font-semibold overflow-hidden"
-                  style={{ color: activeCategoryId === "__all__" ? C.bg : C.text2, border: `1px solid ${activeCategoryId === "__all__" ? "transparent" : C.border}`, ...SANS }}
-                  whileTap={{ scale: 0.93 }}
-                >
-                  {activeCategoryId === "__all__" && (
-                    <motion.div layoutId="cat-active" className="absolute inset-0"
-                      style={{ background: C.gold, borderRadius: "inherit" }}
-                      transition={{ type: "spring", damping: 24, stiffness: 260 }}
-                    />
-                  )}
-                  <span className="relative z-10">All</span>
-                </motion.button>
+                {/* "All" tab is intentionally hidden from the QR ordering UI.
+                    The __all__ sentinel, isAllMode, scrollHighlight, and the
+                    IntersectionObserver All-mode logic are all preserved in the
+                    code — only this rendered button is removed. */}
 
-                {categories.map((cat) => {
+                {visibleCategories.map((cat) => {
                   const active = activeCategoryId === cat.id;
                   return (
                     <motion.button
