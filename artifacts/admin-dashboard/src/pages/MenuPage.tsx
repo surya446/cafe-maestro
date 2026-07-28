@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useMemo } from "react";
 import { useIsMobile } from "@/hooks/use-mobile";
 import * as DialogPrimitive from "@radix-ui/react-dialog";
 import {
@@ -852,9 +852,22 @@ export function MenuPage() {
   const userCategories = categories.filter((c) => !c.is_system);
   const systemCategories = categories.filter((c) => c.is_system);
 
+  // "All" view: iterate categories in category order, then items within each
+  // category sorted by position. This keeps category sections fixed regardless
+  // of item position changes — matching Public Website / QR Ordering behaviour.
+  const allViewItems = useMemo(
+    () =>
+      userCategories.flatMap((c) =>
+        items
+          .filter((i) => i.category_id === c.id)
+          .sort((a, b) => a.position - b.position)
+      ),
+    [userCategories, items]
+  );
+
   const filteredItems =
     filterCat === "all"
-      ? items
+      ? allViewItems
       : items.filter((i) => i.category_id === filterCat);
 
   const filteredArchivedItems = archivedSearch.trim()
