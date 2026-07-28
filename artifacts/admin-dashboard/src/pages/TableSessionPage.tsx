@@ -1011,8 +1011,15 @@ function ActiveSession({
   const [cartBounce, setCartBounce] = useState(false);
   const [timeLeft, setTimeLeft] = useState(() => formatTimeLeft(expiresAt));
   const [activeTab, setActiveTab] = useState<"menu" | "orders">("menu");
+  // In All mode: which category the scroll position is currently inside.
+  // null means the user is above the first section (→ "All" button stays lit).
+  const [scrollHighlight, setScrollHighlight] = useState<string | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const btnRefs = useRef<Record<string, HTMLButtonElement | null>>({});
+  // Refs for category <section> divs rendered in All mode — used by IntersectionObserver.
+  const sectionRefs = useRef<Record<string, HTMLDivElement | null>>({});
+  // Ref for the full sticky header block so we can read its height dynamically.
+  const headerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const id = setInterval(() => setTimeLeft(formatTimeLeft(expiresAt)), 30_000);
@@ -1023,11 +1030,18 @@ function ActiveSession({
   // categories and menuItems arrive as props, already loaded before loader hid.
   const isMenuLoading = false; // always false here — loader waited for this data
 
-  // "__all__" is the sentinel for the "All" tab; defaults on first render (selectedCategory is null)
-  const activeCategoryId = selectedCategory ?? "__all__";
-  const isAllMode = activeCategoryId === "__all__";
+  // "__all__" is the sentinel for the "All" tab; defaults on first render (selectedCategory is null).
+  // isAllMode is true for both null (initial) and "__all__" (explicitly tapped).
+  const isAllMode = selectedCategory === null || selectedCategory === "__all__";
 
-  // Auto-scroll active tab into view
+  // In All mode the active button follows scroll (scrollHighlight), falling back to "__all__"
+  // so the "All" pill stays lit until the first category enters the detection zone.
+  // In single-category mode the active button is simply the selected category.
+  const activeCategoryId = isAllMode
+    ? (scrollHighlight ?? "__all__")
+    : selectedCategory!;
+
+  // Auto-scroll the active tab pill into horizontal view in the category nav bar.
   useEffect(() => {
     const btn = btnRefs.current[activeCategoryId];
     if (btn && scrollRef.current) btn.scrollIntoView({ behavior: "smooth", block: "nearest", inline: "center" });
@@ -1056,6 +1070,55 @@ function ActiveSession({
     () => chunk(visibleItems, INTERNAL_CATEGORY_SIZE),
     [visibleItems]
   );
+
+  // ── IntersectionObserver — scroll-driven active category (All mode only) ──
+  // Observes each category's section div. The rootMargin top offset equals the
+  // sticky header height so a category only becomes "active" once its heading
+  // clears the header. The bottom margin (-50%) means only the top half of the
+  // visible content area triggers a change — preventing the next category from
+  // stealing the highlight before the current one has scrolled away.
+  // Re-runs whenever isAllMode or itemsByCategory changes (e.g. menu reloads).
+  useEffect(() => {
+    if (!isAllMode || itemsByCategory.length === 0) {
+      // Leave scrollHighlight as-is when not in All mode — it's not displayed.
+      return;
+    }
+
+    const observed = new Map<string, boolean>();
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          const id = (entry.target as HTMLElement).dataset.categoryId;
+          if (id) observed.set(id, entry.isIntersecting);
+        });
+        // Pick the first visible category in menu order to avoid flicker when
+        // two adjacent sections straddle the detection boundary simultaneously.
+        const first = itemsByCategory.find((cat) => observed.get(cat.id));
+        setScrollHighlight(first?.id ?? null);
+      },
+      {
+        rootMargin: `-${headerRef.current?.offsetHeight ?? 150}px 0px -50% 0px`,
+        threshold: 0,
+      }
+    );
+
+    Object.values(sectionRefs.current).forEach((el) => {
+      if (el) observer.observe(el);
+    });
+
+    return () => observer.disconnect();
+  }, [isAllMode, itemsByCategory]);
+
+  // Scroll a category section into view, accounting for the sticky header.
+  // Called when a category pill is tapped while in All mode.
+  function scrollToSection(catId: string) {
+    const el = sectionRefs.current[catId];
+    if (!el) return;
+    const headerH = headerRef.current?.offsetHeight ?? 150;
+    const top = el.getBoundingClientRect().top + window.scrollY - headerH - 8;
+    window.scrollTo({ top, behavior: "smooth" });
+  }
 
   const unavailableInCart = useMemo(() => {
     const unavailableIds = new Set(menuItems.filter((m) => !m.is_available || m.is_archived).map((m) => m.id));
@@ -1141,7 +1204,7 @@ function ActiveSession({
       {/* NOTE: background is fully opaque (no backdropFilter/blur). backdrop-filter forces the entire
           scrolling content into a single GPU compositing layer; Chrome tile-rasterizes it lazily,
           producing 2-3 second blank areas mid-scroll on long menus. Solid background eliminates this. */}
-      <div className="sticky top-0 z-30" style={{ background: C.bg }}>
+      <div ref={headerRef} className="sticky top-0 z-30" style={{ background: C.bg }}>
         {/* Top row: branding + guest name */}
         <div className="flex items-center justify-between px-4 pt-4 pb-2" style={{ borderBottom: `1px solid ${C.border}` }}>
           <div className="flex items-center gap-3 min-w-0">
@@ -1219,15 +1282,20 @@ function ActiveSession({
                 className="flex gap-2 overflow-x-auto"
                 style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}
               >
-                {/* "All" tab — always first */}
+                {/* "All" tab — always first.
+                    Active when activeCategoryId is "__all__" (= All mode with no
+                    scroll highlight yet, i.e. user is above the first section). */}
                 <motion.button
                   ref={(el) => { btnRefs.current["__all__"] = el; }}
-                  onClick={() => setSelectedCategory("__all__")}
+                  onClick={() => {
+                    setSelectedCategory(null);
+                    setScrollHighlight(null);
+                  }}
                   className="relative shrink-0 px-4 py-[7px] rounded-full text-xs font-semibold overflow-hidden"
-                  style={{ color: isAllMode ? C.bg : C.text2, border: `1px solid ${isAllMode ? "transparent" : C.border}`, ...SANS }}
+                  style={{ color: activeCategoryId === "__all__" ? C.bg : C.text2, border: `1px solid ${activeCategoryId === "__all__" ? "transparent" : C.border}`, ...SANS }}
                   whileTap={{ scale: 0.93 }}
                 >
-                  {isAllMode && (
+                  {activeCategoryId === "__all__" && (
                     <motion.div layoutId="cat-active" className="absolute inset-0"
                       style={{ background: C.gold, borderRadius: "inherit" }}
                       transition={{ type: "spring", damping: 24, stiffness: 260 }}
@@ -1242,7 +1310,16 @@ function ActiveSession({
                     <motion.button
                       key={cat.id}
                       ref={(el) => { btnRefs.current[cat.id] = el; }}
-                      onClick={() => setSelectedCategory(cat.id)}
+                      onClick={() => {
+                        if (isAllMode) {
+                          // Stay in All mode — immediately highlight then scroll.
+                          setScrollHighlight(cat.id);
+                          scrollToSection(cat.id);
+                        } else {
+                          // Switch single-category content to this category.
+                          setSelectedCategory(cat.id);
+                        }
+                      }}
                       className="relative shrink-0 px-4 py-[7px] rounded-full text-xs font-semibold overflow-hidden"
                       style={{
                         color: active ? C.bg : C.text2,
@@ -1305,7 +1382,12 @@ function ActiveSession({
               ) : (
                 <motion.div key="__all__" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.18 }}>
                   {itemsByCategory.map((cat, idx) => (
-                    <div key={cat.id} className={idx > 0 ? "mt-8" : ""}>
+                    <div
+                      key={cat.id}
+                      ref={(el) => { sectionRefs.current[cat.id] = el; }}
+                      data-category-id={cat.id}
+                      className={idx > 0 ? "mt-8" : ""}
+                    >
                       {/* Category heading */}
                       <div className="flex items-center gap-3 mb-3">
                         <span className="text-[11px] font-semibold uppercase tracking-widest shrink-0" style={{ color: C.gold, ...SANS }}>
