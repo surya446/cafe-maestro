@@ -1002,12 +1002,11 @@ function ActiveSession({
 }) {
   const { cafeName, tableNumber, tableName, expiresAt, sessionId, customerName } = sessionInfo;
 
-  // Default to the first real category (never null/All mode) so the QR ordering
-  // UI opens directly on the first category. The "All" mode logic is preserved
-  // in the code but the "All" button is not rendered — it is intentionally hidden.
-  const [selectedCategory, setSelectedCategory] = useState<string | null>(
-    () => categories.find((cat) => cat.name.toLowerCase() !== "all")?.id ?? null
-  );
+  // null = hidden All mode (default on open). The page starts in All mode so the
+  // customer sees the full scrollable menu immediately. The "All" button is not
+  // rendered, but the logic remains intact. Tapping a category switches to
+  // single-category mode; tapping the active category again returns to All mode.
+  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [selectedItem, setSelectedItem] = useState<MenuItem | null>(null);
   const [cart, setCart] = useState<Map<string, CartItem>>(new Map());
   const [cartOpen, setCartOpen] = useState(false);
@@ -1340,12 +1339,14 @@ function ActiveSession({
                       key={cat.id}
                       ref={(el) => { btnRefs.current[cat.id] = el; }}
                       onClick={() => {
-                        if (isAllMode) {
-                          // Stay in All mode — immediately highlight then scroll.
-                          setScrollHighlight(cat.id);
-                          scrollToSection(cat.id);
+                        if (!isAllMode && selectedCategory === cat.id) {
+                          // Tapping the currently active category returns to
+                          // hidden All mode — full scrollable menu resumes.
+                          setSelectedCategory(null);
+                          setScrollHighlight(null);
                         } else {
-                          // Switch single-category content to this category.
+                          // Any other tap (from All mode or switching category)
+                          // switches to single-category mode for this category.
                           setSelectedCategory(cat.id);
                         }
                       }}
