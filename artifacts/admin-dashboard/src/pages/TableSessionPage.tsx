@@ -379,24 +379,28 @@ function QRNameEntry({
 }
 
 // ─── Menu item card ───────────────────────────────────────────────────────────────
+// NOTE: outer wrapper is a plain <div>, NOT motion.div.
+// Previously: animate={{ scale: 1 }} (when !justAdded) caused Framer Motion to write
+// transform: scale(1) inline on every card, creating stacking contexts on 30-60+ elements
+// simultaneously — compounding the compositing pressure from the (now-removed) backdrop-filter.
+// The bounce animation is handled via a CSS keyframe (see <style> in ActiveSession).
+// The hover shadow is handled via CSS class qr-menu-card (same <style> block).
 function QRMenuItemCard({
   item, qty, onAdd, onDecrement, justAdded, onOpenModal,
 }: { item: MenuItem; qty: number; onAdd: () => void; onDecrement: () => void; justAdded: boolean; onOpenModal: () => void }) {
   const unavailable = !item.is_available;
 
   return (
-    <motion.div
-      className="rounded-2xl overflow-hidden group cursor-pointer"
-      animate={justAdded ? { scale: [1, 1.02, 1] } : { scale: 1 }}
-      transition={{ duration: 0.28, ease: "easeOut" }}
+    <div
+      className={`rounded-2xl overflow-hidden group cursor-pointer qr-menu-card${unavailable ? " qr-menu-card--unavailable" : ""}`}
       style={{
         background: C.card,
         border: `1px solid ${justAdded ? C.goldBorder : C.border}`,
         boxShadow: `0 2px 14px rgba(0,0,0,0.4)`,
         opacity: unavailable ? 0.5 : 1,
         transition: "border-color 0.35s ease, box-shadow 0.25s ease",
+        animation: justAdded ? "qr-card-bounce 0.28s ease-out" : undefined,
       }}
-      whileHover={unavailable ? {} : { boxShadow: "0 6px 28px rgba(0,0,0,0.55)" }}
       onClick={onOpenModal}
     >
       {/* Food image — mobile: 4:3, tablet: 1:1 square, desktop: 4:3 at 3-col width (~310×233 px) */}
@@ -523,7 +527,7 @@ function QRMenuItemCard({
           )}
         </div>
       </div>
-    </motion.div>
+    </div>
   );
 }
 
@@ -1020,8 +1024,22 @@ function ActiveSession({
   return (
     <div className="min-h-screen flex flex-col" style={{ background: C.bg }}>
 
+      {/* ── QR card styles — injected here so they're scoped to the active session ── */}
+      <style>{`
+        @keyframes qr-card-bounce {
+          0%, 100% { transform: scale(1); }
+          50%       { transform: scale(1.02); }
+        }
+        .qr-menu-card:not(.qr-menu-card--unavailable):hover {
+          box-shadow: 0 6px 28px rgba(0,0,0,0.55) !important;
+        }
+      `}</style>
+
       {/* ── HEADER + CATEGORY NAV — single sticky block so categories are always flush below header ── */}
-      <div className="sticky top-0 z-30" style={{ background: `${C.bg}F2`, backdropFilter: "blur(16px)" }}>
+      {/* NOTE: background is fully opaque (no backdropFilter/blur). backdrop-filter forces the entire
+          scrolling content into a single GPU compositing layer; Chrome tile-rasterizes it lazily,
+          producing 2-3 second blank areas mid-scroll on long menus. Solid background eliminates this. */}
+      <div className="sticky top-0 z-30" style={{ background: C.bg }}>
         {/* Top row: branding + guest name */}
         <div className="flex items-center justify-between px-4 pt-4 pb-2" style={{ borderBottom: `1px solid ${C.border}` }}>
           <div className="flex items-center gap-3 min-w-0">
