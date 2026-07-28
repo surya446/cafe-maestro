@@ -12,7 +12,10 @@ import {
   EyeOff,
   AlertCircle,
   Upload,
+  ChevronUp,
   ChevronDown,
+  ChevronsUp,
+  ChevronsDown,
   ArrowLeft,
   X,
   Lock,
@@ -56,6 +59,8 @@ import {
   useArchiveMenuItem,
   useRestoreMenuItem,
   useToggleItemAvailability,
+  useMoveMenuItem,
+  useNormalizeMenuPositions,
 } from "@/hooks/useMenu";
 import { MenuCategory, MenuItem } from "@/types";
 import { formatCurrency } from "@/lib/utils";
@@ -525,6 +530,9 @@ function MenuItemCard({
   onArchive,
   onDelete,
   onToggle,
+  onMove,
+  isFirst,
+  isLast,
 }: {
   item: MenuItem;
   hasOrders: boolean;
@@ -532,6 +540,9 @@ function MenuItemCard({
   onArchive: () => void;
   onDelete: () => void;
   onToggle: (v: boolean) => void;
+  onMove?: (direction: "up" | "down" | "top" | "bottom") => void;
+  isFirst?: boolean;
+  isLast?: boolean;
 }) {
   return (
     <div className="bg-card border border-card-border rounded-xl shadow-sm p-4 space-y-3">
@@ -573,6 +584,45 @@ function MenuItemCard({
         <span className="text-sm text-muted-foreground">Available</span>
         <Switch checked={item.is_available} onCheckedChange={onToggle} />
       </div>
+
+      {/* Reorder controls — visible only when a single category is selected */}
+      {onMove && (
+        <div className="flex items-center gap-1 pt-0.5 border-t border-border">
+          <span className="text-xs text-muted-foreground mr-auto">Reorder</span>
+          <button
+            onClick={() => onMove("top")}
+            disabled={isFirst}
+            className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+            title="Move to top"
+          >
+            <ChevronsUp className="w-3.5 h-3.5" />
+          </button>
+          <button
+            onClick={() => onMove("up")}
+            disabled={isFirst}
+            className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+            title="Move up"
+          >
+            <ChevronUp className="w-3.5 h-3.5" />
+          </button>
+          <button
+            onClick={() => onMove("down")}
+            disabled={isLast}
+            className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+            title="Move down"
+          >
+            <ChevronDown className="w-3.5 h-3.5" />
+          </button>
+          <button
+            onClick={() => onMove("bottom")}
+            disabled={isLast}
+            className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+            title="Move to bottom"
+          >
+            <ChevronsDown className="w-3.5 h-3.5" />
+          </button>
+        </div>
+      )}
 
       {/* Action buttons */}
       <div className="flex items-center gap-2 pt-1 border-t border-border">
@@ -776,6 +826,9 @@ export function MenuPage() {
   const archiveItem = useArchiveMenuItem();
   const restoreItem = useRestoreMenuItem();
   const toggleAvail = useToggleItemAvailability();
+  const moveItem = useMoveMenuItem();
+  const normalizePositions = useNormalizeMenuPositions();
+  const normalizedRef = useRef(false);
 
   const [tab, setTab] = useState<"items" | "categories" | "archived">("items");
   const [catDialog, setCatDialog] = useState(false);
@@ -813,6 +866,20 @@ export function MenuPage() {
     : archivedItems;
 
   const isLoading = catLoading || itemsLoading;
+
+  // Normalize positions once on first load: assigns sequential 0-based positions
+  // to any category where items share the same position value (the default=0 case
+  // that causes non-deterministic ORDER BY results on every UPDATE).
+  useEffect(() => {
+    if (normalizedRef.current || itemsLoading || items.length === 0) return;
+    normalizedRef.current = true;
+    normalizePositions.mutate(items);
+  }, [items, itemsLoading]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  function handleMove(item: MenuItem, direction: "up" | "down" | "top" | "bottom") {
+    const categoryItems = items.filter((i) => i.category_id === item.category_id);
+    moveItem.mutate({ id: item.id, direction, categoryItems });
+  }
 
   return (
     <>
@@ -913,8 +980,9 @@ export function MenuPage() {
               <>
                 {/* ── Mobile cards (< 768 px) ───────────────────────── */}
                 <div className="md:hidden space-y-3">
-                  {filteredItems.map((item) => {
+                  {filteredItems.map((item, idx) => {
                     const hasOrders = orderHistory.has(item.id);
+                    const inCategoryMode = filterCat !== "all";
                     return (
                       <MenuItemCard
                         key={item.id}
@@ -924,6 +992,9 @@ export function MenuPage() {
                         onArchive={() => setArchiveItemId(item.id)}
                         onDelete={() => setDeleteItemId(item.id)}
                         onToggle={(v) => toggleAvail.mutate({ id: item.id, is_available: v })}
+                        onMove={inCategoryMode ? (dir) => handleMove(item, dir) : undefined}
+                        isFirst={inCategoryMode && idx === 0}
+                        isLast={inCategoryMode && idx === filteredItems.length - 1}
                       />
                     );
                   })}
@@ -935,15 +1006,21 @@ export function MenuPage() {
                     <thead>
                       <tr className="border-b border-border bg-muted/40">
                         <th className="text-left px-3 lg:px-4 py-2.5 lg:py-3 text-xs font-medium text-muted-foreground uppercase tracking-wide">Item</th>
-                        <th className="text-left px-3 lg:px-4 py-2.5 lg:py-3 text-xs font-medium text-muted-foreground uppercase tracking-wide">Category</th>
+                        {filterCat !== "all" ? (
+                          <th className="px-3 lg:px-4 py-2.5 lg:py-3 text-xs font-medium text-muted-foreground uppercase tracking-wide">Order</th>
+                        ) : (
+                          <th className="text-left px-3 lg:px-4 py-2.5 lg:py-3 text-xs font-medium text-muted-foreground uppercase tracking-wide">Category</th>
+                        )}
                         <th className="text-right px-3 lg:px-4 py-2.5 lg:py-3 text-xs font-medium text-muted-foreground uppercase tracking-wide">Price</th>
                         <th className="text-center px-3 lg:px-4 py-2.5 lg:py-3 text-xs font-medium text-muted-foreground uppercase tracking-wide">Available</th>
                         <th className="px-3 lg:px-4 py-2.5 lg:py-3" />
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-border">
-                      {filteredItems.map((item) => {
+                      {filteredItems.map((item, idx) => {
                         const hasOrders = orderHistory.has(item.id);
+                        const isFirst = idx === 0;
+                        const isLast = idx === filteredItems.length - 1;
                         return (
                           <tr key={item.id} className="hover:bg-muted/30 transition-colors">
                             <td className="px-3 lg:px-4 py-2.5 lg:py-3">
@@ -969,9 +1046,48 @@ export function MenuPage() {
                                 </div>
                               </div>
                             </td>
-                            <td className="px-3 lg:px-4 py-2.5 lg:py-3 text-muted-foreground text-xs lg:text-sm">
-                              {item.menu_categories?.name ?? "—"}
-                            </td>
+                            {filterCat !== "all" ? (
+                              <td className="px-3 lg:px-4 py-2.5 lg:py-3">
+                                <div className="flex items-center gap-0.5">
+                                  <button
+                                    onClick={() => handleMove(item, "top")}
+                                    disabled={isFirst}
+                                    className="p-1 rounded text-muted-foreground hover:text-foreground hover:bg-muted transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+                                    title="Move to top"
+                                  >
+                                    <ChevronsUp className="w-3.5 h-3.5" />
+                                  </button>
+                                  <button
+                                    onClick={() => handleMove(item, "up")}
+                                    disabled={isFirst}
+                                    className="p-1 rounded text-muted-foreground hover:text-foreground hover:bg-muted transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+                                    title="Move up"
+                                  >
+                                    <ChevronUp className="w-3.5 h-3.5" />
+                                  </button>
+                                  <button
+                                    onClick={() => handleMove(item, "down")}
+                                    disabled={isLast}
+                                    className="p-1 rounded text-muted-foreground hover:text-foreground hover:bg-muted transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+                                    title="Move down"
+                                  >
+                                    <ChevronDown className="w-3.5 h-3.5" />
+                                  </button>
+                                  <button
+                                    onClick={() => handleMove(item, "bottom")}
+                                    disabled={isLast}
+                                    className="p-1 rounded text-muted-foreground hover:text-foreground hover:bg-muted transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+                                    title="Move to bottom"
+                                  >
+                                    <ChevronsDown className="w-3.5 h-3.5" />
+                                  </button>
+                                </div>
+                              </td>
+                            ) : (
+                              <td className="px-3 lg:px-4 py-2.5 lg:py-3 text-muted-foreground text-xs lg:text-sm">
+                                {item.menu_categories?.name ?? "—"}
+                              </td>
+                            )}
                             <td className="px-3 lg:px-4 py-2.5 lg:py-3 text-right font-semibold text-foreground">
                               {formatCurrency(item.price)}
                             </td>

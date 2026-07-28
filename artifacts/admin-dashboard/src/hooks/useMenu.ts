@@ -259,9 +259,21 @@ export function useCreateMenuItem() {
       >
     ) => {
       if (!user) throw new Error("Not authenticated");
+      // Always place new items at the bottom of their category so they never
+      // displace existing items. Query the current max position and add 1.
+      const { data: maxRow } = await supabase
+        .from("menu_items")
+        .select("position")
+        .eq("cafe_id", user.cafeId)
+        .eq("category_id", input.category_id)
+        .eq("is_archived", false)
+        .order("position", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      const nextPosition = (maxRow?.position ?? -1) + 1;
       const { data, error } = await supabase
         .from("menu_items")
-        .insert({ ...input, cafe_id: user.cafeId })
+        .insert({ ...input, cafe_id: user.cafeId, position: nextPosition })
         .select()
         .single();
       if (error) throw error;
@@ -281,9 +293,37 @@ export function useUpdateMenuItem() {
       id,
       ...updates
     }: Partial<MenuItem> & { id: string }) => {
+      if (!user) throw new Error("Not authenticated");
+      // Strip position unconditionally: editing an item must NEVER change its
+      // display order. Position is only modified via useMoveMenuItem.
+      const { position: _stripped, ...safeUpdates } = updates;
+      let finalUpdates: Partial<MenuItem> = safeUpdates;
+
+      // If the item is being moved to a different category, place it at the
+      // bottom of the destination category so it does not displace existing items.
+      if (safeUpdates.category_id !== undefined) {
+        const { data: current } = await supabase
+          .from("menu_items")
+          .select("category_id")
+          .eq("id", id)
+          .maybeSingle();
+        if (current && current.category_id !== safeUpdates.category_id) {
+          const { data: maxRow } = await supabase
+            .from("menu_items")
+            .select("position")
+            .eq("cafe_id", user.cafeId)
+            .eq("category_id", safeUpdates.category_id)
+            .eq("is_archived", false)
+            .order("position", { ascending: false })
+            .limit(1)
+            .maybeSingle();
+          finalUpdates = { ...safeUpdates, position: (maxRow?.position ?? -1) + 1 };
+        }
+      }
+
       const { data, error } = await supabase
         .from("menu_items")
-        .update(updates)
+        .update(finalUpdates)
         .eq("id", id)
         .select()
         .single();
@@ -360,9 +400,20 @@ export function useRestoreMenuItem() {
       id: string;
       category_id: string;
     }) => {
+      if (!user) throw new Error("Not authenticated");
+      // Place the restored item at the bottom of the destination category.
+      const { data: maxRow } = await supabase
+        .from("menu_items")
+        .select("position")
+        .eq("cafe_id", user.cafeId)
+        .eq("category_id", category_id)
+        .eq("is_archived", false)
+        .order("position", { ascending: false })
+        .limit(1)
+        .maybeSingle();
       const { error } = await supabase
         .from("menu_items")
-        .update({ is_archived: false, category_id })
+        .update({ is_archived: false, category_id, position: (maxRow?.position ?? -1) + 1 })
         .eq("id", id);
       if (error) throw error;
     },
@@ -372,6 +423,152 @@ export function useRestoreMenuItem() {
       qc.invalidateQueries({ queryKey: ARCHIVED_ITEMS_KEY(user?.cafeId ?? "") });
       qc.invalidateQueries({ queryKey: CATEGORIES_KEY(user?.cafeId ?? "") });
     },
+  });
+}
+
+// ─── Move item within its category ───────────────────────────────────────────
+// Reorders items within a single category by swapping or repositioning one item.
+// Accepts all items in the category (sorted by position); computes the new order
+// and batch-updates only the rows whose position value actually changed.
+// Optimistic update: cache is rewritten immediately for instant UI feedback.
+export function useMoveMenuItem() {
+  const { user } = useAuth();
+  const qc = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({
+      id,
+      direction,
+      categoryItems,
+    }: {
+      id: string;
+      direction: "up" | "down" | "top" | "bottom";
+      categoryItems: MenuItem[];
+    }) => {
+      if (!user) throw new Error("Not authenticated");
+
+      const sorted = [...categoryItems].sort((a, b) => a.position - b.position);
+      const idx = sorted.findIndex((i) => i.id === id);
+      if (idx === -1) return;
+
+      const ordered = [...sorted];
+      if (direction === "up") {
+        if (idx === 0) return;
+        [ordered[idx - 1], ordered[idx]] = [ordered[idx], ordered[idx - 1]];
+      } else if (direction === "down") {
+        if (idx === ordered.length - 1) return;
+        [ordered[idx + 1], ordered[idx]] = [ordered[idx], ordered[idx + 1]];
+      } else if (direction === "top") {
+        if (idx === 0) return;
+        const [item] = ordered.splice(idx, 1);
+        ordered.unshift(item);
+      } else {
+        if (idx === ordered.length - 1) return;
+        const [item] = ordered.splice(idx, 1);
+        ordered.push(item);
+      }
+
+      // Assign sequential positions 0..n-1; only write rows that changed.
+      const updates = ordered
+        .map((item, pos) => ({ id: item.id, position: pos }))
+        .filter((u, i) => u.position !== sorted[i].position);
+
+      if (updates.length === 0) return;
+
+      await Promise.all(
+        updates.map(({ id: itemId, position }) =>
+          supabase.from("menu_items").update({ position }).eq("id", itemId)
+        )
+      );
+    },
+
+    onMutate: async ({ id, direction, categoryItems }) => {
+      const cafeId = user?.cafeId ?? "";
+      await qc.cancelQueries({ queryKey: ITEMS_KEY(cafeId) });
+      const prev = qc.getQueryData<MenuItem[]>(ITEMS_KEY(cafeId));
+
+      const sorted = [...categoryItems].sort((a, b) => a.position - b.position);
+      const idx = sorted.findIndex((i) => i.id === id);
+      if (idx === -1) return { prev };
+
+      const ordered = [...sorted];
+      if (direction === "up" && idx > 0) {
+        [ordered[idx - 1], ordered[idx]] = [ordered[idx], ordered[idx - 1]];
+      } else if (direction === "down" && idx < ordered.length - 1) {
+        [ordered[idx + 1], ordered[idx]] = [ordered[idx], ordered[idx + 1]];
+      } else if (direction === "top" && idx > 0) {
+        const [item] = ordered.splice(idx, 1);
+        ordered.unshift(item);
+      } else if (direction === "bottom" && idx < ordered.length - 1) {
+        const [item] = ordered.splice(idx, 1);
+        ordered.push(item);
+      }
+
+      const posMap = new Map<string, number>(ordered.map((item, i) => [item.id, i]));
+
+      qc.setQueryData<MenuItem[]>(ITEMS_KEY(cafeId), (old) =>
+        (old ?? [])
+          .map((item) =>
+            posMap.has(item.id) ? { ...item, position: posMap.get(item.id)! } : item
+          )
+          .sort((a, b) => a.position - b.position)
+      );
+
+      return { prev };
+    },
+
+    onError: (_err, _vars, ctx) => {
+      if (ctx?.prev) qc.setQueryData(ITEMS_KEY(user?.cafeId ?? ""), ctx.prev);
+    },
+    onSettled: () =>
+      qc.invalidateQueries({ queryKey: ITEMS_KEY(user?.cafeId ?? "") }),
+  });
+}
+
+// ─── Normalize positions ──────────────────────────────────────────────────────
+// Detects items whose positions are not unique within their category (the common
+// case when all rows defaulted to position=0) and assigns sequential 0-based
+// positions sorted by (current position, created_at).  Only the rows that
+// actually need updating are written.  Called once on MenuPage mount.
+export function useNormalizeMenuPositions() {
+  const { user } = useAuth();
+  const qc = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (items: MenuItem[]) => {
+      if (!user || items.length === 0) return;
+
+      // Group by category
+      const catMap = new Map<string, MenuItem[]>();
+      for (const item of items) {
+        const list = catMap.get(item.category_id) ?? [];
+        list.push(item);
+        catMap.set(item.category_id, list);
+      }
+
+      const updates: Array<{ id: string; position: number }> = [];
+      for (const catList of catMap.values()) {
+        const positions = catList.map((i) => i.position);
+        if (new Set(positions).size === positions.length) continue; // already unique
+
+        const sorted = [...catList].sort(
+          (a, b) => a.position - b.position || a.created_at.localeCompare(b.created_at)
+        );
+        sorted.forEach((item, idx) => {
+          if (item.position !== idx) updates.push({ id: item.id, position: idx });
+        });
+      }
+
+      if (updates.length === 0) return;
+
+      await Promise.all(
+        updates.map(({ id, position }) =>
+          supabase.from("menu_items").update({ position }).eq("id", id)
+        )
+      );
+    },
+    onSuccess: () =>
+      qc.invalidateQueries({ queryKey: ITEMS_KEY(user?.cafeId ?? "") }),
   });
 }
 
