@@ -53,6 +53,7 @@ import {
   useCreateCategory,
   useUpdateCategory,
   useDeleteCategory,
+  useMoveCategoryOrder,
   useCreateMenuItem,
   useUpdateMenuItem,
   useDeleteMenuItem,
@@ -820,6 +821,7 @@ export function MenuPage() {
   const createCat = useCreateCategory();
   const updateCat = useUpdateCategory();
   const deleteCat = useDeleteCategory();
+  const moveCat = useMoveCategoryOrder();
   const createItem = useCreateMenuItem();
   const updateItem = useUpdateMenuItem();
   const deleteItem = useDeleteMenuItem();
@@ -1172,8 +1174,11 @@ export function MenuPage() {
             ) : (
               <div className="space-y-2">
                 {/* User-created categories */}
-                {userCategories.map((cat) => {
+                {userCategories.map((cat, idx) => {
                   const count = items.filter((i) => i.category_id === cat.id).length;
+                  const isFirst = idx === 0;
+                  const isLast = idx === userCategories.length - 1;
+                  const isMoving = moveCat.isPending;
                   return (
                     <div
                       key={cat.id}
@@ -1196,6 +1201,41 @@ export function MenuPage() {
                         ) : (
                           <EyeOff className="w-4 h-4 text-muted-foreground" />
                         )}
+                      </div>
+                      {/* Move Up / Move Down */}
+                      <div className="flex items-center gap-0.5 shrink-0">
+                        <button
+                          onClick={() => {
+                            const above = userCategories[idx - 1];
+                            moveCat.mutate({ idA: cat.id, posA: cat.position, idB: above.id, posB: above.position });
+                          }}
+                          disabled={isFirst || isMoving}
+                          className={cn(
+                            "p-1.5 rounded-lg transition-colors",
+                            isFirst
+                              ? "text-muted-foreground/30 cursor-not-allowed"
+                              : "text-muted-foreground hover:text-foreground hover:bg-muted"
+                          )}
+                          title="Move up"
+                        >
+                          <ChevronUp className="w-3.5 h-3.5" />
+                        </button>
+                        <button
+                          onClick={() => {
+                            const below = userCategories[idx + 1];
+                            moveCat.mutate({ idA: cat.id, posA: cat.position, idB: below.id, posB: below.position });
+                          }}
+                          disabled={isLast || isMoving}
+                          className={cn(
+                            "p-1.5 rounded-lg transition-colors",
+                            isLast
+                              ? "text-muted-foreground/30 cursor-not-allowed"
+                              : "text-muted-foreground hover:text-foreground hover:bg-muted"
+                          )}
+                          title="Move down"
+                        >
+                          <ChevronDown className="w-3.5 h-3.5" />
+                        </button>
                       </div>
                       <div className="flex items-center gap-1 shrink-0">
                         <button

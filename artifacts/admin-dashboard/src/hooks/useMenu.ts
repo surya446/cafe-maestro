@@ -138,9 +138,22 @@ export function useCreateCategory() {
       input: Omit<MenuCategory, "id" | "cafe_id" | "is_system" | "created_at" | "updated_at">
     ) => {
       if (!user) throw new Error("Not authenticated");
+
+      // Always place new categories at the bottom of the user-created list.
+      // Query the highest position among non-system categories and add 1.
+      const { data: maxRow } = await supabase
+        .from("menu_categories")
+        .select("position")
+        .eq("cafe_id", user.cafeId)
+        .eq("is_system", false)
+        .order("position", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      const nextPosition = (maxRow?.position ?? -1) + 1;
+
       const { data, error } = await supabase
         .from("menu_categories")
-        .insert({ ...input, cafe_id: user.cafeId, is_system: false })
+        .insert({ ...input, cafe_id: user.cafeId, is_system: false, position: nextPosition })
         .select()
         .single();
       if (error) throw error;
@@ -174,14 +187,51 @@ export function useUpdateCategory() {
         throw err;
       }
 
+      // Strip position: editing a category's name/description/visibility must
+      // NEVER change its display order. Position is managed exclusively by
+      // useMoveCategoryOrder.
+      const { position: _stripped, ...safeUpdates } = updates;
+
       const { data, error } = await supabase
         .from("menu_categories")
-        .update(updates)
+        .update(safeUpdates)
         .eq("id", id)
         .select()
         .single();
       if (error) throw error;
       return data;
+    },
+    onSuccess: () =>
+      qc.invalidateQueries({ queryKey: CATEGORIES_KEY(user?.cafeId ?? "") }),
+  });
+}
+
+// Swaps the display positions of two adjacent categories (Move Up / Move Down).
+// Callers pass both IDs and their current positions; the mutation writes the
+// swapped values and invalidates the categories cache so the UI re-renders.
+export function useMoveCategoryOrder() {
+  const { user } = useAuth();
+  const qc = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({
+      idA,
+      posA,
+      idB,
+      posB,
+    }: {
+      idA: string;
+      posA: number;
+      idB: string;
+      posB: number;
+    }) => {
+      if (!user) throw new Error("Not authenticated");
+      const [r1, r2] = await Promise.all([
+        supabase.from("menu_categories").update({ position: posB }).eq("id", idA),
+        supabase.from("menu_categories").update({ position: posA }).eq("id", idB),
+      ]);
+      if (r1.error) throw r1.error;
+      if (r2.error) throw r2.error;
     },
     onSuccess: () =>
       qc.invalidateQueries({ queryKey: CATEGORIES_KEY(user?.cafeId ?? "") }),
