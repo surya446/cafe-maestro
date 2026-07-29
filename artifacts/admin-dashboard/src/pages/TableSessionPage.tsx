@@ -158,10 +158,14 @@ function BrandedLoader({ cafeName, cafeNameLoading }: { cafeName: string | null;
 // ─── Skeleton card ───────────────────────────────────────────────────────────────
 function SkeletonCard() {
   return (
-    <div className="rounded-2xl overflow-hidden" style={{ background: C.card, border: `1px solid ${C.border}` }}>
-      <div className="aspect-[4/3] sm:aspect-square lg:aspect-[4/3] w-full" style={{ background: C.cardHover, animation: "pulse 2s cubic-bezier(.4,0,.6,1) infinite" }} />
-      <div className="p-4 space-y-2.5">
-        <div className="h-4 w-3/5 rounded-full" style={{ background: C.cardHover, animation: "pulse 2s cubic-bezier(.4,0,.6,1) infinite" }} />
+    <div className="rounded-2xl overflow-hidden flex flex-row sm:flex-col" style={{ background: C.card, border: `1px solid ${C.border}` }}>
+      {/* Image: mobile = fixed square strip, sm+ = aspect-ratio top */}
+      <div
+        className="w-[90px] self-stretch shrink-0 sm:w-full sm:h-auto sm:aspect-square lg:aspect-[4/3]"
+        style={{ background: C.cardHover, animation: "pulse 2s cubic-bezier(.4,0,.6,1) infinite" }}
+      />
+      <div className="p-3 sm:p-4 space-y-2 flex-1 min-w-0">
+        <div className="h-3.5 w-3/5 rounded-full" style={{ background: C.cardHover, animation: "pulse 2s cubic-bezier(.4,0,.6,1) infinite" }} />
         <div className="h-3 w-full rounded-full" style={{ background: C.cardHover, animation: "pulse 2s cubic-bezier(.4,0,.6,1) .15s infinite" }} />
         <div className="h-3 w-2/5 rounded-full" style={{ background: C.cardHover, animation: "pulse 2s cubic-bezier(.4,0,.6,1) .3s infinite" }} />
       </div>
@@ -440,7 +444,7 @@ const QRMenuItemGroup = memo(function QRMenuItemGroup({
   items, cart, justAddedId, onAdd, onDecrement, onOpenModal,
 }: QRMenuItemGroupProps) {
   return (
-    <div className="grid grid-cols-2 gap-3 lg:grid-cols-5">
+    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 lg:grid-cols-5">
       {items.map((item) => (
         <QRMenuItemCard
           key={item.id}
@@ -501,7 +505,7 @@ const QRMenuItemCard = memo(function QRMenuItemCard({
 
   return (
     <div
-      className={`rounded-2xl overflow-hidden group cursor-pointer qr-menu-card flex flex-col${unavailable ? " qr-menu-card--unavailable" : ""}`}
+      className={`rounded-2xl overflow-hidden group cursor-pointer qr-menu-card flex flex-row sm:flex-col${unavailable ? " qr-menu-card--unavailable" : ""}`}
       style={{
         background: C.card,
         border: `1px solid ${justAdded ? C.goldBorder : C.border}`,
@@ -512,9 +516,9 @@ const QRMenuItemCard = memo(function QRMenuItemCard({
       }}
       onClick={() => onOpenModal(item)}
     >
-      {/* Food image — mobile: 4:3, tablet: 1:1 square, desktop: 4:3 at 3-col width (~310×233 px) */}
+      {/* Food image — mobile: fixed 90px square strip (left side), tablet: 1:1 square (top), desktop: 4:3 (top) */}
       {item.image_url ? (
-        <div className="relative overflow-hidden aspect-[4/3] sm:aspect-square lg:aspect-[4/3]">
+        <div className="relative overflow-hidden w-[90px] self-stretch shrink-0 sm:w-full sm:h-auto sm:aspect-square lg:aspect-[4/3]">
           <img
             src={item.image_url} alt={item.name} loading="eager" decoding="async"
             className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-[1.04]"
@@ -555,15 +559,15 @@ const QRMenuItemCard = memo(function QRMenuItemCard({
           )}
         </div>
       ) : (
-        /* No-image: reserved placeholder matching image area so all cards stay the same width/height */
+        /* No-image: placeholder strip on mobile, top block on sm+ */
         <div
-          className="aspect-[4/3] sm:aspect-square lg:aspect-[4/3] w-full"
-          style={{ background: `linear-gradient(135deg, ${C.cardHover} 0%, ${C.bg} 100%)`, borderBottom: `1px solid ${C.border}` }}
+          className="w-[90px] self-stretch shrink-0 sm:w-full sm:h-auto sm:aspect-square lg:aspect-[4/3]"
+          style={{ background: `linear-gradient(135deg, ${C.cardHover} 0%, ${C.bg} 100%)`, borderRight: `1px solid ${C.border}`, borderBottom: "none" }}
         />
       )}
 
       {/* Info — flex-col so the Add button is always pinned to the bottom */}
-      <div className="px-4 pt-3.5 pb-4 flex-1 flex flex-col">
+      <div className="px-3 py-3 sm:px-4 sm:pt-3.5 sm:pb-4 flex-1 flex flex-col min-w-0">
 
         {/* Name (top-left) + Price (top-right, never moves) */}
         <div className="flex items-start justify-between gap-2">
@@ -1495,7 +1499,7 @@ function ActiveSession({
         {activeTab === "menu" && (
           <>
             {isMenuLoading ? (
-              <div className="grid grid-cols-2 gap-3 lg:grid-cols-5">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 lg:grid-cols-5">
                 {Array.from({ length: 4 }).map((_, i) => <SkeletonCard key={i} />)}
               </div>
             ) : itemsByCategory.length === 0 ? (
