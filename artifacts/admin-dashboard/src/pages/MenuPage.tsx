@@ -1540,6 +1540,7 @@ export function MenuPage() {
             </div>
           ) : (
             <ItemForm
+              key={editItem?.id ?? 'new'}
               initial={editItem ?? undefined}
               categories={userCategories}
               onSubmit={async (data) => {
