@@ -501,7 +501,7 @@ const QRMenuItemCard = memo(function QRMenuItemCard({
 
   return (
     <div
-      className={`rounded-2xl overflow-hidden group cursor-pointer qr-menu-card${unavailable ? " qr-menu-card--unavailable" : ""}`}
+      className={`rounded-2xl overflow-hidden group cursor-pointer qr-menu-card flex flex-col${unavailable ? " qr-menu-card--unavailable" : ""}`}
       style={{
         background: C.card,
         border: `1px solid ${justAdded ? C.goldBorder : C.border}`,
@@ -562,21 +562,27 @@ const QRMenuItemCard = memo(function QRMenuItemCard({
         />
       )}
 
-      {/* Info */}
-      <div className="px-4 pt-3.5 pb-4">
-        {/* Name + food-type icon + price row */}
-        <div className="flex items-start justify-between gap-2 mb-1.5">
-          <div className="flex items-start gap-1.5 min-w-0">
+      {/* Info — flex-col so the Add button is always pinned to the bottom */}
+      <div className="px-4 pt-3.5 pb-4 flex-1 flex flex-col">
+
+        {/* Name (top-left) + Price (top-right, never moves) */}
+        <div className="flex items-start justify-between gap-2">
+          {/* Left side: name, then FoodTypeIcon below on mobile / beside on sm+ */}
+          <div className="min-w-0 flex-1 flex flex-col sm:flex-row sm:items-start sm:gap-1.5">
             <h3
-              className="text-[1.05rem] leading-[1.25] tracking-[-0.01em] min-w-0"
+              className="line-clamp-2 sm:line-clamp-none text-[1.05rem] leading-[1.25] tracking-[-0.01em] min-w-0"
               style={{ color: C.text, fontWeight: 400, ...SERIF }}
             >
               {item.name}
             </h3>
-            <FoodTypeIcon type={item.food_type} />
+            {/* FoodTypeIcon: own line on mobile (mt-1), inline on sm+ (mt-[3px]) */}
+            <span className="shrink-0 self-start mt-1 sm:mt-[3px]">
+              <FoodTypeIcon type={item.food_type} />
+            </span>
           </div>
+          {/* Price: always pinned top-right, never displaced by name length */}
           <span
-            className="text-sm font-semibold shrink-0 tabular-nums mt-0.5"
+            className="text-sm font-semibold shrink-0 tabular-nums self-start ml-1"
             style={{ color: C.gold, ...SANS }}
           >
             {fmt(item.price)}
@@ -584,13 +590,16 @@ const QRMenuItemCard = memo(function QRMenuItemCard({
         </div>
 
         {item.description && (
-          <p className="text-xs leading-[1.6] line-clamp-2 mb-2.5" style={{ color: C.text2, ...SANS }}>
+          <p className="text-xs leading-[1.6] line-clamp-2 mt-1.5" style={{ color: C.text2, ...SANS }}>
             {item.description}
           </p>
         )}
 
+        {/* Flexible spacer — pushes Add button to the bottom regardless of content length */}
+        <div className="flex-1 min-h-[8px]" />
+
         {/* Bottom row: prep time + CTA */}
-        <div className="flex items-center justify-between mt-2">
+        <div className="flex items-center justify-between">
           {item.prep_time_min ? (
             <span className="text-[11px] flex items-center gap-1" style={{ color: C.text3, ...SANS }}>
               <Clock className="w-2.5 h-2.5" />~{item.prep_time_min} min
