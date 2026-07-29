@@ -1105,8 +1105,11 @@ function ActiveSession({
   // the flag once the browser finishes scrolling, restoring normal observer-driven
   // behaviour for subsequent manual scrolls.
   useEffect(() => {
-    if (!isAllMode || itemsByCategory.length === 0) {
-      // Leave scrollHighlight as-is when not in All mode — it's not displayed.
+    // Skip when the menu tab is not visible — the section <div> elements are
+    // unmounted, sectionRefs.current is empty, and there is nothing to observe.
+    // Critically, this also means we do NOT create an observer that will fire
+    // all-false entries (clearing scrollHighlight) the moment the sections unmount.
+    if (!isAllMode || itemsByCategory.length === 0 || activeTab !== "menu") {
       return;
     }
 
@@ -1145,7 +1148,7 @@ function ActiveSession({
       observer.disconnect();
       window.removeEventListener("scrollend", onScrollEnd);
     };
-  }, [isAllMode, itemsByCategory]);
+  }, [isAllMode, itemsByCategory, activeTab]);
 
   // Scroll a category section into view, accounting for the sticky header.
   // Called when a category pill is tapped while in All mode.
