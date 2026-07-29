@@ -161,7 +161,7 @@ function SkeletonCard() {
     <div className="rounded-2xl overflow-hidden flex flex-row sm:flex-col" style={{ background: C.card, border: `1px solid ${C.border}` }}>
       {/* Image: mobile = fixed square strip, sm+ = aspect-ratio top */}
       <div
-        className="aspect-square self-stretch shrink-0 sm:w-full sm:h-auto sm:aspect-square lg:aspect-[4/3]"
+        className="w-[120px] self-stretch shrink-0 sm:w-full sm:h-auto sm:aspect-square lg:aspect-[4/3]"
         style={{ background: C.cardHover, animation: "pulse 2s cubic-bezier(.4,0,.6,1) infinite" }}
       />
       <div className="p-3 sm:p-4 space-y-2 flex-1 min-w-0">
@@ -518,7 +518,7 @@ const QRMenuItemCard = memo(function QRMenuItemCard({
     >
       {/* Food image — mobile: fixed 90px square strip (left side), tablet: 1:1 square (top), desktop: 4:3 (top) */}
       {item.image_url ? (
-        <div className="relative overflow-hidden aspect-square self-stretch shrink-0 sm:w-full sm:h-auto sm:aspect-square lg:aspect-[4/3]">
+        <div className="relative overflow-hidden w-[120px] self-stretch shrink-0 sm:w-full sm:h-auto sm:aspect-square lg:aspect-[4/3]">
           <img
             src={item.image_url} alt={item.name} loading="eager" decoding="async"
             className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-[1.04]"
@@ -561,7 +561,7 @@ const QRMenuItemCard = memo(function QRMenuItemCard({
       ) : (
         /* No-image: placeholder strip on mobile, top block on sm+ */
         <div
-          className="aspect-square self-stretch shrink-0 sm:w-full sm:h-auto sm:aspect-square lg:aspect-[4/3]"
+          className="w-[120px] self-stretch shrink-0 sm:w-full sm:h-auto sm:aspect-square lg:aspect-[4/3]"
           style={{ background: `linear-gradient(135deg, ${C.cardHover} 0%, ${C.bg} 100%)`, borderRight: `1px solid ${C.border}`, borderBottom: "none" }}
         />
       )}
