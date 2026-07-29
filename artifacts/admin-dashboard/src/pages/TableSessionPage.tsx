@@ -1002,11 +1002,10 @@ function ActiveSession({
 }) {
   const { cafeName, tableNumber, tableName, expiresAt, sessionId, customerName } = sessionInfo;
 
-  // null = hidden All mode (default on open). The page starts in All mode so the
-  // customer sees the full scrollable menu immediately. The "All" button is not
-  // rendered, but the logic remains intact. Tapping a category switches to
-  // single-category mode; tapping the active category again returns to All mode.
-  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
+  // The QR ordering page is permanently in All mode — the complete menu is always
+  // rendered as one continuous scroll. selectedCategory is kept for code
+  // compatibility but is never changed from null. isAllMode is always true.
+  const [selectedCategory] = useState<string | null>(null);
   const [selectedItem, setSelectedItem] = useState<MenuItem | null>(null);
   const [cart, setCart] = useState<Map<string, CartItem>>(new Map());
   const [cartOpen, setCartOpen] = useState(false);
@@ -1339,16 +1338,12 @@ function ActiveSession({
                       key={cat.id}
                       ref={(el) => { btnRefs.current[cat.id] = el; }}
                       onClick={() => {
-                        if (!isAllMode && selectedCategory === cat.id) {
-                          // Tapping the currently active category returns to
-                          // hidden All mode — full scrollable menu resumes.
-                          setSelectedCategory(null);
-                          setScrollHighlight(null);
-                        } else {
-                          // Any other tap (from All mode or switching category)
-                          // switches to single-category mode for this category.
-                          setSelectedCategory(cat.id);
-                        }
+                        // Always in All mode — tap scrolls to the section and
+                        // immediately highlights the pill. The guard prevents the
+                        // IntersectionObserver from overwriting the highlight
+                        // during the smooth-scroll animation.
+                        setScrollHighlight(cat.id);
+                        scrollToSection(cat.id);
                       }}
                       className="relative shrink-0 px-4 py-[7px] rounded-full text-xs font-semibold overflow-hidden"
                       style={{
@@ -1402,75 +1397,47 @@ function ActiveSession({
               <div className="grid grid-cols-2 gap-3 lg:grid-cols-5">
                 {Array.from({ length: 4 }).map((_, i) => <SkeletonCard key={i} />)}
               </div>
-            ) : isAllMode ? (
-              /* ── ALL MODE: every category with its own heading + grid ── */
-              itemsByCategory.length === 0 ? (
-                <div className="text-center py-20">
-                  <UtensilsCrossed className="w-7 h-7 mx-auto mb-3 opacity-20" style={{ color: C.text }} />
-                  <p className="text-sm" style={{ color: C.text3, ...SANS }}>No menu items yet</p>
-                </div>
-              ) : (
-                <motion.div key="__all__" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.18 }}>
-                  {itemsByCategory.map((cat, idx) => (
-                    <div
-                      key={cat.id}
-                      ref={(el) => { sectionRefs.current[cat.id] = el; }}
-                      data-category-id={cat.id}
-                      className={idx > 0 ? "mt-8" : ""}
-                    >
-                      {/* Category heading */}
-                      <div className="flex items-center gap-3 mb-3">
-                        <span className="text-[11px] font-semibold uppercase tracking-widest shrink-0" style={{ color: C.gold, ...SANS }}>
-                          {cat.name}
-                        </span>
-                        <div className="flex-1 h-px" style={{ background: C.border }} />
-                      </div>
-                      {/* Internal category groups — each a memo-isolated React subtree.
-                          cat.groups[] is a stable memoized reference (from itemsByCategory
-                          above). areGroupPropsEqual only re-renders the one group whose
-                          items were affected by the cart change. */}
-                      <div className="flex flex-col gap-3">
-                        {cat.groups.map((group, gi) => (
-                          <QRMenuItemGroup
-                            key={gi}
-                            items={group}
-                            cart={cart}
-                            justAddedId={justAddedId}
-                            onAdd={addToCart}
-                            onDecrement={updateCartQty}
-                            onOpenModal={setSelectedItem}
-                          />
-                        ))}
-                      </div>
-                    </div>
-                  ))}
-                </motion.div>
-              )
-            ) : visibleItems.length === 0 && categories.length > 0 ? (
-              /* ── SINGLE CATEGORY — empty ── */
+            ) : itemsByCategory.length === 0 ? (
+              /* ── Empty menu ── */
               <div className="text-center py-20">
                 <UtensilsCrossed className="w-7 h-7 mx-auto mb-3 opacity-20" style={{ color: C.text }} />
-                <p className="text-sm" style={{ color: C.text3, ...SANS }}>Nothing in this category yet</p>
+                <p className="text-sm" style={{ color: C.text3, ...SANS }}>No menu items yet</p>
               </div>
             ) : (
-              /* ── SINGLE CATEGORY — filtered grid ── */
-              <motion.div
-                key={activeCategoryId}
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={{ duration: 0.18 }}
-                className="flex flex-col gap-3"
-              >
-                {visibleGroups.map((group, gi) => (
-                  <QRMenuItemGroup
-                    key={gi}
-                    items={group}
-                    cart={cart}
-                    justAddedId={justAddedId}
-                    onAdd={addToCart}
-                    onDecrement={updateCartQty}
-                    onOpenModal={setSelectedItem}
-                  />
+              /* ── ALL MODE (permanent): every category rendered as one continuous scroll ── */
+              <motion.div key="__all__" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.18 }}>
+                {itemsByCategory.map((cat, idx) => (
+                  <div
+                    key={cat.id}
+                    ref={(el) => { sectionRefs.current[cat.id] = el; }}
+                    data-category-id={cat.id}
+                    className={idx > 0 ? "mt-8" : ""}
+                  >
+                    {/* Category heading */}
+                    <div className="flex items-center gap-3 mb-3">
+                      <span className="text-[11px] font-semibold uppercase tracking-widest shrink-0" style={{ color: C.gold, ...SANS }}>
+                        {cat.name}
+                      </span>
+                      <div className="flex-1 h-px" style={{ background: C.border }} />
+                    </div>
+                    {/* Internal category groups — each a memo-isolated React subtree.
+                        cat.groups[] is a stable memoized reference (from itemsByCategory
+                        above). areGroupPropsEqual only re-renders the one group whose
+                        items were affected by the cart change. */}
+                    <div className="flex flex-col gap-3">
+                      {cat.groups.map((group, gi) => (
+                        <QRMenuItemGroup
+                          key={gi}
+                          items={group}
+                          cart={cart}
+                          justAddedId={justAddedId}
+                          onAdd={addToCart}
+                          onDecrement={updateCartQty}
+                          onOpenModal={setSelectedItem}
+                        />
+                      ))}
+                    </div>
+                  </div>
                 ))}
               </motion.div>
             )}
