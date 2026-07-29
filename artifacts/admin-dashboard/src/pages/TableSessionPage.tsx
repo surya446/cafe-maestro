@@ -158,7 +158,7 @@ function BrandedLoader({ cafeName, cafeNameLoading }: { cafeName: string | null;
 // ─── Skeleton card ───────────────────────────────────────────────────────────────
 function SkeletonCard() {
   return (
-    <div className="rounded-2xl overflow-hidden flex flex-row sm:flex-col" style={{ background: C.card, border: `1px solid ${C.border}` }}>
+    <div className="rounded-2xl overflow-hidden flex flex-row sm:flex-col h-[120px] sm:h-auto" style={{ background: C.card, border: `1px solid ${C.border}` }}>
       {/* Image: mobile = fixed square strip, sm+ = aspect-ratio top */}
       <div
         className="w-[120px] self-stretch shrink-0 sm:w-full sm:h-auto sm:aspect-square lg:aspect-[4/3]"
@@ -505,7 +505,7 @@ const QRMenuItemCard = memo(function QRMenuItemCard({
 
   return (
     <div
-      className={`rounded-2xl overflow-hidden group cursor-pointer qr-menu-card flex flex-row sm:flex-col${unavailable ? " qr-menu-card--unavailable" : ""}`}
+      className={`rounded-2xl overflow-hidden group cursor-pointer qr-menu-card flex flex-row sm:flex-col h-[120px] sm:h-auto${unavailable ? " qr-menu-card--unavailable" : ""}`}
       style={{
         background: C.card,
         border: `1px solid ${justAdded ? C.goldBorder : C.border}`,
