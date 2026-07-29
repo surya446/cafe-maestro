@@ -417,7 +417,7 @@ function FoodTypeIcon({ type }: { type: 'veg' | 'non_veg' }) {
     <span
       className="inline-flex items-center justify-center shrink-0"
       title={type === 'veg' ? 'Vegetarian' : 'Non-Vegetarian'}
-      style={{ width: 13, height: 13, border: `1.5px solid ${color}`, borderRadius: 2, marginTop: 2 }}
+      style={{ width: 13, height: 13, border: `1.5px solid ${color}`, borderRadius: 2 }}
     >
       <span style={{ width: 6, height: 6, borderRadius: '50%', background: color, display: 'block' }} />
     </span>
