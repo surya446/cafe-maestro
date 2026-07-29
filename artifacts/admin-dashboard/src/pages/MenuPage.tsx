@@ -158,6 +158,11 @@ function ItemForm({
   const [tags, setTags] = useState((initial?.tags ?? []).join(", "));
   const [allergens, setAllergens] = useState((initial?.allergens ?? []).join(", "));
   const [ingredients, setIngredients] = useState(initial?.ingredients ?? "");
+  // food_type: '' forces the admin to explicitly pick one when creating a new item.
+  // When editing, initial.food_type is always populated (DB default is 'veg').
+  const [foodType, setFoodType] = useState<'veg' | 'non_veg' | ''>(
+    initial?.food_type ?? ''
+  );
   const [localPreview, setLocalPreview] = useState<string | null>(null);
   const [showUrlField, setShowUrlField] = useState(!!initial?.image_url);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -180,6 +185,7 @@ function ItemForm({
 
   function handle(e: React.FormEvent) {
     e.preventDefault();
+    if (!foodType) return; // guard — form submit disabled below, but be safe
     onSubmit({
       name: name.trim(),
       description: description.trim() || null,
@@ -193,6 +199,7 @@ function ItemForm({
       tags: tags.split(",").map((t) => t.trim()).filter(Boolean),
       allergens: allergens.split(",").map((a) => a.trim()).filter(Boolean),
       ingredients: ingredients.trim() || null,
+      food_type: foodType as 'veg' | 'non_veg',
     });
   }
 
@@ -264,6 +271,57 @@ function ItemForm({
               placeholder="Short description of the item"
               className="min-h-[120px] resize-none"
             />
+          </div>
+
+          {/* Food type — required. Displayed as the Indian veg/non-veg indicator
+              on the QR ordering menu. Admin must choose before saving. */}
+          <div className="space-y-2">
+            <Label>
+              Food Type <span className="text-destructive">*</span>
+            </Label>
+            <div className="grid grid-cols-2 gap-3">
+              {/* Veg */}
+              <button
+                type="button"
+                onClick={() => setFoodType('veg')}
+                className={cn(
+                  "flex items-center gap-2.5 px-4 py-3.5 rounded-xl border text-sm font-medium transition-colors text-left",
+                  foodType === 'veg'
+                    ? "border-green-600 bg-green-600/10 text-green-600"
+                    : "border-border bg-transparent text-muted-foreground hover:border-green-600/40"
+                )}
+              >
+                <span
+                  className="inline-flex items-center justify-center shrink-0"
+                  style={{ width: 16, height: 16, border: '2px solid #16a34a', borderRadius: 3 }}
+                >
+                  <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#16a34a', display: 'block' }} />
+                </span>
+                Vegetarian
+              </button>
+              {/* Non-Veg */}
+              <button
+                type="button"
+                onClick={() => setFoodType('non_veg')}
+                className={cn(
+                  "flex items-center gap-2.5 px-4 py-3.5 rounded-xl border text-sm font-medium transition-colors text-left",
+                  foodType === 'non_veg'
+                    ? "border-red-600 bg-red-600/10 text-red-600"
+                    : "border-border bg-transparent text-muted-foreground hover:border-red-600/40"
+                )}
+              >
+                <span
+                  className="inline-flex items-center justify-center shrink-0"
+                  style={{ width: 16, height: 16, border: '2px solid #dc2626', borderRadius: 3 }}
+                >
+                  <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#dc2626', display: 'block' }} />
+                </span>
+                Non-Vegetarian
+              </button>
+            </div>
+            {!foodType && (
+              <p className="text-xs text-muted-foreground">Required — select one before saving</p>
+            )}
           </div>
         </div>
 
@@ -426,7 +484,7 @@ function ItemForm({
         </Button>
         <Button
           type="submit"
-          disabled={loading || !name.trim() || !price || !categoryId}
+          disabled={loading || !name.trim() || !price || !categoryId || !foodType}
           className="flex-1 h-12"
         >
           {loading ? "Saving…" : initial?.name ? "Update Item" : "Create Item"}

@@ -39,6 +39,7 @@ interface MenuItem {
   price: number; image_url: string | null; tags: string[];
   prep_time_min: number | null; allergens: string[]; ingredients: string | null;
   is_available: boolean; is_archived: boolean;
+  food_type: 'veg' | 'non_veg';
 }
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────────
@@ -403,6 +404,22 @@ function chunk<T>(arr: T[], size: number): T[][] {
   return out;
 }
 
+// ── Food type indicator ───────────────────────────────────────────────────────────
+// Standard Indian veg / non-veg marker: a square border with a filled circle inside.
+// Veg = green, Non-Veg = red. Rendered inline beside every item name.
+function FoodTypeIcon({ type }: { type: 'veg' | 'non_veg' }) {
+  const color = type === 'veg' ? '#22c55e' : '#ef4444';
+  return (
+    <span
+      className="inline-flex items-center justify-center shrink-0"
+      title={type === 'veg' ? 'Vegetarian' : 'Non-Vegetarian'}
+      style={{ width: 13, height: 13, border: `1.5px solid ${color}`, borderRadius: 2, marginTop: 2 }}
+    >
+      <span style={{ width: 6, height: 6, borderRadius: '50%', background: color, display: 'block' }} />
+    </span>
+  );
+}
+
 // ── QRMenuItemGroup ───────────────────────────────────────────────────────────────
 // One internal category group for the QR ordering page.
 //
@@ -547,14 +564,17 @@ const QRMenuItemCard = memo(function QRMenuItemCard({
 
       {/* Info */}
       <div className="px-4 pt-3.5 pb-4">
-        {/* Name + price row */}
+        {/* Name + food-type icon + price row */}
         <div className="flex items-start justify-between gap-2 mb-1.5">
-          <h3
-            className="text-[1.05rem] leading-[1.25] tracking-[-0.01em]"
-            style={{ color: C.text, fontWeight: 400, ...SERIF }}
-          >
-            {item.name}
-          </h3>
+          <div className="flex items-start gap-1.5 min-w-0">
+            <h3
+              className="text-[1.05rem] leading-[1.25] tracking-[-0.01em] min-w-0"
+              style={{ color: C.text, fontWeight: 400, ...SERIF }}
+            >
+              {item.name}
+            </h3>
+            <FoodTypeIcon type={item.food_type} />
+          </div>
           <span
             className="text-sm font-semibold shrink-0 tabular-nums mt-0.5"
             style={{ color: C.gold, ...SANS }}
@@ -1006,6 +1026,9 @@ function ActiveSession({
   // rendered as one continuous scroll. selectedCategory is kept for code
   // compatibility but is never changed from null. isAllMode is always true.
   const [selectedCategory] = useState<string | null>(null);
+  // Food filter: 'all' (default) = show everything; 'veg' = veg items only;
+  // 'non_veg' = all items with non-veg sorted first inside each category.
+  const [foodFilter, setFoodFilter] = useState<'all' | 'veg' | 'non_veg'>('all');
   const [selectedItem, setSelectedItem] = useState<MenuItem | null>(null);
   const [cart, setCart] = useState<Map<string, CartItem>>(new Map());
   const [cartOpen, setCartOpen] = useState(false);
@@ -1074,12 +1097,33 @@ function ActiveSession({
   // Uses visibleCategories so the "All" database category never appears as a section.
   // .groups is the memoized chunk slice required for QRMenuItemGroup.memo to work.
   // Stable array references are the prerequisite for areGroupPropsEqual to bail out.
+  //
+  // foodFilter logic:
+  //   'all'     — no change, all items rendered in their natural position order.
+  //   'veg'     — only veg items; categories with no veg items are hidden entirely.
+  //   'non_veg' — all items shown, but within each category non-veg items are listed
+  //               first (preserving relative position order within each group), then
+  //               veg items after them. Category order is never changed.
   const itemsByCategory = useMemo(
     () => visibleCategories
-      .map((cat) => ({ ...cat, items: menuItems.filter((i) => i.category_id === cat.id) }))
+      .map((cat) => {
+        const all = menuItems.filter((i) => i.category_id === cat.id);
+        let items: typeof all;
+        if (foodFilter === 'veg') {
+          items = all.filter((i) => i.food_type === 'veg');
+        } else if (foodFilter === 'non_veg') {
+          items = [
+            ...all.filter((i) => i.food_type === 'non_veg'),
+            ...all.filter((i) => i.food_type === 'veg'),
+          ];
+        } else {
+          items = all;
+        }
+        return { ...cat, items };
+      })
       .filter((cat) => cat.items.length > 0)
       .map((cat) => ({ ...cat, groups: chunk(cat.items, INTERNAL_CATEGORY_SIZE) })),
-    [visibleCategories, menuItems]
+    [visibleCategories, menuItems, foodFilter]
   );
 
   // Memoized group slices for single-category mode.
@@ -1324,6 +1368,7 @@ function ActiveSession({
               className="px-4 py-3"
               style={{ borderTop: `1px solid ${C.border}` }}
             >
+              {/* ── Category pills ── */}
               <div
                 ref={scrollRef}
                 className="flex gap-2 overflow-x-auto"
@@ -1368,6 +1413,54 @@ function ActiveSession({
                     </motion.button>
                   );
                 })}
+              </div>
+
+              {/* ── Veg / Non-Veg filter chips ──
+                  Tap once to activate; tap the active chip again to clear the filter.
+                  'veg'     → veg items only; empty categories are hidden.
+                  'non_veg' → all items shown, non-veg sorted first per category. */}
+              <div className="flex gap-2 mt-2.5">
+                {/* Veg chip */}
+                <motion.button
+                  whileTap={{ scale: 0.93 }}
+                  onClick={() => setFoodFilter((f) => f === 'veg' ? 'all' : 'veg')}
+                  className="flex items-center gap-1.5 shrink-0 px-3 py-[6px] rounded-full text-[11px] font-semibold transition-colors"
+                  style={{
+                    border: `1px solid ${foodFilter === 'veg' ? '#22c55e' : C.border}`,
+                    background: foodFilter === 'veg' ? 'rgba(34,197,94,0.12)' : 'transparent',
+                    color: foodFilter === 'veg' ? '#22c55e' : C.text2,
+                    ...SANS,
+                  }}
+                >
+                  <span
+                    className="inline-flex items-center justify-center"
+                    style={{ width: 11, height: 11, border: '1.5px solid #22c55e', borderRadius: 2 }}
+                  >
+                    <span style={{ width: 5, height: 5, borderRadius: '50%', background: '#22c55e', display: 'block' }} />
+                  </span>
+                  Veg
+                </motion.button>
+
+                {/* Non-Veg chip */}
+                <motion.button
+                  whileTap={{ scale: 0.93 }}
+                  onClick={() => setFoodFilter((f) => f === 'non_veg' ? 'all' : 'non_veg')}
+                  className="flex items-center gap-1.5 shrink-0 px-3 py-[6px] rounded-full text-[11px] font-semibold transition-colors"
+                  style={{
+                    border: `1px solid ${foodFilter === 'non_veg' ? '#ef4444' : C.border}`,
+                    background: foodFilter === 'non_veg' ? 'rgba(239,68,68,0.12)' : 'transparent',
+                    color: foodFilter === 'non_veg' ? '#ef4444' : C.text2,
+                    ...SANS,
+                  }}
+                >
+                  <span
+                    className="inline-flex items-center justify-center"
+                    style={{ width: 11, height: 11, border: '1.5px solid #ef4444', borderRadius: 2 }}
+                  >
+                    <span style={{ width: 5, height: 5, borderRadius: '50%', background: '#ef4444', display: 'block' }} />
+                  </span>
+                  Non-Veg
+                </motion.button>
               </div>
             </motion.div>
           )}

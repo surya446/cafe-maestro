@@ -74,6 +74,8 @@ export interface MenuItem {
   calories: number | null;
   allergens: string[];
   ingredients: string | null;
+  /** Standard Indian food classification — 'veg' or 'non_veg'. */
+  food_type: 'veg' | 'non_veg';
   created_at: string;
   updated_at: string;
   menu_categories?: MenuCategory;
