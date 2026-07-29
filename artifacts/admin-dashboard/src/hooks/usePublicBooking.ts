@@ -49,7 +49,8 @@ export function usePublicCafe() {
         .select("id, name, description, phone, address")
         .eq("is_active", true);
 
-      if (cafeId) q = (q as ReturnType<typeof q.eq>).eq("id", cafeId);
+      // Cast to `any` to break the recursive Supabase builder type (TS2589)
+      if (cafeId) q = (q as any).eq("id", cafeId);
 
       const { data, error } = await (q as ReturnType<typeof q.limit>)
         .limit(1)

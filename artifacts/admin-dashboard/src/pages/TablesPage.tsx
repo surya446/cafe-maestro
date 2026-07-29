@@ -22,6 +22,7 @@ import {
   Circle,
   Clock,
   AlertTriangle,
+  type LucideIcon,
 } from "lucide-react";
 import QRCode from "react-qr-code";
 import { PageHeader } from "@/components/common/PageHeader";
@@ -77,7 +78,7 @@ function fmtTime(t: string) {
 
 const STATUS_CONFIG: Record<
   TableStatus,
-  { label: string; icon: React.FC<{ className?: string }>; badgeCls: string; cardCls: string; cardActiveCls: string }
+  { label: string; icon: LucideIcon; badgeCls: string; cardCls: string; cardActiveCls: string }
 > = {
   free:        { label: "Free",        icon: Circle,        badgeCls: "bg-emerald-100 text-emerald-700 border-emerald-200", cardCls: "text-emerald-700",  cardActiveCls: "ring-2 ring-emerald-400 bg-emerald-50/50" },
   busy:        { label: "Busy",        icon: Clock,         badgeCls: "bg-blue-100 text-blue-700 border-blue-200",         cardCls: "text-blue-700",     cardActiveCls: "ring-2 ring-blue-400 bg-blue-50/50" },
@@ -287,7 +288,7 @@ function QRDialog({
   }
 
   async function handleRegenerate() {
-    await onRegenerate(table.id);
+    await onRegenerate(table!.id);
     toast({ title: "QR code regenerated", description: "Old QR code is now invalid." });
   }
 

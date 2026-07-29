@@ -162,7 +162,7 @@ export function TvLoginScreen({ accountError }: TvLoginScreenProps) {
       console.log("[DIAG] fetch intercepted →", url);
       console.log("[DIAG] headers (first 4):", headerSummary);
       console.log("[DIAG] method:", init?.method ?? "GET");
-      return origFetch.call(this, input, init);
+      return origFetch(input, init);
     } as typeof fetch;
 
     console.group("[TvLoginScreen] signInWithPassword");
