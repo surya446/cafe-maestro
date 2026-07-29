@@ -1403,28 +1403,60 @@ function ActiveSession({
                 })}
               </div>
 
-              {/* ── Veg toggle ──
-                  Single toggle: tap to show veg-only, tap again to restore all items. */}
+              {/* ── Veg toggle switch ──
+                  Tap label or switch to show veg-only / restore all items. */}
               <div className="flex mt-2.5">
-                <motion.button
-                  whileTap={{ scale: 0.93 }}
+                <button
+                  type="button"
                   onClick={() => setFoodFilter((f) => f === 'veg' ? 'all' : 'veg')}
-                  className="flex items-center gap-1.5 shrink-0 px-3 py-[6px] rounded-full text-[11px] font-semibold transition-colors"
-                  style={{
-                    border: `1px solid ${foodFilter === 'veg' ? '#22c55e' : C.border}`,
-                    background: foodFilter === 'veg' ? 'rgba(34,197,94,0.12)' : 'transparent',
-                    color: foodFilter === 'veg' ? '#22c55e' : C.text2,
-                    ...SANS,
-                  }}
+                  className="flex items-center gap-2.5 shrink-0 select-none"
+                  style={{ WebkitTapHighlightColor: 'transparent', background: 'none', border: 'none', padding: 0, cursor: 'pointer' }}
+                  aria-pressed={foodFilter === 'veg'}
+                  aria-label="Filter vegetarian items"
                 >
-                  <span
-                    className="inline-flex items-center justify-center"
-                    style={{ width: 11, height: 11, border: '1.5px solid #22c55e', borderRadius: 2 }}
-                  >
-                    <span style={{ width: 5, height: 5, borderRadius: '50%', background: '#22c55e', display: 'block' }} />
+                  {/* Veg icon + label */}
+                  <span className="flex items-center gap-1.5" style={{ ...SANS }}>
+                    <span
+                      className="inline-flex items-center justify-center shrink-0"
+                      style={{ width: 12, height: 12, border: '1.5px solid #22c55e', borderRadius: 2 }}
+                    >
+                      <span style={{ width: 5.5, height: 5.5, borderRadius: '50%', background: '#22c55e', display: 'block' }} />
+                    </span>
+                    <span
+                      className="text-[11px] font-semibold tracking-wide transition-colors duration-200"
+                      style={{ color: foodFilter === 'veg' ? '#22c55e' : C.text2 }}
+                    >
+                      Veg
+                    </span>
                   </span>
-                  Veg
-                </motion.button>
+
+                  {/* Toggle track */}
+                  <span
+                    className="relative inline-flex shrink-0 items-center rounded-full transition-colors duration-200"
+                    style={{
+                      width: 36,
+                      height: 20,
+                      background: foodFilter === 'veg' ? '#22c55e' : 'rgba(255,255,255,0.10)',
+                      border: `1px solid ${foodFilter === 'veg' ? '#22c55e' : 'rgba(255,255,255,0.14)'}`,
+                      boxShadow: foodFilter === 'veg' ? '0 0 8px rgba(34,197,94,0.35)' : 'none',
+                    }}
+                  >
+                    {/* Thumb */}
+                    <motion.span
+                      layout
+                      transition={{ type: 'spring', stiffness: 600, damping: 38 }}
+                      className="absolute rounded-full"
+                      style={{
+                        width: 14,
+                        height: 14,
+                        background: '#FFFFFF',
+                        left: foodFilter === 'veg' ? 19 : 2,
+                        top: 2,
+                        boxShadow: '0 1px 3px rgba(0,0,0,0.4)',
+                      }}
+                    />
+                  </span>
+                </button>
               </div>
             </motion.div>
           )}
