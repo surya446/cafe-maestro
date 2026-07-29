@@ -501,7 +501,7 @@ const QRMenuItemCard = memo(function QRMenuItemCard({
 
   return (
     <div
-      className={`rounded-2xl overflow-hidden flex flex-col group cursor-pointer qr-menu-card${unavailable ? " qr-menu-card--unavailable" : ""}`}
+      className={`rounded-2xl overflow-hidden group cursor-pointer qr-menu-card${unavailable ? " qr-menu-card--unavailable" : ""}`}
       style={{
         background: C.card,
         border: `1px solid ${justAdded ? C.goldBorder : C.border}`,
@@ -514,7 +514,7 @@ const QRMenuItemCard = memo(function QRMenuItemCard({
     >
       {/* Food image — mobile: 4:3, tablet: 1:1 square, desktop: 4:3 at 3-col width (~310×233 px) */}
       {item.image_url ? (
-        <div className="relative overflow-hidden aspect-[4/3] sm:aspect-square lg:aspect-[4/3] shrink-0">
+        <div className="relative overflow-hidden aspect-[4/3] sm:aspect-square lg:aspect-[4/3]">
           <img
             src={item.image_url} alt={item.name} loading="eager" decoding="async"
             className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-[1.04]"
@@ -555,61 +555,47 @@ const QRMenuItemCard = memo(function QRMenuItemCard({
           )}
         </div>
       ) : (
-        /* No-image: reserved placeholder matching image area */
+        /* No-image: reserved placeholder matching image area so all cards stay the same width/height */
         <div
-          className="aspect-[4/3] sm:aspect-square lg:aspect-[4/3] w-full shrink-0"
+          className="aspect-[4/3] sm:aspect-square lg:aspect-[4/3] w-full"
           style={{ background: `linear-gradient(135deg, ${C.cardHover} 0%, ${C.bg} 100%)`, borderBottom: `1px solid ${C.border}` }}
         />
       )}
 
-      {/* ── Content — flex column so Add button always anchors to the bottom ── */}
-      <div className="flex flex-col flex-1 px-4 pt-3.5 pb-4">
-
-        {/* Header row: [name · icon] ··· [price] */}
+      {/* Info */}
+      <div className="px-4 pt-3.5 pb-4">
+        {/* Name + food-type icon + price row */}
         <div className="flex items-start justify-between gap-2 mb-1.5">
-          {/* Left: name + food-type icon — name line-clamps at 2, icon stays top-aligned */}
-          <div className="flex items-start gap-1.5 flex-1 min-w-0">
+          <div className="flex items-start gap-1.5 min-w-0">
             <h3
-              className="text-[1.05rem] leading-[1.25] tracking-[-0.01em] line-clamp-2 min-w-0"
+              className="text-[1.05rem] leading-[1.25] tracking-[-0.01em] min-w-0"
               style={{ color: C.text, fontWeight: 400, ...SERIF }}
             >
               {item.name}
             </h3>
-            {/* Icon nudged down by 3 px to optically align with the cap-height of the first text line */}
-            <span className="shrink-0" style={{ marginTop: 3 }}>
-              <FoodTypeIcon type={item.food_type} />
-            </span>
+            <FoodTypeIcon type={item.food_type} />
           </div>
-          {/* Right: price — shrink-0 + self-start so it never shifts regardless of name length */}
           <span
-            className="text-sm font-semibold shrink-0 tabular-nums self-start"
-            style={{ color: C.gold, lineHeight: '1.25', ...SANS }}
+            className="text-sm font-semibold shrink-0 tabular-nums mt-0.5"
+            style={{ color: C.gold, ...SANS }}
           >
             {fmt(item.price)}
           </span>
         </div>
 
-        {/* Description — always occupies a fixed 2-line block so cards in the same row align */}
-        <p
-          className="text-xs leading-[1.6] line-clamp-2"
-          style={{ color: C.text2, minHeight: '2.4rem', ...SANS }}
-        >
-          {item.description ?? ''}
-        </p>
+        {item.description && (
+          <p className="text-xs leading-[1.6] line-clamp-2 mb-2.5" style={{ color: C.text2, ...SANS }}>
+            {item.description}
+          </p>
+        )}
 
-        {/* Prep time (optional) */}
-        {item.prep_time_min ? (
-          <span className="text-[11px] flex items-center gap-1 mt-1.5" style={{ color: C.text3, ...SANS }}>
-            <Clock className="w-2.5 h-2.5" />~{item.prep_time_min} min
-          </span>
-        ) : null}
-
-        {/* Spacer — pushes Add button to the card bottom regardless of content height */}
-        <div className="flex-1" />
-
-        {/* Add / qty controls — always at the card bottom */}
-        <div className="flex items-center justify-between mt-3">
-          <div /> {/* left placeholder keeps the button right-aligned */}
+        {/* Bottom row: prep time + CTA */}
+        <div className="flex items-center justify-between mt-2">
+          {item.prep_time_min ? (
+            <span className="text-[11px] flex items-center gap-1" style={{ color: C.text3, ...SANS }}>
+              <Clock className="w-2.5 h-2.5" />~{item.prep_time_min} min
+            </span>
+          ) : <div />}
 
           {!unavailable && (
             qty === 0 ? (
