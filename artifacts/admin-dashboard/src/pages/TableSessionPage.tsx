@@ -161,7 +161,7 @@ function SkeletonCard() {
     <div className="rounded-2xl overflow-hidden flex flex-row sm:flex-col" style={{ background: C.card, border: `1px solid ${C.border}` }}>
       {/* Image: mobile = fixed square strip, sm+ = aspect-ratio top */}
       <div
-        className="w-[90px] self-stretch shrink-0 sm:w-full sm:h-auto sm:aspect-square lg:aspect-[4/3]"
+        className="w-[80px] h-[80px] shrink-0 sm:w-full sm:h-auto sm:aspect-square lg:aspect-[4/3]"
         style={{ background: C.cardHover, animation: "pulse 2s cubic-bezier(.4,0,.6,1) infinite" }}
       />
       <div className="p-3 sm:p-4 space-y-2 flex-1 min-w-0">
@@ -518,7 +518,7 @@ const QRMenuItemCard = memo(function QRMenuItemCard({
     >
       {/* Food image — mobile: fixed 90px square strip (left side), tablet: 1:1 square (top), desktop: 4:3 (top) */}
       {item.image_url ? (
-        <div className="relative overflow-hidden w-[90px] self-stretch shrink-0 sm:w-full sm:h-auto sm:aspect-square lg:aspect-[4/3]">
+        <div className="relative overflow-hidden w-[80px] h-[80px] shrink-0 sm:w-full sm:h-auto sm:aspect-square lg:aspect-[4/3]">
           <img
             src={item.image_url} alt={item.name} loading="eager" decoding="async"
             className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-[1.04]"
@@ -561,13 +561,13 @@ const QRMenuItemCard = memo(function QRMenuItemCard({
       ) : (
         /* No-image: placeholder strip on mobile, top block on sm+ */
         <div
-          className="w-[90px] self-stretch shrink-0 sm:w-full sm:h-auto sm:aspect-square lg:aspect-[4/3]"
+          className="w-[80px] h-[80px] shrink-0 sm:w-full sm:h-auto sm:aspect-square lg:aspect-[4/3]"
           style={{ background: `linear-gradient(135deg, ${C.cardHover} 0%, ${C.bg} 100%)`, borderRight: `1px solid ${C.border}`, borderBottom: "none" }}
         />
       )}
 
       {/* Info — flex-col so the Add button is always pinned to the bottom */}
-      <div className="px-3 py-3 sm:px-4 sm:pt-3.5 sm:pb-4 flex-1 flex flex-col min-w-0">
+      <div className="px-3 py-2 sm:px-4 sm:pt-3.5 sm:pb-4 flex-1 flex flex-col min-w-0">
 
         {/* Name (top-left) + Price (top-right, never moves) */}
         <div className="flex items-start justify-between gap-2">
@@ -594,13 +594,13 @@ const QRMenuItemCard = memo(function QRMenuItemCard({
         </div>
 
         {item.description && (
-          <p className="text-xs leading-[1.6] line-clamp-2 mt-1.5" style={{ color: C.text2, ...SANS }}>
+          <p className="text-xs leading-[1.6] line-clamp-2 mt-1" style={{ color: C.text2, ...SANS }}>
             {item.description}
           </p>
         )}
 
         {/* Flexible spacer — pushes Add button to the bottom regardless of content length */}
-        <div className="flex-1 min-h-[8px]" />
+        <div className="flex-1 min-h-[4px]" />
 
         {/* Bottom row: prep time + CTA */}
         <div className="flex items-center justify-between">
