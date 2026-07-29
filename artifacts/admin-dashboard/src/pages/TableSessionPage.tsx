@@ -567,7 +567,7 @@ const QRMenuItemCard = memo(function QRMenuItemCard({
       )}
 
       {/* Info — flex-col so the Add button is always pinned to the bottom */}
-      <div className="px-3 py-2 sm:px-4 sm:pt-3.5 sm:pb-4 flex-1 flex flex-col min-w-0">
+      <div className="px-3 py-1.5 sm:px-4 sm:pt-3.5 sm:pb-4 flex-1 flex flex-col min-w-0">
 
         {/* Name (top-left) + Price (top-right, never moves) */}
         <div className="flex items-start justify-between gap-2">
