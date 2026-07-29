@@ -1712,7 +1712,7 @@ export function TableSessionPage() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("menu_items")
-        .select("id, category_id, name, description, price, image_url, tags, prep_time_min, allergens, ingredients, is_available, is_archived")
+        .select("id, category_id, name, description, price, image_url, tags, prep_time_min, allergens, ingredients, is_available, is_archived, food_type")
         .eq("cafe_id", cafeId!).eq("is_archived", false).order("position");
       if (error) throw error;
       return (data ?? []) as MenuItem[];

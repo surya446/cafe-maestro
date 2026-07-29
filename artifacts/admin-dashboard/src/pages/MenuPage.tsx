@@ -158,11 +158,23 @@ function ItemForm({
   const [tags, setTags] = useState((initial?.tags ?? []).join(", "));
   const [allergens, setAllergens] = useState((initial?.allergens ?? []).join(", "));
   const [ingredients, setIngredients] = useState(initial?.ingredients ?? "");
+  // [DIAG STEP 2] Verify what the edit dialog receives
+  console.log("[DIAG STEP 2] ItemForm initial prop:", {
+    id: initial?.id,
+    name: initial?.name,
+    food_type: initial?.food_type,
+    has_food_type_key: initial ? 'food_type' in initial : 'no initial',
+    full_initial: initial,
+  });
+
   // food_type: '' forces the admin to explicitly pick one when creating a new item.
   // When editing, initial.food_type is always populated (DB default is 'veg').
   const [foodType, setFoodType] = useState<'veg' | 'non_veg' | ''>(
     initial?.food_type ?? ''
   );
+
+  // [DIAG STEP 3] Verify form state (foodType value actually used by selector)
+  console.log("[DIAG STEP 3] ItemForm foodType state:", foodType, "| initial?.food_type:", initial?.food_type);
   const [localPreview, setLocalPreview] = useState<string | null>(null);
   const [showUrlField, setShowUrlField] = useState(!!initial?.image_url);
   const fileInputRef = useRef<HTMLInputElement>(null);
