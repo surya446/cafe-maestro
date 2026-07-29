@@ -571,16 +571,20 @@ const QRMenuItemCard = memo(function QRMenuItemCard({
 
         {/* Name (top-left) + Price (top-right, never moves) */}
         <div className="flex items-start justify-between gap-2">
-          {/* Left side: name, then FoodTypeIcon below on mobile / beside on sm+ */}
-          <div className="min-w-0 flex-1 flex flex-col sm:flex-row sm:items-center sm:gap-1.5">
+          {/* Left side: name + FoodTypeIcon */}
+          <div className="min-w-0 flex-1">
             <h3
-              className="line-clamp-2 sm:line-clamp-none text-[1.05rem] leading-[1.25] tracking-[-0.01em] min-w-0"
+              className="line-clamp-2 sm:line-clamp-none text-[1.05rem] leading-[1.25] tracking-[-0.01em]"
               style={{ color: C.text, fontWeight: 400, ...SERIF }}
             >
               {item.name}
+              {/* sm+: icon inline immediately after name text, always attached */}
+              <span className="hidden sm:inline-flex items-center ml-1.5" style={{ verticalAlign: "middle" }}>
+                <FoodTypeIcon type={item.food_type} />
+              </span>
             </h3>
-            {/* FoodTypeIcon: own line on mobile (mt-1), inline on sm+ (mt-[3px]) */}
-            <span className="shrink-0 self-start mt-1 sm:mt-0 sm:self-auto">
+            {/* mobile only: icon on its own line below name */}
+            <span className="sm:hidden block mt-1">
               <FoodTypeIcon type={item.food_type} />
             </span>
           </div>
