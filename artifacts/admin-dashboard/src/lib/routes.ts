@@ -46,5 +46,8 @@ export const ROUTES = {
  * (Replit dev, production, Capacitor) without configuration.
  */
 export function buildTableQrUrl(token: string): string {
-  return `${window.location.origin}${import.meta.env.BASE_URL}table/${token}`;
+  // Strip the trailing slash Vite adds to BASE_URL (mirrors App.tsx's Wouter base setup)
+  // so the URL reads  https://domain/table/TOKEN  not  https://domain//table/TOKEN
+  const base = import.meta.env.BASE_URL.replace(/\/$/, "");
+  return `${window.location.origin}${base}/table/${token}`;
 }
