@@ -53,6 +53,7 @@ export function CafeReviewsPage() {
       logoUrl={settings?.logo_url}
       primaryColor={primaryColor}
       settings={settings}
+      isLoading={isLoading}
     >
 
       {/* ── Header ──────────────────────────────────────────── */}

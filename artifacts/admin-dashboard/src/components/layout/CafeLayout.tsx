@@ -1,7 +1,7 @@
 import { Link, useLocation } from "wouter";
 import cupLogoSrc from "@assets/image_1784655126464.png";
 import { cn } from "@/lib/utils";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Menu as MenuIcon,
@@ -18,6 +18,7 @@ import { WebsiteSettings } from "@/types";
 import { SmoothScrollProvider } from "@/providers/SmoothScrollProvider";
 import { BookingModalProvider, useBookingModal } from "@/contexts/BookingModalContext";
 import { BookingModal } from "@/components/public/BookingModal";
+import { CafeLoader } from "@/components/public/CafeLoader";
 
 /* ── Brand palette ──────────────────────────────────────────────────────── */
 const CREAM   = "#F2E8D5";
@@ -32,6 +33,10 @@ interface CafeLayoutProps {
   secondaryColor?: string;
   settings?: WebsiteSettings | null;
   children: React.ReactNode;
+  /** When true an animated full-screen branded loader covers the page until
+   *  data is ready.  CafeLayout enforces a minimum display time of 1.3 s so
+   *  the animation always plays in full even on fast cached loads. */
+  isLoading?: boolean;
 }
 
 const NAV_LINKS = [
@@ -47,6 +52,7 @@ function CafeLayoutInner({
   logoUrl,
   settings,
   children,
+  isLoading,
 }: CafeLayoutProps) {
   const [location] = useLocation();
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -65,6 +71,20 @@ function CafeLayoutInner({
     return () => { document.body.style.overflow = ""; };
   }, [mobileOpen]);
 
+  // ── Branded loader ────────────────────────────────────────────────────────
+  // Enforce a 1.3 s minimum so the entrance animation always plays fully,
+  // even when data arrives instantly from the React-Query cache.
+  const loaderStart = useRef<number | null>(isLoading ? Date.now() : null);
+  const [showLoader, setShowLoader] = useState(!!isLoading);
+  useEffect(() => {
+    if (!isLoading && showLoader) {
+      const elapsed = loaderStart.current != null ? Date.now() - loaderStart.current : 9999;
+      const remaining = Math.max(0, 1300 - elapsed);
+      const t = setTimeout(() => setShowLoader(false), remaining);
+      return () => clearTimeout(t);
+    }
+  }, [isLoading, showLoader]);
+
   function isActive(href: string) {
     if (href === "/") return location === "/";
     return location === href || location.startsWith(href + "/");
@@ -75,6 +95,13 @@ function CafeLayoutInner({
   return (
     <SmoothScrollProvider>
       <div className="min-h-screen flex flex-col" style={{ background: CREAM, color: BROWN }}>
+
+        {/* ── PAGE LOADER ────────────────────────────────────────────────── */}
+        <AnimatePresence>
+          {showLoader && (
+            <CafeLoader key="cafe-page-loader" cafeName={displayName} />
+          )}
+        </AnimatePresence>
 
         {/* ── HEADER ─────────────────────────────────────────────────────── */}
         <header

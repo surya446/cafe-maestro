@@ -46,6 +46,7 @@ export function CafeOffersPage() {
       logoUrl={settings?.logo_url}
       primaryColor={primaryColor}
       settings={settings}
+      isLoading={isLoading}
     >
 
       {/* ── Header ──────────────────────────────────────────── */}

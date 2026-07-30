@@ -40,6 +40,7 @@ export function CafeAboutPage() {
       logoUrl={settings?.logo_url}
       primaryColor={primaryColor}
       settings={settings}
+      isLoading={isLoading}
     >
 
       {/* ── Cinematic header ─────────────────────────────────── */}

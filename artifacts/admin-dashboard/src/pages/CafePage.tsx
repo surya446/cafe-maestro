@@ -56,19 +56,7 @@ export function CafePage() {
   const hasHours     = Array.isArray(settings?.opening_hours) && settings!.opening_hours.length > 0;
   const openLabel    = hasHours ? todayHours(settings!.opening_hours) : null;
 
-  if (isLoading) {
-    return (
-      <CafeLayout cafeName="Loading…" primaryColor={primaryColor}>
-        <div className="h-screen flex items-center justify-center" style={{ background: CREAM }}>
-          <motion.div animate={{ opacity: [0.3, 1, 0.3] }} transition={{ duration: 2, repeat: Infinity }}>
-            <Coffee className="w-10 h-10" style={{ color: TERRA }} />
-          </motion.div>
-        </div>
-      </CafeLayout>
-    );
-  }
-
-  if (!cafe) {
+  if (!cafe && !isLoading) {
     return (
       <CafeLayout cafeName="Cafe" primaryColor={primaryColor}>
         <div className="flex flex-col items-center justify-center min-h-screen gap-4" style={{ background: CREAM }}>
@@ -85,6 +73,7 @@ export function CafePage() {
       logoUrl={settings?.logo_url}
       primaryColor={primaryColor}
       settings={settings}
+      isLoading={isLoading}
     >
 
       {/* ══════════════════════════════════════════════════════════════════
