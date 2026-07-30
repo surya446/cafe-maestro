@@ -1,5 +1,5 @@
 import { Link, useLocation } from "wouter";
-import cupLogoSrc from "@assets/image_1784655126464.png";
+import cupLogoSrc from "@assets/cup-logo-transparent.png";
 import { cn } from "@/lib/utils";
 import { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";

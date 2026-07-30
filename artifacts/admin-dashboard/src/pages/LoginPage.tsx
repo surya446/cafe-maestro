@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useLocation } from "wouter";
-import { Coffee, Eye, EyeOff, AlertCircle } from "lucide-react";
+import { Eye, EyeOff, AlertCircle } from "lucide-react";
+import cupLogoSrc from "@assets/cup-logo-transparent.png";
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -35,8 +36,8 @@ export function LoginPage() {
       <div className="hidden lg:flex flex-col justify-between w-96 bg-sidebar p-10 shrink-0">
         <div>
           <div className="flex items-center gap-3 mb-16">
-            <div className="flex items-center justify-center w-10 h-10 rounded-xl bg-sidebar-primary/20 text-sidebar-primary">
-              <Coffee className="w-6 h-6" />
+            <div className="flex items-center justify-center w-10 h-10 rounded-xl bg-sidebar-primary/20">
+              <img src={cupLogoSrc} alt="Cup & Cozy" className="w-7 h-7 object-contain" />
             </div>
             <span className="text-lg font-bold text-sidebar-foreground">
               Cup & Cozy
@@ -74,8 +75,8 @@ export function LoginPage() {
         <div className="w-full max-w-sm">
           {/* Mobile logo */}
           <div className="flex items-center gap-3 mb-8 lg:hidden">
-            <div className="flex items-center justify-center w-9 h-9 rounded-lg bg-primary/10 text-primary">
-              <Coffee className="w-5 h-5" />
+            <div className="flex items-center justify-center w-9 h-9 rounded-lg bg-primary/10">
+              <img src={cupLogoSrc} alt="Cup & Cozy" className="w-6 h-6 object-contain" />
             </div>
             <span className="text-base font-bold text-foreground">
               Cup & Cozy
