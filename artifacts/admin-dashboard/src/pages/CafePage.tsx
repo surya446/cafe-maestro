@@ -91,8 +91,7 @@ export function CafePage() {
           §1  HERO — full-viewport interior, editorial typography
       ══════════════════════════════════════════════════════════════════ */}
       <section
-        className="relative w-full overflow-hidden"
-        style={{ height: "100svh", minHeight: 600 }}
+        className="relative w-full overflow-hidden min-h-[480px] sm:min-h-[600px] [height:78svh] sm:[height:100svh]"
         aria-label="Hero"
       >
         <motion.img
@@ -113,12 +112,12 @@ export function CafePage() {
           }}
         />
 
-        <div className="relative z-10 h-full flex flex-col items-center justify-center px-6 text-center">
+        <div className="relative z-10 h-full flex flex-col items-center justify-end pb-12 sm:justify-center sm:pb-0 px-6 text-center">
           <motion.div
             initial="hidden"
             animate="show"
             variants={stagger}
-            className="flex flex-col items-center gap-6"
+            className="flex flex-col items-center gap-4 sm:gap-6"
           >
             <motion.p
               variants={fadeUp}
@@ -130,7 +129,7 @@ export function CafePage() {
             <motion.h1
               variants={fadeUp}
               className="font-serif text-white leading-[1.05] tracking-tight"
-              style={{ fontSize: "clamp(2.8rem, 7.5vw, 5.5rem)", textShadow: "0 4px 32px rgba(0,0,0,0.35)" }}
+              style={{ fontSize: "clamp(2.2rem, 7.5vw, 5.5rem)", textShadow: "0 4px 32px rgba(0,0,0,0.35)" }}
             >
               {displayName}
             </motion.h1>
@@ -170,7 +169,7 @@ export function CafePage() {
 
         {/* Scroll indicator */}
         <motion.div
-          className="absolute bottom-10 left-1/2 -translate-x-1/2 z-10 flex flex-col items-center gap-2"
+          className="hidden sm:flex absolute bottom-10 left-1/2 -translate-x-1/2 z-10 flex-col items-center gap-2"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ delay: 2.2, duration: 1 }}
@@ -191,8 +190,8 @@ export function CafePage() {
                Image has a defined height — not filling the entire column.
       ══════════════════════════════════════════════════════════════════ */}
       <section style={{ background: CREAM }} aria-label="Crafted to Cup & Cozy">
-        <div className="max-w-screen-xl mx-auto px-6 sm:px-12 lg:px-20 py-24 sm:py-32 lg:py-40">
-          <div className="flex flex-col sm:flex-row gap-14 lg:gap-24 items-center">
+        <div className="max-w-screen-xl mx-auto px-6 sm:px-12 lg:px-20 py-12 sm:py-32 lg:py-40">
+          <div className="flex flex-col sm:flex-row gap-8 sm:gap-14 lg:gap-24 items-center">
 
             {/* Image — contained height, not filling the viewport */}
             <motion.div
@@ -280,8 +279,8 @@ export function CafePage() {
         style={{ background: CREAM, borderTop: `1px solid ${BROWN}14` }}
         aria-label="Curated Corners"
       >
-        <div className="max-w-screen-xl mx-auto px-6 sm:px-12 lg:px-20 py-24 sm:py-32 lg:py-40">
-          <div className="flex flex-col sm:flex-row gap-14 lg:gap-24 items-center">
+        <div className="max-w-screen-xl mx-auto px-6 sm:px-12 lg:px-20 py-12 sm:py-32 lg:py-40">
+          <div className="flex flex-col sm:flex-row gap-8 sm:gap-14 lg:gap-24 items-center">
 
             {/* Text panel — LEFT */}
             <motion.div

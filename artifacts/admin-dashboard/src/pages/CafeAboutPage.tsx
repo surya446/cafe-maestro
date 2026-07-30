@@ -119,7 +119,7 @@ export function CafeAboutPage() {
       </section>
 
       {/* ── CTA ───────────────────────────────────────────────── */}
-      <section className="py-16 sm:py-28 px-4 sm:px-6 text-center relative overflow-hidden" style={{ background: BG2 }}>
+      <section className="py-12 sm:py-28 px-4 sm:px-6 text-center relative overflow-hidden" style={{ background: BG2 }}>
         <div className="absolute inset-0 opacity-[0.05]" style={{ backgroundImage: `radial-gradient(circle at 50% 50%, ${GOLD}, transparent 60%)` }} />
         <motion.div initial="hidden" whileInView="show" viewport={{ once: true }} variants={stagger}
           className="relative z-10 max-w-xl mx-auto">
