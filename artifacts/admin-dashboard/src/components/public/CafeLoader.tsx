@@ -1,5 +1,5 @@
 import { motion } from "framer-motion";
-import cupLogoSrc from "@assets/image_1784655126464.png";
+import cupLogoSrc from "@assets/cup-logo-transparent.png";
 
 /* ── Brand palette (mirrors CafeLayout) ─────────────────────────────────── */
 const CREAM = "#F2E8D5";
@@ -49,7 +49,6 @@ export function CafeLoader({ cafeName = "Cup & Cozy" }: CafeLoaderProps) {
           src={cupLogoSrc}
           alt={cafeName}
           className="h-[68px] w-auto object-contain"
-          style={{ mixBlendMode: "multiply" }}
           initial={{ opacity: 0, scale: 0.82, y: 10 }}
           animate={{ opacity: 1, scale: 1, y: 0 }}
           transition={{ duration: 0.75, ease: [0.16, 1, 0.3, 1] }}
