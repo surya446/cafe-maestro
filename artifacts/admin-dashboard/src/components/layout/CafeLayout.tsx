@@ -71,6 +71,21 @@ function CafeLayoutInner({
     return () => { document.body.style.overflow = ""; };
   }, [mobileOpen]);
 
+  // Set html/body background to match the footer colour so that mobile
+  // browser overscroll at the bottom of the page shows dark brown instead
+  // of the admin-dashboard's near-white bg-background (#F8FAFC).
+  // Reset to empty string on unmount so the admin shell gets its own bg back.
+  useEffect(() => {
+    const prevHtml = document.documentElement.style.backgroundColor;
+    const prevBody = document.body.style.backgroundColor;
+    document.documentElement.style.backgroundColor = BROWN;
+    document.body.style.backgroundColor = BROWN;
+    return () => {
+      document.documentElement.style.backgroundColor = prevHtml;
+      document.body.style.backgroundColor = prevBody;
+    };
+  }, []);
+
   // ── Branded loader ────────────────────────────────────────────────────────
   // Enforce a 1.3 s minimum so the entrance animation always plays fully,
   // even when data arrives instantly from the React-Query cache.

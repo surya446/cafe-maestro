@@ -179,7 +179,7 @@ export function CafePage() {
                Image has a defined height — not filling the entire column.
       ══════════════════════════════════════════════════════════════════ */}
       <section style={{ background: CREAM }} aria-label="Crafted to Cup & Cozy">
-        <div className="max-w-screen-xl mx-auto px-6 sm:px-12 lg:px-20 py-12 sm:py-32 lg:py-40">
+        <div className="max-w-screen-xl mx-auto px-6 sm:px-12 lg:px-20 pb-12 sm:py-32 lg:py-40">
           <div className="flex flex-col sm:flex-row gap-8 sm:gap-14 lg:gap-24 items-center">
 
             {/* Image — contained height, not filling the viewport */}
