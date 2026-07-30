@@ -80,13 +80,13 @@ export function CafePage() {
           §1  HERO — full-viewport interior, editorial typography
       ══════════════════════════════════════════════════════════════════ */}
       <section
-        className="relative w-full overflow-hidden min-h-[480px] sm:min-h-[600px] [height:78svh] sm:[height:100svh]"
+        className="relative w-full overflow-hidden min-h-[420px] sm:min-h-[600px] [height:72svh] sm:[height:100svh]"
         aria-label="Hero"
       >
         <motion.img
           src={heroImg}
           alt="Cup & Cozy café interior"
-          className="absolute inset-0 w-full h-full object-cover object-center"
+          className="absolute inset-0 w-full h-full object-cover object-center sm:object-center [object-position:center_38%] sm:[object-position:center]"
           fetchPriority="high"
           decoding="async"
           initial={{ scale: 1.08 }}
@@ -101,16 +101,16 @@ export function CafePage() {
           }}
         />
 
-        <div className="relative z-10 h-full flex flex-col items-center justify-end pb-12 sm:justify-center sm:pb-0 px-6 text-center">
+        <div className="relative z-10 h-full flex flex-col items-center justify-center pb-4 sm:justify-center sm:pb-0 px-6 text-center">
           <motion.div
             initial="hidden"
             animate="show"
             variants={stagger}
-            className="flex flex-col items-center gap-4 sm:gap-6"
+            className="flex flex-col items-center gap-5 sm:gap-6"
           >
             <motion.p
               variants={fadeUp}
-              className="text-[10px] sm:text-xs font-semibold tracking-[0.30em] uppercase text-white/60"
+              className="text-[11px] sm:text-xs font-semibold tracking-[0.22em] uppercase text-white/80"
             >
               Meringrice · Est. 2023
             </motion.p>
@@ -118,7 +118,7 @@ export function CafePage() {
             <motion.h1
               variants={fadeUp}
               className="font-serif text-white leading-[1.05] tracking-tight"
-              style={{ fontSize: "clamp(2.2rem, 7.5vw, 5.5rem)", textShadow: "0 4px 32px rgba(0,0,0,0.35)" }}
+              style={{ fontSize: "clamp(2.6rem, 7.5vw, 5.5rem)", textShadow: "0 4px 32px rgba(0,0,0,0.35)" }}
             >
               {displayName}
             </motion.h1>
@@ -126,14 +126,14 @@ export function CafePage() {
             <motion.p
               variants={fadeUp}
               className="font-serif italic text-white/75 leading-snug max-w-xs sm:max-w-md"
-              style={{ fontSize: "clamp(1.05rem, 2.4vw, 1.4rem)" }}
+              style={{ fontSize: "clamp(1.15rem, 2.4vw, 1.4rem)" }}
             >
               Curated coffee.<br />Curated conversations.
             </motion.p>
 
             <motion.div variants={fadeUp} className="w-12 h-px" style={{ background: "rgba(255,255,255,0.35)" }} />
 
-            <motion.div variants={fadeUp} className="flex flex-col sm:flex-row items-center gap-3 mt-1">
+            <motion.div variants={fadeUp} className="flex flex-col sm:flex-row items-center gap-3 mt-2">
               <Link
                 href="/menu"
                 className="inline-flex items-center gap-2 px-8 py-3.5 text-[13px] font-semibold text-white rounded-sm transition-all duration-300 hover:bg-white hover:text-[#3D1E0F] active:scale-95"
@@ -179,7 +179,7 @@ export function CafePage() {
                Image has a defined height — not filling the entire column.
       ══════════════════════════════════════════════════════════════════ */}
       <section style={{ background: CREAM }} aria-label="Crafted to Cup & Cozy">
-        <div className="max-w-screen-xl mx-auto px-6 sm:px-12 lg:px-20 pb-12 sm:py-32 lg:py-40">
+        <div className="max-w-screen-xl mx-auto px-6 sm:px-12 lg:px-20 pt-10 pb-12 sm:py-32 lg:py-40">
           <div className="flex flex-col sm:flex-row gap-8 sm:gap-14 lg:gap-24 items-center">
 
             {/* Image — contained height, not filling the viewport */}
