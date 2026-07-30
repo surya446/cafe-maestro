@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo, useRef, useCallback } from "react";
+import { buildTableQrUrl } from "@/lib/routes";
 import { format, formatDistanceToNow } from "date-fns";
 import {
   ClipboardList,
@@ -991,7 +992,7 @@ function QRTableCard({
   const [busy, setBusy] = useState(false);
 
   const guestUrl = table.qrCodeToken
-    ? `${window.location.origin}${import.meta.env.BASE_URL}table/${table.qrCodeToken}`
+    ? buildTableQrUrl(table.qrCodeToken)
     : null;
 
   const label = tableLabel(table.number, table.name);

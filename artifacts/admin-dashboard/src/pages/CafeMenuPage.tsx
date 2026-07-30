@@ -289,7 +289,7 @@ export function CafeMenuPage() {
       <div className="relative pt-20 sm:pt-28 pb-5 sm:pb-10 px-4 sm:px-6 text-center overflow-hidden" style={{ background: BG1 }}>
         <div className="absolute inset-0 opacity-[0.06]" style={{ backgroundImage: `radial-gradient(ellipse at 50% 100%, ${GOLD}, transparent 68%)` }} />
         <div className="relative z-10">
-          <Link href="/cafe">
+          <Link href="/">
             <span className="inline-flex items-center gap-1.5 text-xs font-medium hover:opacity-70 mb-6 sm:mb-8 transition-opacity cursor-pointer tracking-[0.12em] uppercase" style={{ color: BODY }}>
               <ArrowLeft className="w-3.5 h-3.5" /> Back to home
             </span>

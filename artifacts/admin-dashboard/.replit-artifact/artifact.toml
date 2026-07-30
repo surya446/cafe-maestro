@@ -1,5 +1,5 @@
 kind = "web"
-previewPath = "/admin/"
+previewPath = "/"
 title = "Cafe Maestro — Admin Dashboard"
 version = "1.0.0"
 id = "artifacts/admin-dashboard"
@@ -11,7 +11,7 @@ version = "1.0.0"
 
 [[services]]
 name = "web"
-paths = [ "/admin/" ]
+paths = [ "/" ]
 localPort = 22133
 
 [services.development]
@@ -28,4 +28,4 @@ to = "/index.html"
 
 [services.env]
 PORT = "22133"
-BASE_PATH = "/admin/"
+BASE_PATH = "/"

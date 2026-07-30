@@ -1,5 +1,6 @@
 import { Link, useLocation } from "wouter";
 import { cn } from "@/lib/utils";
+import { ROUTES } from "@/lib/routes";
 import {
   LayoutDashboard,
   UtensilsCrossed,
@@ -31,18 +32,18 @@ interface NavItem {
 }
 
 const NAV_ITEMS: NavItem[] = [
-  { href: "/", label: "Dashboard", icon: LayoutDashboard },
-  { href: "/orders", label: "Orders", icon: ClipboardList },
-  { href: "/tables", label: "Tables", icon: TableProperties },
-  { href: "/menu", label: "Menu", icon: UtensilsCrossed },
-  { href: "/gallery", label: "Gallery", icon: Images },
-  { href: "/offers", label: "Offers", icon: Tag },
-  { href: "/bookings", label: "Bookings", icon: CalendarDays },
-  { href: "/staff", label: "Staff", icon: Users, ownerOnly: false },
-  { href: "/analytics", label: "Analytics", icon: BarChart3 },
-  { href: "/website-settings", label: "Website", icon: Globe, ownerOnly: true },
-  { href: "/downloads", label: "App Releases", icon: PackageOpen, managerOrAbove: true },
-  { href: "/settings", label: "Settings", icon: Settings, ownerOnly: true },
+  { href: ROUTES.ADMIN.ROOT,             label: "Dashboard",   icon: LayoutDashboard },
+  { href: ROUTES.ADMIN.ORDERS,           label: "Orders",      icon: ClipboardList },
+  { href: ROUTES.ADMIN.TABLES,           label: "Tables",      icon: TableProperties },
+  { href: ROUTES.ADMIN.MENU,             label: "Menu",        icon: UtensilsCrossed },
+  { href: ROUTES.ADMIN.GALLERY,          label: "Gallery",     icon: Images },
+  { href: ROUTES.ADMIN.OFFERS,           label: "Offers",      icon: Tag },
+  { href: ROUTES.ADMIN.BOOKINGS,         label: "Bookings",    icon: CalendarDays },
+  { href: ROUTES.ADMIN.STAFF,            label: "Staff",       icon: Users,      ownerOnly: false },
+  { href: ROUTES.ADMIN.ANALYTICS,        label: "Analytics",   icon: BarChart3 },
+  { href: ROUTES.ADMIN.WEBSITE_SETTINGS, label: "Website",     icon: Globe,      ownerOnly: true },
+  { href: ROUTES.ADMIN.DOWNLOADS,        label: "App Releases",icon: PackageOpen,managerOrAbove: true },
+  { href: ROUTES.ADMIN.SETTINGS,         label: "Settings",    icon: Settings,   ownerOnly: true },
 ];
 
 interface SidebarProps {
@@ -97,11 +98,11 @@ export function Sidebar({ collapsed, mobileOpen, onToggleCollapse, onCloseMobile
         <nav className="flex-1 py-4 px-2 space-y-0.5 overflow-y-auto sidebar-nav">
           {visibleItems.map((item) => {
             const isActive =
-              item.href === "/"
-                ? location === "/" || location === ""
+              item.href === ROUTES.ADMIN.ROOT
+                ? location === ROUTES.ADMIN.ROOT
                 : location.startsWith(item.href);
 
-            const badge = item.href === "/orders" ? orderNavBadge : 0;
+            const badge = item.href === ROUTES.ADMIN.ORDERS ? orderNavBadge : 0;
 
             return (
               <Link
@@ -227,11 +228,11 @@ export function Sidebar({ collapsed, mobileOpen, onToggleCollapse, onCloseMobile
         <nav className="flex-1 py-4 px-3 space-y-0.5 overflow-y-auto sidebar-nav">
           {visibleItems.map((item) => {
             const isActive =
-              item.href === "/"
-                ? location === "/" || location === ""
+              item.href === ROUTES.ADMIN.ROOT
+                ? location === ROUTES.ADMIN.ROOT
                 : location.startsWith(item.href);
 
-            const badge = item.href === "/orders" ? orderNavBadge : 0;
+            const badge = item.href === ROUTES.ADMIN.ORDERS ? orderNavBadge : 0;
 
             return (
               <Link

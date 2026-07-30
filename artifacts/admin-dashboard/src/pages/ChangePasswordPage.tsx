@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useAuth } from "@/hooks/useAuth";
+import { ROUTES } from "@/lib/routes";
 
 export function ChangePasswordPage() {
   const [, navigate] = useLocation();
@@ -49,7 +50,7 @@ export function ChangePasswordPage() {
     setLoading(false);
     setDone(true);
 
-    setTimeout(() => navigate("/"), 1800);
+    setTimeout(() => navigate(ROUTES.ADMIN.ROOT), 1800);
   }
 
   return (

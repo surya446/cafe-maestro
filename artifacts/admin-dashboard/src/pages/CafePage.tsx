@@ -15,13 +15,14 @@ const TERRA = "#8B4A2B";
 const MID   = "#6B3A2A";
 
 /* ── Photo manifest ─────────────────────────────────────────────────────── */
+const BASE = import.meta.env.BASE_URL;
 const PHOTOS = {
-  hero:      "/admin/cafe-hero.png",
-  coffee:    "/admin/cafe-crafted.png",
+  hero:      `${BASE}cafe-hero.png`,
+  coffee:    `${BASE}cafe-crafted.png`,
   artwall:   curatedCornersImg,
-  pendant:   "/admin/cafe-pendant.png",
-  ringlight: "/admin/cafe-ringlight.png",
-  dining:    "/admin/cafe-contact.png",
+  pendant:   `${BASE}cafe-pendant.png`,
+  ringlight: `${BASE}cafe-ringlight.png`,
+  dining:    `${BASE}cafe-contact.png`,
 };
 
 /* ── Animation presets ──────────────────────────────────────────────────── */
@@ -146,7 +147,7 @@ export function CafePage() {
 
             <motion.div variants={fadeUp} className="flex flex-col sm:flex-row items-center gap-3 mt-1">
               <Link
-                href="/cafe/menu"
+                href="/menu"
                 className="inline-flex items-center gap-2 px-8 py-3.5 text-[13px] font-semibold text-white rounded-sm transition-all duration-300 hover:bg-white hover:text-[#3D1E0F] active:scale-95"
                 style={{
                   border: "1.5px solid rgba(255,255,255,0.80)",
@@ -258,7 +259,7 @@ export function CafePage() {
 
               <motion.div variants={fadeUp} className="mt-8">
                 <Link
-                  href="/cafe/menu"
+                  href="/menu"
                   className="inline-flex items-center gap-1.5 text-xs font-semibold tracking-[0.10em] uppercase transition-opacity hover:opacity-60"
                   style={{ color: TERRA }}
                 >
@@ -329,7 +330,7 @@ export function CafePage() {
 
               <motion.div variants={fadeUp} className="mt-8">
                 <Link
-                  href="/cafe/gallery"
+                  href="/gallery"
                   className="inline-flex items-center gap-1.5 text-xs font-semibold tracking-[0.10em] uppercase transition-opacity hover:opacity-60"
                   style={{ color: TERRA }}
                 >

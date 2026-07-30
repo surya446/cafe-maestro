@@ -35,11 +35,11 @@ interface CafeLayoutProps {
 }
 
 const NAV_LINKS = [
-  { href: "/cafe",         label: "HOME"      },
-  { href: "/cafe/about",   label: "OUR STORY" },
-  { href: "/cafe/menu",    label: "MENU"      },
-  { href: "/cafe/gallery", label: "GALLERY"   },
-  { href: "/cafe/contact", label: "FIND US"   },
+  { href: "/",        label: "HOME"      },
+  { href: "/about",   label: "OUR STORY" },
+  { href: "/menu",    label: "MENU"      },
+  { href: "/gallery", label: "GALLERY"   },
+  { href: "/contact", label: "FIND US"   },
 ];
 
 function CafeLayoutInner({
@@ -66,7 +66,7 @@ function CafeLayoutInner({
   }, [mobileOpen]);
 
   function isActive(href: string) {
-    if (href === "/cafe") return location === href;
+    if (href === "/") return location === "/";
     return location === href || location.startsWith(href + "/");
   }
 
@@ -94,7 +94,7 @@ function CafeLayoutInner({
 
             {/* Brand */}
             <Link
-              href="/cafe"
+              href="/"
               className="flex items-center gap-2.5 shrink-0 group"
               aria-label={`${displayName} — home`}
             >

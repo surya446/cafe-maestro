@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from "react";
+import { buildTableQrUrl } from "@/lib/routes";
 import {
   TableProperties,
   Plus,
@@ -64,7 +65,7 @@ function tableLabel(number: number, name: string) {
 
 function qrUrl(token: string | null): string | null {
   if (!token) return null;
-  return `${window.location.origin}${import.meta.env.BASE_URL}table/${token}`;
+  return buildTableQrUrl(token);
 }
 
 function fmtTime(t: string) {

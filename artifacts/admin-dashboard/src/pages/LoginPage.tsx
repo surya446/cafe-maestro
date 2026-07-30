@@ -5,6 +5,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { ROUTES } from "@/lib/routes";
 
 export function LoginPage() {
   const { signIn } = useAuth();
@@ -24,7 +25,7 @@ export function LoginPage() {
     if (err) {
       setError("Invalid email or password. Please try again.");
     } else {
-      navigate("/");
+      navigate(ROUTES.ADMIN.ROOT);
     }
   }
 

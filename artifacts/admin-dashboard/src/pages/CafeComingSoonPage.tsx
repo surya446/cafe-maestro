@@ -5,11 +5,11 @@ import { usePublicCafe } from "@/hooks/usePublicBooking";
 import { usePublicWebsiteSettings } from "@/hooks/usePublicWebsiteSettings";
 
 const PAGE_LABELS: Record<string, string> = {
-  "/cafe/gallery": "Gallery",
-  "/cafe/offers": "Offers",
-  "/cafe/reviews": "Reviews",
-  "/cafe/about": "About",
-  "/cafe/contact": "Contact",
+  "/gallery": "Gallery",
+  "/offers":  "Offers",
+  "/reviews": "Reviews",
+  "/about":   "About",
+  "/contact": "Contact",
 };
 
 export function CafeComingSoonPage() {
@@ -53,7 +53,7 @@ export function CafeComingSoonPage() {
               This section is coming soon. We're putting the finishing touches on it.
             </p>
             <Link
-              href="/cafe"
+              href="/"
               className="inline-flex items-center gap-2 text-sm font-medium transition-opacity hover:opacity-60"
               style={{ color: primaryColor }}
             >
